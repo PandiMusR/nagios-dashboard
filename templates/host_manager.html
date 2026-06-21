@@ -1,0 +1,1198 @@
+{% extends "base.html" %}
+{% block title %}Host Manager{% endblock %}
+{% block content %}
+<style>
+    .host-header {
+        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
+    }
+    .host-header h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.75rem;
+        font-weight: 700;
+    }
+    .host-header p {
+        margin: 0;
+        opacity: 0.95;
+        font-size: 0.95rem;
+    }
+    .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #f1f5f9;
+        transition: all 0.3s;
+    }
+    .section-card h3 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .button-group {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .btn-primary {
+        padding: 0.45rem 0.85rem;
+        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.3s;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        white-space: nowrap;
+        min-width: auto;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+    }
+    .btn-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    .btn-success:hover {
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    }
+    .btn-info {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+    .btn-info:hover {
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+    }
+    .btn-danger {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    }
+    .btn-danger:hover {
+        box-shadow: 0 6px 20px rgba(220, 38, 38, 0.3);
+    }
+    .filter-bar-button-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .filter-bar-button-group .btn-primary {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.8rem;
+        flex: 1;
+        min-width: 120px;
+        max-width: 180px;
+    }
+    .filter-bar-button-group .btn-primary i {
+        margin-right: 0.25rem;
+    }
+    .btn-text {
+        display: inline;
+    }
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #1e293b;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    .filter-bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+    }
+    .filter-bar-button-group {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .filter-bar .form-group {
+        margin-bottom: 0;
+    }
+    .filter-bar .form-group label {
+        margin-bottom: 0.4rem;
+        font-size: 0.85rem;
+    }
+    .filter-bar .form-group input,
+    .filter-bar .form-group select {
+        padding: 0.6rem 0.75rem;
+        font-size: 0.9rem;
+    }
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        overflow-y: auto;
+    }
+    .modal.show {
+        display: flex;
+    }
+    .modal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 16px;
+        max-width: 700px;
+        width: 95%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        margin: 20px auto;
+    }
+    .modal-content h3 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+    .modal-footer {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    .hosts-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        table-layout: fixed;
+    }
+    .hosts-table thead {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        position: sticky;
+        top: 0;
+    }
+    .hosts-table th {
+        padding: 0.75rem;
+        text-align: left;
+        font-weight: 600;
+        color: #1e293b;
+        border-bottom: 2px solid #cbd5e1;
+        font-size: 0.9rem;
+        word-break: break-word;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    .hosts-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e2e8f0;
+        word-break: break-word;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
+    }
+    .hosts-table td:nth-child(1) { width: 10%; min-width: 80px; }
+    .hosts-table td:nth-child(2) { width: 12%; min-width: 100px; }
+    .hosts-table td:nth-child(3) { width: 15%; min-width: 120px; }
+    .hosts-table td:nth-child(4) { width: 15%; min-width: 120px; }
+    .hosts-table td:nth-child(5) { width: 12%; min-width: 90px; }
+    .hosts-table td:nth-child(6) { width: 10%; min-width: 85px; }
+    .hosts-table td:nth-child(7) { width: 26%; min-width: 180px; }
+    .hosts-table tbody tr:hover {
+        background: #f8fafc;
+    }
+    .backup-item {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s;
+    }
+    .backup-item:hover {
+        background: #f8fafc;
+    }
+    .backup-item strong {
+        color: #1e293b;
+    }
+    .backup-item small {
+        color: #64748b;
+        font-size: 0.8rem;
+    }
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8rem;
+        border-radius: 6px;
+        border: none;
+        color: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-right: 0.5rem;
+    }
+    @media (max-width: 768px) {
+        .filter-bar {
+            grid-template-columns: 1fr;
+            gap: 0.6rem;
+            padding: 1rem;
+        }
+        .filter-bar-button-group {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.5rem;
+            flex-direction: unset;
+        }
+        .filter-bar-button-group .btn-primary {
+            padding: 0.35rem 0.5rem;
+            font-size: 0.75rem;
+            min-width: auto;
+            max-width: none;
+        }
+        .btn-text {
+            display: inline;
+        }
+        .filter-bar-button-group button {
+            flex: 1;
+        }
+        .modal-content {
+            width: 90%;
+            padding: 1.5rem;
+        }
+        .hosts-table {
+            font-size: 0.8rem;
+        }
+        .hosts-table th, .hosts-table td {
+            padding: 0.5rem;
+            font-size: 0.8rem;
+        }
+        .hosts-table td:nth-child(1) { width: 8%; min-width: 60px; }
+        .hosts-table td:nth-child(2) { width: 10%; min-width: 70px; }
+        .hosts-table td:nth-child(3) { width: 13%; min-width: 90px; }
+        .hosts-table td:nth-child(4) { width: 13%; min-width: 90px; }
+        .hosts-table td:nth-child(5) { width: 10%; min-width: 70px; }
+        .hosts-table td:nth-child(6) { width: 8%; min-width: 70px; }
+        .hosts-table td:nth-child(7) { width: 28%; min-width: 140px; }
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.7rem;
+        }
+        .btn-primary {
+            padding: 0.45rem 0.8rem;
+            font-size: 0.8rem;
+            gap: 0.3rem;
+        }
+    }
+    @media (max-width: 480px) {
+        .filter-bar {
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+            padding: 0.75rem;
+        }
+        .filter-bar .form-group label {
+            font-size: 0.75rem;
+        }
+        .filter-bar .form-group input,
+        .filter-bar .form-group select {
+            padding: 0.5rem 0.6rem;
+            font-size: 0.8rem;
+        }
+        .filter-bar-button-group {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.4rem;
+            flex-direction: unset;
+        }
+        .filter-bar-button-group .btn-primary {
+            padding: 0.35rem 0.5rem;
+            font-size: 0.7rem;
+            min-width: auto;
+        }
+        .btn-text {
+            display: inline;
+        }
+        .hosts-table {
+            font-size: 0.75rem;
+        }
+        .hosts-table th, .hosts-table td {
+            padding: 0.4rem;
+            font-size: 0.75rem;
+        }
+        .hosts-table td:nth-child(7) {
+            width: 30%;
+            min-width: 130px;
+        }
+        .btn-sm {
+            padding: 0.2rem 0.4rem;
+            font-size: 0.65rem;
+        }
+        .btn-primary {
+            padding: 0.4rem 0.6rem;
+            font-size: 0.75rem;
+            gap: 0.2rem;
+        }
+    }
+</style>
+
+<div class="host-header">
+    <h1><i class="fas fa-network-wired"></i> Host Manager</h1>
+    <p>Manage hosts and configurations across all Nagios servers</p>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-database"></i> Backup & Rollback</h3>
+    <div class="button-group" style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+        <select id="backupServer" style="flex: 1; min-width: 150px; max-width: 250px; padding: 0.6rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem;">
+            <option value="">Select Server</option>
+            {% for server in servers %}
+            <option value="{{ server }}">{{ server }}</option>
+            {% endfor %}
+        </select>
+        <button onclick="createBackup()" class="btn-primary btn-success" title="Create backup"><i class="fas fa-save"></i> Backup</button>
+        <button onclick="loadBackups()" class="btn-primary btn-info" title="Refresh backups"><i class="fas fa-sync-alt"></i> Refresh</button>
+    </div>
+    <div id="backupHistory" style="max-height: 300px; overflow-y: auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
+        <p style="text-align: center; color: #94a3b8; margin: 2rem 0; padding: 1rem;">Select a server to view backups</p>
+    </div>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-filter"></i> Hosts Management</h3>
+    <div class="filter-bar">
+        <div class="form-group">
+            <label>Filter Server</label>
+            <select id="serverFilter" onchange="filterByServer()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <option value="all">All Servers</option>
+                {% for server in servers %}
+                <option value="{{ server }}">{{ server }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Rows per Page</label>
+            <select id="entriesPerPage" onchange="changeEntriesPerPage()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="all">ALL</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Search</label>
+            <input type="text" id="searchInput" onkeyup="searchHosts()" placeholder="Host name, IP, parent..." style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem;">
+        </div>
+        <div class="filter-bar-button-group">
+            <button onclick="refreshAllHostStatus()" class="btn-primary btn-info" title="Refresh host status"><i class="fas fa-sync-alt"></i> <span class="btn-text">Refresh</span></button>
+            <button onclick="openBatchModal()" class="btn-primary btn-success" title="Add multiple hosts"><i class="fas fa-list"></i> <span class="btn-text">Batch Add</span></button>
+            <button onclick="openAddModal()" class="btn-primary" title="Add a host"><i class="fas fa-plus"></i> <span class="btn-text">Add Host</span></button>
+        </div>
+    </div>
+    <div style="overflow-x: auto; border-radius: 12px; border: 1px solid #e2e8f0;">
+        <table id="hostsTable" class="hosts-table">
+            <thead>
+                <tr>
+                    <th>Server</th>
+                    <th>Parent</th>
+                    <th>Host Name</th>
+                    <th>Alias</th>
+                    <th>Address</th>
+                    <th>Status</th>
+                    <th style="width: 160px;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="hostsTableBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div id="addModal" class="modal">
+    <div class="modal-content">
+        <h3><i class="fas fa-plus-circle"></i> Add New Host</h3>
+        <form id="addForm" method="POST" action="/host-manager/add" onsubmit="return validateAddForm()">
+            <div class="form-group">
+                <label>Server</label>
+                <select name="server" id="addServer" required onchange="onAddServerChange()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    {% for server in servers %}
+                    <option value="{{ server }}">{{ server }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Host Name</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" name="host_name" id="addHostName" required placeholder="e.g. 81411-130112252037001-Ria Sirait" style="flex: 1; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <button type="button" onclick="generateHostname()" class="btn-primary btn-info"><i class="fas fa-magic"></i></button>
+                </div>
+                <small style="color: #64748b; font-size: 0.8rem;">Format: NID-CID-NamaClient</small>
+            </div>
+            <div class="form-group">
+                <label>Alias (optional)</label>
+                <input type="text" name="alias" id="addAlias" placeholder="e.g. Web Server 1" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <small style="color: #64748b; font-size: 0.8rem;">A friendly name/description for the host</small>
+            </div>
+            <div class="form-group">
+                <label>IP Address</label>
+                <input type="text" name="address" required placeholder="e.g. 192.168.1.100" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+            </div>
+            <div class="form-group">
+                <label>Parent (optional)</label>
+                <input type="text" id="addParentsSearch" placeholder="Search parent..." style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 0.5rem;" oninput="filterAddParents()">
+                <select name="parents" id="addParents" size="4" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <option value="">-- No Parent --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 0.5rem;">
+                    <input type="checkbox" name="uptime_kuma_enabled" id="uptimeKumaEnabled" style="margin-right: 0.5rem; width: 18px; height: 18px;">
+                    <span>Monitor in Uptime Kuma</span>
+                </label>
+                <small style="color: #64748b; font-size: 0.8rem;"><i class="fas fa-info-circle"></i> Automatically add this host as a monitor in Uptime Kuma</small>
+            </div>
+            <div class="form-group">
+                <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 0.5rem;">
+                    <input type="checkbox" name="service_enabled" id="serviceEnabled" onchange="toggleServiceFields()" style="margin-right: 0.5rem; width: 18px; height: 18px;">
+                    <span>Add Service/Plugin</span>
+                </label>
+                <div id="serviceFields" style="display: none; padding-left: 1.5rem; margin-top: 0.75rem;">
+                    <div class="form-group">
+                        <label>Plugin</label>
+                        <select name="service_plugin" id="servicePlugin" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                            <option value="">-- Select Plugin --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Arguments (optional)</label>
+                        <input type="text" name="service_args" id="serviceArgs" placeholder="e.g. 41805" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <small style="color: #64748b; font-size: 0.8rem;">Arguments to pass to the plugin</small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="closeAddModal()" class="btn-primary" style="background: #6b7280;"><i class="fas fa-times"></i> Cancel</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Add Host</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Batch Add Modal -->
+<div id="batchModal" class="modal">
+    <div class="modal-content" style="max-width: 1000px;">
+        <h3><i class="fas fa-list-ul"></i> Batch Add Hosts</h3>
+        <form method="POST" action="/host-manager/batch-add">
+            <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; color: #1e293b; font-weight: 600;">Hosts</h4>
+                    <button type="button" onclick="addBatchRow()" class="btn-primary btn-success"><i class="fas fa-plus"></i> Add Row</button>
+                </div>
+                <div id="batchHostsContainer" style="max-height: 500px; overflow-y: auto; display: grid; gap: 0.75rem;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="closeBatchModal()" class="btn-primary" style="background: #6b7280;"><i class="fas fa-times"></i> Cancel</button>
+                <button type="submit" class="btn-primary btn-success"><i class="fas fa-save"></i> Add All Hosts</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3><i class="fas fa-edit"></i> Edit Host</h3>
+        <form method="POST" action="/host-manager/edit" onsubmit="return validateEditForm()">
+            <input type="hidden" name="server" id="editServer">
+            <input type="hidden" name="old_host_name" id="editOldHostName">
+            <div class="form-group">
+                <label>Host Name</label>
+                <input type="text" name="host_name" id="editHostName" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+            </div>
+            <div class="form-group">
+                <label>Alias (optional)</label>
+                <input type="text" name="alias" id="editAlias" placeholder="e.g. Web Server 1" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <small style="color: #64748b; font-size: 0.8rem;">A friendly name/description for the host</small>
+            </div>
+            <div class="form-group">
+                <label>IP Address</label>
+                <input type="text" name="address" id="editAddress" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+            </div>
+            <div class="form-group">
+                <label>Parent (optional)</label>
+                <input type="text" id="editParentsSearch" placeholder="Search parent..." style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 0.5rem;" oninput="filterEditParents()">
+                <select name="parents" id="editParents" size="4" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <option value="">-- No Parent --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 0.5rem;">
+                    <input type="checkbox" name="uptime_kuma_enabled" id="editUptimeKumaEnabled" style="margin-right: 0.5rem; width: 18px; height: 18px;">
+                    <span>Monitor in Uptime Kuma</span>
+                </label>
+                <small style="color: #64748b; font-size: 0.8rem;"><i class="fas fa-info-circle"></i> Automatically add/update this host in Uptime Kuma</small>
+            </div>
+            <div class="form-group">
+                <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 0.5rem;">
+                    <input type="checkbox" name="service_enabled" id="editServiceEnabled" onchange="toggleEditServiceFields()" style="margin-right: 0.5rem; width: 18px; height: 18px;">
+                    <span>Add Service/Plugin</span>
+                </label>
+                <div id="editServiceFields" style="display: none; padding-left: 1.5rem; margin-top: 0.75rem;">
+                    <div class="form-group">
+                        <label>Plugin</label>
+                        <select name="service_plugin" id="editServicePlugin" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                            <option value="">-- Select Plugin --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Arguments (optional)</label>
+                        <input type="text" name="service_args" id="editServiceArgs" placeholder="e.g. 41805" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <small style="color: #64748b; font-size: 0.8rem;">Arguments to pass to the plugin</small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="closeEditModal()" class="btn-primary" style="background: #6b7280;"><i class="fas fa-times"></i> Cancel</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <h3 style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> Confirm Delete</h3>
+        <p style="color: #64748b;">The following <strong id="deleteTotalCount">0</strong> host(s) will be deleted:</p>
+        <div id="deleteHostList" style="max-height: 400px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;"></div>
+        <div class="modal-footer">
+            <button type="button" onclick="closeDeleteModal()" class="btn-primary" style="background: #6b7280;"><i class="fas fa-times"></i> Cancel</button>
+            <button type="button" id="confirmDeleteBtn" class="btn-primary btn-danger"><i class="fas fa-trash"></i> Delete All</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let allHostsData = [];
+let currentPage = 1;
+let entriesPerPage = 10;
+let serverPlugins = {{ server_plugins|tojson }};
+let batchRowCounter = 0;
+
+function createBackup() {
+    const server = document.getElementById('backupServer').value;
+    if (!server) { alert('Select a server'); return; }
+    
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '⏳ Uploading...';
+    
+    fetch('/host-manager/backup', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({server: server})
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.textContent = '📦 Backup';
+        if (data.success) {
+            alert('Backup created!' + (data.cloud ? ' ✓ Uploaded to cloud' : ' ⚠️ Cloud upload failed'));
+            loadBackups();
+        } else {
+            alert('Failed: ' + data.error);
+        }
+    });
+}
+
+function loadBackups() {
+    const server = document.getElementById('backupServer').value;
+    if (!server) return;
+    
+    fetch(`/host-manager/backups/${server}`)
+    .then(r => r.json())
+    .then(data => {
+        const div = document.getElementById('backupHistory');
+        if (data.backups.length === 0) {
+            div.innerHTML = '<p style="text-align: center; color: #94a3b8; margin: 0; padding: 2rem;">No backups</p>';
+            return;
+        }
+        div.innerHTML = data.backups.map((b, i) => `
+            <div class="backup-item">
+                <div>
+                    <strong>${b.name}</strong>
+                    ${i < 3 ? `<span style="background: #10b981; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">Point ${i + 1}</span>` : ''}
+                    <small>${b.date}</small>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button onclick="restoreBackup('${server}', '${b.name}')" class="btn-sm" style="background: #f59e0b;"><i class="fas fa-redo"></i></button>
+                    <button onclick="deleteBackup('${server}', '${b.name}')" class="btn-sm" style="background: #dc2626;"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `).join('');
+    });
+}
+
+function restoreBackup(server, name) {
+    if (confirm(`Restore "${name}"? This will overwrite current config.`)) {
+        fetch('/host-manager/restore', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({server: server, backup_name: name})
+        })
+        .then(r => r.json())
+        .then(data => {
+            alert(data.success ? 'Restored!' : 'Failed');
+            if (data.success) location.reload();
+        });
+    }
+}
+
+function deleteBackup(server, name) {
+    if (confirm(`Delete "${name}"?`)) {
+        fetch(`/host-manager/delete-backup/${server}/${name}`, {method: 'DELETE'})
+        .then(r => r.json())
+        .then(data => {
+            alert(data.success ? 'Deleted' : 'Failed');
+            if (data.success) loadBackups();
+        });
+    }
+}
+
+document.getElementById('backupServer').addEventListener('change', loadBackups);
+
+function addBatchRow() {
+    const container = document.getElementById('batchHostsContainer');
+    const rowId = `batch-row-${batchRowCounter++}`;
+    
+    const row = document.createElement('div');
+    row.id = rowId;
+    row.style.cssText = 'padding: 1rem; background: white; border: 1px solid #e2e8f0; border-radius: 8px;';
+    
+    const serverOptions = {{ servers|tojson }}.map(s => `<option value="${s}">${s}</option>`).join('');
+    
+    row.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 2fr 1.5fr 0.8fr auto; gap: 0.75rem; align-items: center;">
+            <select name="batch_servers[]" onchange="updateBatchRowData('${rowId}')" style="padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+                ${serverOptions}
+            </select>
+            <input type="text" name="batch_hostnames[]" placeholder="NID-CID-Name" required style="padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+            <input type="text" name="batch_addresses[]" placeholder="IP Address" required style="padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+            <select name="batch_parents[]" style="padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem; width: 100%;">
+                <option value="">-</option>
+            </select>
+            <button type="button" onclick="toggleBatchRowDetails('${rowId}')" class="btn-sm" style="background: #3b82f6; padding: 0.5rem; margin-right: 0;"><i class="fas fa-chevron-down"></i></button>
+        </div>
+        <div id="${rowId}-details" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">Alias (optional)</label>
+                <input type="text" name="batch_alias[]" placeholder="Friendly name" style="width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" name="batch_uptime_kuma[]" style="margin-right: 0.5rem; width: 18px; height: 18px;">
+                    <span style="font-size: 0.95rem;"><i class="fas fa-heartbeat"></i> Uptime Kuma</span>
+                </label>
+                <label style="display: flex; align-items: center; cursor: pointer;" onchange="toggleBatchServiceFields('${rowId}')">
+                    <input type="checkbox" name="batch_service_enabled[]" style="margin-right: 0.5rem; width: 18px; height: 18px;">
+                    <span style="font-size: 0.95rem;"><i class="fas fa-cog"></i> Add Service/Plugin</span>
+                </label>
+            </div>
+            <div id="${rowId}-service" style="display: none; margin-top: 1rem; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">Plugin</label>
+                <select name="batch_service_plugin[]" style="width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem; margin-bottom: 0.75rem;">
+                    <option value="">-- Select Plugin --</option>
+                </select>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">Arguments (optional)</label>
+                <input type="text" name="batch_service_args[]" placeholder="e.g. 41805" style="width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+            </div>
+        </div>
+        <div style="text-align: right; margin-top: 0.75rem;">
+            <button type="button" onclick="removeBatchRow('${rowId}')" class="btn-sm" style="background: #dc2626; padding: 0.5rem;"><i class="fas fa-trash"></i> Delete</button>
+        </div>
+    `;
+    
+    container.appendChild(row);
+    updateBatchRowData(rowId);
+}
+
+function updateBatchRowData(rowId) {
+    const row = document.getElementById(rowId);
+    const serverSelect = row.querySelector('select[name="batch_servers[]"]');
+    const parentSelect = row.querySelector('select[name="batch_parents[]"]');
+    const pluginSelect = row.querySelector('select[name="batch_service_plugin[]"]');
+    const server = serverSelect.value;
+    
+    const hosts = allHostsData.filter(h => h.server === server);
+    parentSelect.innerHTML = '<option value="">-</option>' + 
+        hosts.map(h => `<option value="${h.host_name}">${h.host_name}</option>`).join('');
+    
+    // Update plugin dropdown
+    if (serverPlugins && serverPlugins[server]) {
+        pluginSelect.innerHTML = '<option value="">-- Select Plugin --</option>' + 
+            serverPlugins[server].map(p => `<option value="${p}">${p}</option>`).join('');
+    }
+}
+
+function toggleBatchRowDetails(rowId) {
+    const detailsDiv = document.getElementById(`${rowId}-details`);
+    const btn = event.target.closest('button');
+    detailsDiv.style.display = detailsDiv.style.display === 'none' ? 'block' : 'none';
+    btn.innerHTML = detailsDiv.style.display === 'none' ? '<i class="fas fa-chevron-down"></i>' : '<i class="fas fa-chevron-up"></i>';
+}
+
+function toggleBatchServiceFields(rowId) {
+    const checkbox = event.target;
+    const serviceDiv = document.getElementById(`${rowId}-service`);
+    serviceDiv.style.display = checkbox.checked ? 'block' : 'none';
+}
+
+function removeBatchRow(rowId) {
+    document.getElementById(rowId).remove();
+}
+
+function generateHostname() {
+    const nid = prompt('Enter NID (Network ID):');
+    if (!nid) return;
+    
+    const cid = prompt('Enter CID (Customer ID):');
+    if (!cid) return;
+    
+    const name = prompt('Enter Customer Name:');
+    if (!name) return;
+    
+    const hostname = `${nid}-${cid}-${name.replace(/\s+/g, ' ').trim()}`;
+    document.getElementById('addHostName').value = hostname;
+}
+
+function toggleServiceFields() {
+    const enabled = document.getElementById('serviceEnabled').checked;
+    document.getElementById('serviceFields').style.display = enabled ? 'block' : 'none';
+}
+
+function toggleEditServiceFields() {
+    const enabled = document.getElementById('editServiceEnabled').checked;
+    document.getElementById('editServiceFields').style.display = enabled ? 'block' : 'none';
+}
+
+function loadPluginsForServer(server) {
+    const select = document.getElementById('servicePlugin');
+    const plugins = serverPlugins[server] || [];
+    
+    select.innerHTML = '<option value="">-- Select Plugin --</option>' + 
+        plugins.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+function loadPluginsForEditServer(server) {
+    const select = document.getElementById('editServicePlugin');
+    const plugins = serverPlugins[server] || [];
+    
+    select.innerHTML = '<option value="">-- Select Plugin --</option>' + 
+        plugins.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+{% for server, config in all_hosts.items() %}
+(function() {
+    const config = {{ config|tojson }};
+    const hosts = [];
+    const servicesByHost = {};
+    const lines = config.split('\n');
+    let currentHost = null;
+    let currentService = null;
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.includes('define host')) {
+            currentHost = {server: '{{ server }}', alias: '', status: 'unknown'};
+        } else if (currentHost && line.startsWith('host_name')) {
+            currentHost.host_name = line.replace(/^host_name\s+/, '').trim();
+        } else if (currentHost && line.startsWith('alias')) {
+            currentHost.alias = line.replace(/^alias\s+/, '').trim();
+        } else if (currentHost && line.startsWith('address')) {
+            currentHost.address = line.replace(/^address\s+/, '').trim();
+        } else if (currentHost && line.startsWith('parents')) {
+            currentHost.parents = line.replace(/^parents\s+/, '').trim();
+        } else if (currentHost && line.includes('}')) {
+            if (currentHost.host_name) {
+                hosts.push(currentHost);
+            }
+            currentHost = null;
+        } else if (line.includes('define service')) {
+            currentService = {};
+        } else if (currentService && line.startsWith('host_name')) {
+            currentService.host_name = line.replace(/^host_name\s+/, '').trim();
+        } else if (currentService && line.startsWith('check_command')) {
+            const checkCommand = line.replace(/^check_command\s+/, '').trim();
+            const commandParts = checkCommand.split('!');
+            const plugin = commandParts.shift() || '';
+            const args = commandParts.join('!');
+            if (currentService.host_name && plugin && !servicesByHost[currentService.host_name]) {
+                servicesByHost[currentService.host_name] = {
+                    plugin: plugin,
+                    args: args
+                };
+            }
+        } else if (currentService && line.includes('}')) {
+            currentService = null;
+        }
+    }
+
+    hosts.forEach(host => {
+        const serviceInfo = servicesByHost[host.host_name];
+        host.service_enabled = !!serviceInfo;
+        host.service_plugin = serviceInfo ? serviceInfo.plugin : '';
+        host.service_args = serviceInfo ? serviceInfo.args : '';
+    });
+
+    allHostsData.push(...hosts);
+    
+    // Load status for this server's hosts
+    loadHostStatusForServer('{{ server }}');
+})();
+{% endfor %}
+
+function loadHostStatusForServer(server) {
+    if (!server) return;
+    
+    fetch(`/host-manager/host-status/${server}`)
+        .then(r => r.json())
+        .then(data => {
+            // Update all hosts from this server with their status
+            const hostsStatus = data.hosts || {};
+            allHostsData.forEach(host => {
+                if (host.server === server && hostsStatus[host.host_name]) {
+                    host.status = hostsStatus[host.host_name];
+                }
+            });
+            renderTable();
+        })
+        .catch(err => console.log('Status fetch error:', err));
+}
+
+function refreshAllHostStatus() {
+    const servers = [...new Set(allHostsData.map(h => h.server))];
+    servers.forEach(server => loadHostStatusForServer(server));
+}
+
+function renderTable() {
+    const tbody = document.getElementById('hostsTableBody');
+    if (!tbody) return;
+    
+    const serverFilter = document.getElementById('serverFilter').value;
+    const searchInput = document.getElementById('searchInput').value.toLowerCase();
+    
+    let filteredHosts = allHostsData.filter(host => {
+        const matchServer = serverFilter === 'all' || host.server === serverFilter;
+        const matchSearch = !searchInput || 
+            host.host_name.toLowerCase().includes(searchInput) || 
+            host.address.toLowerCase().includes(searchInput) ||
+            (host.parents && host.parents.toLowerCase().includes(searchInput));
+        return matchServer && matchSearch;
+    });
+    
+    if (filteredHosts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="padding: 2rem; text-align: center; color: #94a3b8;">No hosts found</td></tr>';
+        return;
+    }
+    
+    const start = entriesPerPage === 'all' ? 0 : (currentPage - 1) * entriesPerPage;
+    const end = entriesPerPage === 'all' ? filteredHosts.length : start + parseInt(entriesPerPage);
+    const displayHosts = filteredHosts.slice(start, end);
+    
+    tbody.innerHTML = displayHosts.map(host => {
+        let statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: #94a3b8; color: white; white-space: nowrap;">Unknown</span>';
+        if (host.status === 'up') {
+            statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: #10b981; color: white; white-space: nowrap;">UP</span>';
+        } else if (host.status === 'down') {
+            statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: #dc2626; color: white; white-space: nowrap;">DOWN</span>';
+        } else if (host.status === 'unreachable') {
+            statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: #f59e0b; color: white; white-space: nowrap;">UNREACHABLE</span>';
+        }
+        
+        return `
+        <tr>
+            <td title="${host.server}" style="overflow: hidden; text-overflow: ellipsis;">${host.server}</td>
+            <td title="${host.parents || 'No parent'}" style="overflow: hidden; text-overflow: ellipsis;">${host.parents || '-'}</td>
+            <td title="${host.host_name}" style="overflow: hidden; text-overflow: ellipsis;"><strong>${host.host_name}</strong></td>
+            <td title="${host.alias || 'No alias'}" style="overflow: hidden; text-overflow: ellipsis;">${host.alias || '-'}</td>
+            <td title="${host.address}" style="overflow: hidden; text-overflow: ellipsis;">${host.address}</td>
+            <td style="text-align: center;">${statusBadge}</td>
+            <td style="padding: 0.5rem; text-align: center;">
+                <button onclick="editHost('${host.server}', '${host.host_name}', '${host.address}', '${host.parents || ''}', '${host.alias || ''}')" class="btn-sm" style="background: #3b82f6; padding: 0.35rem 0.6rem; font-size: 0.75rem; margin-right: 0.3rem; white-space: nowrap;" title="Edit host"><i class="fas fa-edit"></i> Edit</button>
+                <button onclick="confirmDelete('${host.server}', '${host.host_name}')" class="btn-sm" style="background: #dc2626; padding: 0.35rem 0.6rem; font-size: 0.75rem; margin-right: 0; white-space: nowrap;" title="Delete host"><i class="fas fa-trash"></i> Delete</button>
+            </td>
+        </tr>
+    `}).join('');
+}
+
+function filterByServer() {
+    currentPage = 1;
+    renderTable();
+}
+
+function searchHosts() {
+    currentPage = 1;
+    renderTable();
+}
+
+function changeEntriesPerPage() {
+    entriesPerPage = document.getElementById('entriesPerPage').value;
+    currentPage = 1;
+    renderTable();
+}
+
+function openAddModal() {
+    document.getElementById('addModal').classList.add('show');
+    const server = document.getElementById('addServer').value;
+    populateParentDropdown('addParents', server);
+    loadPluginsForServer(server);
+}
+
+function closeAddModal() {
+    document.getElementById('addModal').classList.remove('show');
+    document.getElementById('addForm').reset();
+}
+
+function openBatchModal() {
+    document.getElementById('batchModal').classList.add('show');
+    document.getElementById('batchHostsContainer').innerHTML = '';
+    batchRowCounter = 0;
+    for (let i = 0; i < 3; i++) {
+        addBatchRow();
+    }
+}
+
+function closeBatchModal() {
+    document.getElementById('batchModal').classList.remove('show');
+}
+
+function populateParentDropdown(selectId, currentServer) {
+    const select = document.getElementById(selectId);
+    const currentValue = select.value;
+    
+    const hosts = currentServer ? allHostsData.filter(h => h.server === currentServer) : allHostsData;
+    
+    select.innerHTML = '<option value="">-- No Parent --</option>' + 
+        hosts.map(h => `<option value="${h.host_name}">${h.host_name}</option>`).join('');
+    
+    if (currentValue) {
+        select.value = currentValue;
+    }
+}
+
+function filterAddParents() {
+    const search = document.getElementById('addParentsSearch').value.toLowerCase();
+    const select = document.getElementById('addParents');
+    const server = document.getElementById('addServer').value;
+    const hosts = allHostsData.filter(h => h.server === server);
+    
+    const filtered = hosts.filter(h => h.host_name.toLowerCase().includes(search));
+    
+    select.innerHTML = '<option value="">-- No Parent --</option>' + 
+        filtered.map(h => `<option value="${h.host_name}">${h.host_name}</option>`).join('');
+}
+
+function filterEditParents() {
+    const search = document.getElementById('editParentsSearch').value.toLowerCase();
+    const select = document.getElementById('editParents');
+    const server = document.getElementById('editServer').value;
+    const hosts = allHostsData.filter(h => h.server === server);
+    
+    const filtered = hosts.filter(h => h.host_name.toLowerCase().includes(search));
+    
+    select.innerHTML = '<option value="">-- No Parent --</option>' + 
+        filtered.map(h => `<option value="${h.host_name}">${h.host_name}</option>`).join('');
+}
+
+function onAddServerChange() {
+    const server = document.getElementById('addServer').value;
+    document.getElementById('addParentsSearch').value = '';
+    populateParentDropdown('addParents', server);
+    loadPluginsForServer(server);
+}
+
+function editHost(server, hostName, address, parents, alias) {
+    const hostData = allHostsData.find(h => h.server === server && h.host_name === hostName);
+
+    document.getElementById('editServer').value = server;
+    document.getElementById('editOldHostName').value = hostName;
+    document.getElementById('editHostName').value = hostName;
+    document.getElementById('editAlias').value = alias || '';
+    document.getElementById('editAddress').value = address;
+    document.getElementById('editParentsSearch').value = '';
+    populateParentDropdown('editParents', server);
+    document.getElementById('editParents').value = parents;
+    loadPluginsForEditServer(server);
+
+    const editServiceEnabled = document.getElementById('editServiceEnabled');
+    const editServicePlugin = document.getElementById('editServicePlugin');
+    const editServiceArgs = document.getElementById('editServiceArgs');
+    const hasService = !!(hostData && hostData.service_enabled && hostData.service_plugin);
+
+    editServiceEnabled.checked = hasService;
+    editServiceArgs.value = hasService ? (hostData.service_args || '') : '';
+    if (hasService) {
+        const pluginExists = Array.from(editServicePlugin.options).some(o => o.value === hostData.service_plugin);
+        if (!pluginExists) {
+            const opt = document.createElement('option');
+            opt.value = hostData.service_plugin;
+            opt.textContent = hostData.service_plugin;
+            editServicePlugin.appendChild(opt);
+        }
+        editServicePlugin.value = hostData.service_plugin;
+    } else {
+        editServicePlugin.value = '';
+    }
+
+    document.getElementById('editUptimeKumaEnabled').checked = false;
+    toggleEditServiceFields();
+    document.getElementById('editModal').classList.add('show');
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').classList.remove('show');
+}
+
+function confirmDelete(server, hostName) {
+    const allHosts = allHostsData.filter(h => h.server === server);
+    
+    function findDescendants(parentName) {
+        const descendants = [];
+        const directChildren = allHosts.filter(h => h.parents === parentName);
+        
+        directChildren.forEach(child => {
+            descendants.push(child.host_name);
+            const grandChildren = findDescendants(child.host_name);
+            descendants.push(...grandChildren);
+        });
+        
+        return descendants;
+    }
+    
+    const descendants = findDescendants(hostName);
+    
+    const modal = document.getElementById('deleteModal');
+    const hostList = document.getElementById('deleteHostList');
+    const totalCount = document.getElementById('deleteTotalCount');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    
+    let listHTML = '<div style="padding: 0.75rem; background: #fee2e2; border-left: 4px solid #dc2626; border-radius: 6px; margin-bottom: 0.75rem;"><strong style="color: #991b1b;">' + hostName + '</strong> <small style="color: #991b1b;">(Parent)</small></div>';
+    
+    if (descendants.length > 0) {
+        listHTML += descendants.map(d => '<div style="padding: 0.75rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px; margin-bottom: 0.5rem;"><small style="color: #92400e;">' + d + '</small></div>').join('');
+    }
+    
+    hostList.innerHTML = listHTML;
+    totalCount.textContent = descendants.length + 1;
+    
+    confirmBtn.onclick = function() {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/host-manager/delete';
+        
+        const serverInput = document.createElement('input');
+        serverInput.type = 'hidden';
+        serverInput.name = 'server';
+        serverInput.value = server;
+        form.appendChild(serverInput);
+        
+        const hostInput = document.createElement('input');
+        hostInput.type = 'hidden';
+        hostInput.name = 'host_name';
+        hostInput.value = hostName;
+        form.appendChild(hostInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    };
+    
+    modal.classList.add('show');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('show');
+}
+
+function validateAddForm() {
+    const server = document.getElementById('addServer').value;
+    const parents = document.getElementById('addParents').value;
+    
+    if (parents) {
+        const validParents = allHostsData.filter(h => h.server === server).map(h => h.host_name);
+        if (!validParents.includes(parents)) {
+            alert('Invalid parent! Parent must be an existing host on the same server.');
+            return false;
+        }
+    }
+    return true;
+}
+
+function validateEditForm() {
+    const server = document.getElementById('editServer').value;
+    const parents = document.getElementById('editParents').value;
+    
+    if (parents) {
+        const validParents = allHostsData.filter(h => h.server === server).map(h => h.host_name);
+        if (!validParents.includes(parents)) {
+            alert('Invalid parent! Parent must be an existing host on the same server.');
+            return false;
+        }
+    }
+    return true;
+}
+
+document.getElementById('addModal').addEventListener('click', function(e) {
+    if (e.target === this) closeAddModal();
+});
+
+document.getElementById('batchModal').addEventListener('click', function(e) {
+    if (e.target === this) closeBatchModal();
+});
+
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+});
+
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+});
+
+renderTable();
+</script>
+{% endblock %}

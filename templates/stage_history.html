@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Stage History{% endblock %}
+{% block content %}
+<style>
+    .settings-header {
+        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        color: white;
+        margin-bottom: 2rem;
+    }
+    .settings-header h1 { margin: 0 0 0.5rem 0; font-size: 1.75rem; font-weight: 700; }
+    .settings-header p { margin: 0; opacity: 0.9; font-size: 0.95rem; }
+    .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #f1f5f9;
+    }
+    .section-card h3 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .form-group { margin-bottom: 1.5rem; }
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #1e293b;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        font-family: inherit;
+        box-sizing: border-box;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3); }
+    .btn-secondary {
+        background: #94a3b8;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .btn-secondary:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .history-table th {
+        background: #f8fafc;
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: #64748b;
+        font-weight: 600;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .history-table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.9rem;
+        color: #1e293b;
+    }
+    .history-table tr:hover td { background: #f8fafc; }
+    .stage-arrow { color: #94a3b8; font-size: 0.85rem; margin: 0 0.3rem; }
+    .empty-state { text-align: center; padding: 3rem; color: #94a3b8; }
+    .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
+    @media (max-width: 768px) {
+        .form-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="settings-header">
+    <h1><i class="fas fa-history"></i> Stage History</h1>
+    <p>Catatan lengkap semua perubahan stage host</p>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-filter"></i> Filter</h3>
+    <form method="GET" action="/stage-history">
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Host</label>
+                <input type="text" name="host" value="{{ request.args.get('host', '') }}" placeholder="Filter by hostname...">
+            </div>
+            <div class="form-group">
+                <label>Container / Server</label>
+                <input type="text" name="container" value="{{ request.args.get('container', '') }}" placeholder="Filter by server...">
+            </div>
+            <div class="form-group">
+                <label>Limit</label>
+                <select name="limit" onchange="this.form.submit()">
+                    <option value="50" {% if limit == 50 %}selected{% endif %}>50 entries</option>
+                    <option value="100" {% if limit == 100 %}selected{% endif %}>100 entries</option>
+                    <option value="250" {% if limit == 250 %}selected{% endif %}>250 entries</option>
+                    <option value="500" {% if limit == 500 %}selected{% endif %}>500 entries</option>
+                </select>
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.75rem; margin-top: 0.5rem;">
+            <button type="submit" class="btn-primary"><i class="fas fa-search"></i> Filter</button>
+            <a href="/stage-history" class="btn-secondary"><i class="fas fa-undo"></i> Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-list"></i> History ({{ entries|length }} entries)</h3>
+    {% if entries %}
+    <div style="overflow-x: auto;">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Host</th>
+                    <th>Container</th>
+                    <th>Stage Change</th>
+                    <th>User</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td style="white-space: nowrap; color: #64748b; font-size: 0.85rem;">{{ entry.ts[:19].replace('T', ' ') }}</td>
+                    <td><strong>{{ entry.host }}</strong></td>
+                    <td>{{ entry.container }}</td>
+                    <td>
+                        <span style="font-weight: 600;">{{ stage_labels.get(entry['from'], entry['from']) }}</span>
+                        <span class="stage-arrow">→</span>
+                        <span style="font-weight: 600;">{{ stage_labels.get(entry['to'], entry['to']) }}</span>
+                    </td>
+                    <td>{{ entry.user }}</td>
+                    <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ entry.note }}">{{ entry.note or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-history"></i>
+        <p>Belum ada stage history</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

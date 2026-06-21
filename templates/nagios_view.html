@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ container }}{% endblock %}
+{% block content %}
+<style>
+    .nagios-header {
+        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
+    }
+    .nagios-header h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .nagios-container {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #f1f5f9;
+        overflow: hidden;
+    }
+    .nagios-frame {
+        width: 100%;
+        height: 80vh;
+        border: none;
+        border-radius: 12px;
+        background: white;
+    }
+    @media (max-width: 768px) {
+        .nagios-frame {
+            height: 70vh;
+        }
+    }
+</style>
+
+<div class="nagios-header">
+    <h1><i class="fas fa-chart-line"></i> {{ container }}</h1>
+</div>
+
+<div class="nagios-container">
+    <iframe class="nagios-frame" src="http://{{ request.host.split(':')[0] }}:{{ proxy_port }}/"></iframe>
+</div>
+{% endblock %}

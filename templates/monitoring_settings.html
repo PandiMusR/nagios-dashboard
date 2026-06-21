@@ -1,0 +1,661 @@
+{% extends "base.html" %}
+{% block title %}Monitoring Settings{% endblock %}
+{% block content %}
+<style>
+    .settings-header {
+        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
+    }
+    .settings-header h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.75rem;
+        font-weight: 700;
+    }
+    .settings-header p {
+        margin: 0;
+        opacity: 0.95;
+    }
+    .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #f1f5f9;
+    }
+    .section-card h3 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .section-header h3 {
+        margin: 0;
+    }
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #1e293b;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .btn-primary {
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+    }
+    .btn-small {
+        padding: 0.5rem 1rem;
+        background: #6b7280;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    .btn-small:hover {
+        background: #4b5563;
+    }
+    .alarm-card {
+        padding: 1.5rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    .alarm-card h4 {
+        margin: 0 0 1rem 0;
+        color: #1e293b;
+        font-weight: 600;
+    }
+    .checkbox-group {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+    .checkbox-label input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: #4f46e5;
+    }
+    .sound-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+    .mappings-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    .mapping-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+    }
+    .mapping-badge button {
+        background: none;
+        border: none;
+        color: #dc2626;
+        cursor: pointer;
+        font-size: 1.1rem;
+        padding: 0;
+    }
+    .mapping-badge button:hover {
+        color: #991b1b;
+    }
+    .category-grid {
+        display: grid;
+        grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+        gap: 1.5rem;
+        align-items: start;
+    }
+    .category-list {
+        display: grid;
+        gap: 1rem;
+    }
+    .category-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+    }
+    .category-item-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    .category-item h4 {
+        margin: 0;
+        color: #1e293b;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+    .category-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .meta-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: #e2e8f0;
+        color: #475569;
+    }
+    .meta-badge.service {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+    .category-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .btn-secondary,
+    .btn-danger {
+        padding: 0.55rem 1rem;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+    }
+    .btn-secondary {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+    .btn-danger {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+    .helper-text {
+        margin-top: 0.5rem;
+        color: #64748b;
+        font-size: 0.85rem;
+        line-height: 1.5;
+    }
+    .empty-state {
+        padding: 2rem;
+        text-align: center;
+        color: #94a3b8;
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+        background: #f8fafc;
+    }
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .modal-card {
+        width: min(100%, 520px);
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+    }
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+    @media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        .sound-group {
+            grid-template-columns: 1fr;
+        }
+        .checkbox-group {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .category-grid {
+            grid-template-columns: 1fr;
+        }
+        .category-item-header {
+            flex-direction: column;
+        }
+        .section-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .modal-actions {
+            flex-direction: column-reverse;
+        }
+    }
+</style>
+
+<div class="settings-header">
+    <h1><i class="fas fa-sliders-h"></i> Monitoring Settings</h1>
+    <p>Manage monitoring categories, alarms, and server mappings</p>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-clock"></i> Refresh Interval</h3>
+    <form method="POST" action="/monitoring-settings/update-config">
+        <div class="form-group" style="max-width: 300px;">
+            <label>Refresh Interval (seconds)</label>
+            <input type="number" name="refresh_interval" value="{{ monitoring_config.get('refresh_interval', 30) }}" min="5" max="300" required>
+        </div>
+        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Update Interval</button>
+    </form>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-volume-up"></i> Alarm Settings</h3>
+    {% for category in categories %}
+    <div class="alarm-card">
+        <h4><i class="fas fa-bell"></i> {{ category|title }}</h4>
+        <form method="POST" action="/monitoring-settings/update-config" enctype="multipart/form-data" style="margin-bottom: 1.5rem;">
+            <input type="hidden" name="category" value="{{ category }}">
+            <input type="hidden" name="refresh_interval" value="{{ monitoring_config.get('refresh_interval', 30) }}">
+            
+            <div class="checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="alarm_down" {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('alarm_down') %}checked{% endif %}>
+                    <span>Alarm on DOWN</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="alarm_up" {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('alarm_up') %}checked{% endif %}>
+                    <span>Alarm on UP</span>
+                </label>
+            </div>
+
+            <div class="sound-group">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label><i class="fas fa-arrow-down"></i> DOWN Sound</label>
+                    {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_down') %}
+                    <p style="font-size: 0.85rem; color: #64748b; margin: 0.5rem 0;">Current: {{ monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_down').split('/')[-1] }}</p>
+                    {% endif %}
+                    <input type="file" name="sound_down" accept="audio/*" id="sound_down_{{ category }}">
+                    <button type="button" onclick="testSound('sound_down_{{ category }}')" class="btn-small" style="margin-top: 0.5rem;"><i class="fas fa-play"></i> Test</button>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label><i class="fas fa-arrow-up"></i> UP Sound</label>
+                    {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_up') %}
+                    <p style="font-size: 0.85rem; color: #64748b; margin: 0.5rem 0;">Current: {{ monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_up').split('/')[-1] }}</p>
+                    {% endif %}
+                    <input type="file" name="sound_up" accept="audio/*" id="sound_up_{{ category }}">
+                    <button type="button" onclick="testSound('sound_up_{{ category }}')" class="btn-small" style="margin-top: 0.5rem;"><i class="fas fa-play"></i> Test</button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary" style="margin-top: 1rem;"><i class="fas fa-save"></i> Save Alarm Settings</button>
+        </form>
+
+        <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid #e2e8f0;">
+
+        <h4 style="margin-bottom: 1rem; color: #1e293b; font-weight: 600;"><i class="fas fa-clock"></i> CR Auto-Reset</h4>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">Otomatis reset host CR Verification ke New pada jam dan interval yang ditentukan.</p>
+        <form method="POST" action="/monitoring-settings/update-cr-reset" onsubmit="return validateCrReset(this)">
+            <input type="hidden" name="category" value="{{ category }}">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Reset Hours (24h)</label>
+                    <input type="text" name="cr_reset_hours" value="{{ monitoring_config.get('category_settings', {}).get(category, {}).get('cr_reset_hours', '') }}" placeholder="15" pattern="[0-9, ]*" title="Angka dan koma saja, contoh: 03,15">
+                    <small style="color: #64748b; font-size: 0.8rem;">Contoh: <code>15</code> = jam 3 sore, <code>03,15</code> = jam 3 pagi & 3 sore</small>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Interval (hari)</label>
+                    <input type="number" name="cr_reset_interval_days" value="{{ monitoring_config.get('category_settings', {}).get(category, {}).get('cr_reset_interval_days', 0) }}" min="0" max="365">
+                    <small style="color: #64748b; font-size: 0.8rem;"><code>1</code> = setiap hari, <code>4</code> = setiap 4 hari, <code>0</code> = nonaktif</small>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Grace Period (jam)</label>
+                    <input type="number" name="cr_reset_grace_hours" value="{{ monitoring_config.get('category_settings', {}).get(category, {}).get('cr_reset_grace_hours', 0) }}" min="0" max="720">
+                    <small style="color: #64748b; font-size: 0.8rem;"><code>0</code> = semua reset, <code>6</code> = skip host yang baru di-set 6 jam terakhir</small>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary" style="margin-top: 1rem;"><i class="fas fa-save"></i> Save Auto-Reset</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-plus-circle"></i> Tambah Kategori Monitoring</h3>
+    <div class="category-grid">
+        <div class="alarm-card" style="margin-bottom: 0;">
+            <h4><i class="fas fa-folder-plus"></i> Add New Category</h4>
+            <form method="POST" action="/monitoring-settings/add">
+                <div class="form-group">
+                    <label>Category Name</label>
+                    <input type="text" name="category" required placeholder="e.g. Network Backbone">
+                    <p class="helper-text">Nama akan disimpan sebagai slug, misalnya `Network Backbone` menjadi `network-backbone`.</p>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Status Information Source</label>
+                    <select name="use_service_plugin">
+                        <option value="false">Default (Host Plugin Output)</option>
+                        <option value="true">Service Plugin Output</option>
+                    </select>
+                    <p class="helper-text">Pilih `Service Plugin Output` jika kategori perlu menampilkan detail status service, bukan output host default.</p>
+                </div>
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;"><i class="fas fa-plus"></i> Add Category</button>
+            </form>
+        </div>
+
+        <div>
+            {% if categories %}
+            <div class="category-list">
+                {% for category in categories %}
+                <div class="category-item">
+                    <div class="category-item-header">
+                        <div>
+                            <h4><i class="fas fa-folder-open"></i> {{ category|title }}</h4>
+                            <p class="helper-text" style="margin-top: 0.35rem;">Slug: <code>{{ category }}</code></p>
+                        </div>
+                        <a href="/monitoring/{{ category }}" class="btn-secondary"><i class="fas fa-eye"></i> View</a>
+                    </div>
+
+                    <div class="category-meta">
+                        <span class="meta-badge"><i class="fas fa-server"></i> {{ server_mappings.get(category, [])|length }} server(s)</span>
+                        {% if monitoring_config.get('category_settings', {}).get(category, {}).get('use_service_plugin') %}
+                        <span class="meta-badge service"><i class="fas fa-plug"></i> Service Plugin</span>
+                        {% else %}
+                        <span class="meta-badge"><i class="fas fa-desktop"></i> Host Plugin</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="category-actions">
+                        <button type="button" class="btn-small" onclick="editCategory('{{ category }}', {{ monitoring_config.get('category_settings', {}).get(category, {}).get('use_service_plugin', false)|tojson }})">
+                            <i class="fas fa-pen"></i> Edit
+                        </button>
+                        <form method="POST" action="/monitoring-settings/delete/{{ category }}" style="display: inline;">
+                            <button type="submit" class="btn-danger" onclick="return confirm('Delete category {{ category }}?')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-folder-open" style="font-size: 1.5rem; margin-bottom: 0.75rem;"></i>
+                <p style="margin: 0;">No categories found yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-link"></i> Map Server to Category</h3>
+    <form method="POST" action="/monitoring-settings/map-server">
+        <div class="form-grid">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Server</label>
+                <select name="server" required>
+                    {% for server in nagios_servers_list %}
+                    <option value="{{ server }}">{{ server }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Category</label>
+                <select name="category" required>
+                    {% for category in categories %}
+                    <option value="{{ category }}">{{ category|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="display: flex; align-items: flex-end; margin-bottom: 0;">
+                <button type="submit" class="btn-primary" style="width: 100%;"><i class="fas fa-link"></i> Map Server</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="section-card" id="server-mappings">
+    <div class="section-header">
+        <h3><i class="fas fa-sitemap"></i> Server Mappings</h3>
+        <button type="button" class="btn-primary" onclick="openAddCategoryModal()">
+            <i class="fas fa-plus"></i> Add Category
+        </button>
+    </div>
+    {% for category in categories %}
+    <div style="margin-bottom: 2rem;">
+        <h4 style="color: #1e293b; margin-bottom: 1rem; font-weight: 600;"><i class="fas fa-chevron-right"></i> {{ category|title }}</h4>
+        {% if server_mappings.get(category) %}
+            <div class="mappings-grid">
+                {% for server in server_mappings[category] %}
+                <div class="mapping-badge">
+                    <span><i class="fas fa-server"></i> {{ server }}</span>
+                    <form method="POST" action="/monitoring-settings/unmap-server" style="display: inline;">
+                        <input type="hidden" name="server" value="{{ server }}">
+                        <input type="hidden" name="category" value="{{ category }}">
+                        <button type="submit" title="Remove mapping"><i class="fas fa-times"></i></button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="color: #94a3b8; font-size: 0.9rem;"><i class="fas fa-info-circle"></i> No servers mapped</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+function validateCrReset(form) {
+    const hours = form.querySelector('[name="cr_reset_hours"]').value.trim();
+    const interval = form.querySelector('[name="cr_reset_interval_days"]').value;
+    const grace = form.querySelector('[name="cr_reset_grace_hours"]').value;
+
+    // Validate hours: only numbers and commas
+    if (hours && !/^[0-9, ]*$/.test(hours)) {
+        alert('Reset Hours hanya boleh angka dan koma. Contoh: 03,15');
+        return false;
+    }
+
+    // Validate each hour is 0-23
+    if (hours) {
+        const parts = hours.split(',').map(h => parseInt(h.trim())).filter(h => !isNaN(h));
+        for (const h of parts) {
+            if (h < 0 || h > 23) {
+                alert('Jam harus antara 0-23. Contoh: 03,15');
+                return false;
+            }
+        }
+    }
+
+    // Validate interval
+    if (interval < 0 || interval > 365) {
+        alert('Interval harus antara 0-365 hari');
+        return false;
+    }
+
+    // Validate grace period
+    if (grace < 0 || grace > 720) {
+        alert('Grace Period harus antara 0-720 jam');
+        return false;
+    }
+
+    return true;
+}
+
+function testSound(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element.files || !element.files[0]) {
+        alert('Please select a sound file first');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const audio = new Audio();
+        audio.src = e.target.result;
+        audio.play();
+    };
+    reader.readAsDataURL(element.files[0]);
+}
+
+function editCategory(category, useServicePlugin) {
+    document.getElementById('editCategoryName').value = category;
+    document.getElementById('editCategoryNameDisplay').value = category;
+    document.getElementById('editUseServicePlugin').value = useServicePlugin ? 'true' : 'false';
+    document.getElementById('editCategoryModal').style.display = 'flex';
+}
+
+function closeEditCategoryModal() {
+    document.getElementById('editCategoryModal').style.display = 'none';
+}
+
+function openAddCategoryModal() {
+    document.getElementById('addCategoryModal').style.display = 'flex';
+}
+
+function closeAddCategoryModal() {
+    document.getElementById('addCategoryModal').style.display = 'none';
+}
+
+document.getElementById('editCategoryModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEditCategoryModal();
+    }
+});
+
+document.getElementById('addCategoryModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAddCategoryModal();
+    }
+});
+</script>
+
+<div id="addCategoryModal" class="modal-overlay">
+    <div class="modal-card">
+        <h3 style="margin-top: 0;"><i class="fas fa-folder-plus"></i> Add Monitoring Category</h3>
+        <form method="POST" action="/monitoring-settings/add">
+            <div class="form-group">
+                <label>Category Name</label>
+                <input type="text" name="category" required placeholder="e.g. Network Backbone">
+                <p class="helper-text">Kategori baru akan tampil di menu Monitoring dan bisa dipakai di Server Mappings.</p>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Status Information Source</label>
+                <select name="use_service_plugin">
+                    <option value="false">Default (Host Plugin Output)</option>
+                    <option value="true">Service Plugin Output</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-small" onclick="closeAddCategoryModal()">Cancel</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Add Category</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="editCategoryModal" class="modal-overlay">
+    <div class="modal-card">
+        <h3 style="margin-top: 0;"><i class="fas fa-pen"></i> Edit Category Settings</h3>
+        <form method="POST" action="/monitoring-settings/edit-category">
+            <input type="hidden" name="category" id="editCategoryName">
+            <div class="form-group">
+                <label>Category</label>
+                <input type="text" id="editCategoryNameDisplay" readonly>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Status Information Source</label>
+                <select name="use_service_plugin" id="editUseServicePlugin">
+                    <option value="false">Default (Host Plugin Output)</option>
+                    <option value="true">Service Plugin Output</option>
+                </select>
+                <p class="helper-text">Gunakan `Service Plugin Output` jika status untuk kategori ini berasal dari service check.</p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-small" onclick="closeEditCategoryModal()">Cancel</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

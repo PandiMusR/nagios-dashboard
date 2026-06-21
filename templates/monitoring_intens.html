@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+{% block title %}Monitoring Intens{% endblock %}
+{% block content %}
+<style>
+    .intens-header {
+        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
+    }
+    .intens-header h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.75rem;
+        font-weight: 700;
+    }
+    .intens-header p {
+        margin: 0;
+        opacity: 0.95;
+    }
+    .monitor-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #f1f5f9;
+        transition: all 0.3s ease;
+    }
+    .monitor-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    .monitor-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .monitor-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .monitor-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .status-up {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    .status-down {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    .status-pending {
+        background: #fef3c7;
+        color: #78350f;
+    }
+    .status-maintenance {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    .monitor-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    .info-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.3rem;
+    }
+    .info-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1e293b;
+    }
+    .heartbeat-chart {
+        display: flex;
+        gap: 2px;
+        margin-top: 1rem;
+        height: 30px;
+    }
+    .heartbeat-bar {
+        flex: 1;
+        border-radius: 3px;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .heartbeat-bar:hover {
+        transform: scaleY(1.2);
+    }
+    .heartbeat-bar.up {
+        background: #10b981;
+    }
+    .heartbeat-bar.down {
+        background: #ef4444;
+    }
+    .heartbeat-bar.pending {
+        background: #f59e0b;
+    }
+    .heartbeat-bar.maintenance {
+        background: #3b82f6;
+    }
+    .uptime-section {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #f1f5f9;
+    }
+    .uptime-bars {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 1rem;
+    }
+    .uptime-item {
+        text-align: center;
+    }
+    .uptime-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-bottom: 0.3rem;
+    }
+    .uptime-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+    .uptime-bar {
+        height: 6px;
+        background: #e2e8f0;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 0.3rem;
+    }
+    .uptime-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #059669);
+        transition: width 0.3s;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        background: white;
+        border-radius: 12px;
+        color: #64748b;
+    }
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #cbd5e1;
+    }
+    .btn-primary {
+        padding: 0.625rem 1.25rem;
+        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+    }
+    .btn-danger {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    }
+    .btn-danger:hover {
+        box-shadow: 0 6px 20px rgba(220, 38, 38, 0.3);
+    }
+    .ping-value {
+        font-size: 0.9rem;
+        color: #64748b;
+        margin-top: 0.3rem;
+    }
+</style>
+
+<div class="intens-header">
+    <h1><i class="fas fa-heartbeat"></i> Monitoring Intens (Uptime Kuma)</h1>
+    <p>Real-time monitoring of hosts using Uptime Kuma integration</p>
+</div>
+
+<div id="monitorList">
+    <div class="empty-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Loading monitors...</p>
+    </div>
+</div>
+
+<script>
+async function loadMonitors() {
+    try {
+        const response = await fetch('/api/monitoring-intens/monitors');
+        
+        // Check if response is OK
+        if (!response.ok) {
+            document.getElementById('monitorList').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>HTTP Error ${response.status}: ${response.statusText}</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let data;
+        try {
+            data = await response.json();
+        } catch (parseError) {
+            // Response is not JSON
+            const text = await response.text();
+            document.getElementById('monitorList').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Invalid response from server</p>
+                    <small style="color: #94a3b8;">${escapeHtml(text.substring(0, 100))}</small>
+                </div>
+            `;
+            return;
+        }
+        
+        if (!data.success) {
+            document.getElementById('monitorList').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>${data.error || 'Failed to load monitors'}</p>
+                </div>
+            `;
+            return;
+        }
+
+        if (!data.monitors || data.monitors.length === 0) {
+            document.getElementById('monitorList').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>No monitors found. Add hosts with "Monitor in Uptime Kuma" enabled in Host Manager.</p>
+                    <p style="font-size: 0.9rem; color: #94a3b8; margin-top: 1rem;">Note: Uptime Kuma integration requires proper configuration in Global Settings.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const html = data.monitors.map(monitor => {
+            const status = getStatusBadge(monitor.status);
+            const heartbeats = monitor.heartbeats || [];
+            const uptime = monitor.uptime || 0;
+            
+            return `
+                <div class="monitor-card">
+                    <div class="monitor-header">
+                        <div class="monitor-title">
+                            <i class="fas fa-${getMonitorIcon(monitor.type)}"></i>
+                            <span>${escapeHtml(monitor.name)}</span>
+                        </div>
+                        <span class="monitor-status ${status.class}">${status.text}</span>
+                    </div>
+
+                    <div class="monitor-info">
+                        <div class="info-item">
+                            <span class="info-label">Type</span>
+                            <span class="info-value">${escapeHtml(monitor.type || 'Unknown')}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Hostname/IP</span>
+                            <span class="info-value">${escapeHtml(monitor.hostname || monitor.url || 'N/A')}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Last Check</span>
+                            <span class="info-value">${formatTime(monitor.lastHeartbeat)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Uptime (24h)</span>
+                            <span class="info-value">${(uptime * 100).toFixed(2)}%</span>
+                        </div>
+                    </div>
+
+                    ${heartbeats.length > 0 ? `
+                    <div style="margin-bottom: 1rem;">
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 700;">Recent Status (Last 48 hours)</div>
+                        <div class="heartbeat-chart">
+                            ${heartbeats.map(hb => `
+                                <div class="heartbeat-bar ${getHeartbeatClass(hb.status)}" title="${hb.msg || ''} - ${new Date(hb.time).toLocaleString()}"></div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div class="uptime-section">
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem; text-transform: uppercase; font-weight: 700;">Uptime Trend</div>
+                        <div class="uptime-bars">
+                            <div class="uptime-item">
+                                <div class="uptime-label">24h</div>
+                                <div class="uptime-value">${(uptime * 100).toFixed(1)}%</div>
+                                <div class="uptime-bar">
+                                    <div class="uptime-bar-fill" style="width: ${uptime * 100}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${monitor.avgPing ? `
+                    <div class="ping-value"><i class="fas fa-tachometer-alt"></i> Avg Ping: ${monitor.avgPing.toFixed(0)}ms</div>
+                    ` : ''}
+
+                    <div style="margin-top: 1rem; display: flex; gap: 0.75rem;">
+                        <button onclick="removeMonitor(${monitor.id})" class="btn-primary btn-danger" style="font-size: 0.85rem;">
+                            <i class="fas fa-trash"></i> Remove Monitor
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        document.getElementById('monitorList').innerHTML = html;
+    } catch (error) {
+        console.error('Error loading monitors:', error);
+        document.getElementById('monitorList').innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error loading monitors: ${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+function getStatusBadge(status) {
+    const statuses = {
+        0: { text: 'DOWN', class: 'status-down' },
+        1: { text: 'UP', class: 'status-up' },
+        2: { text: 'PENDING', class: 'status-pending' },
+        3: { text: 'MAINTENANCE', class: 'status-maintenance' }
+    };
+    return statuses[status] || { text: 'UNKNOWN', class: 'status-pending' };
+}
+
+function getHeartbeatClass(status) {
+    const classes = {
+        0: 'down',
+        1: 'up',
+        2: 'pending',
+        3: 'maintenance'
+    };
+    return classes[status] || 'pending';
+}
+
+function getMonitorIcon(type) {
+    const icons = {
+        'ping': 'network-wired',
+        'http': 'globe',
+        'https': 'lock',
+        'dns': 'server',
+        'tcp': 'plug',
+        'udp': 'plug',
+        'smtp': 'envelope',
+        'pop3': 'envelope',
+        'imap': 'envelope',
+        'ftp': 'folder'
+    };
+    return icons[type] || 'heartbeat';
+}
+
+function formatTime(time) {
+    if (!time) return 'Never';
+    const date = new Date(time);
+    const now = new Date();
+    const diff = now - date;
+    
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+    return date.toLocaleDateString();
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+async function removeMonitor(monitorId) {
+    if (!confirm('Remove this monitor?')) return;
+    
+    try {
+        const response = await fetch(`/api/monitoring-intens/monitors/${monitorId}`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            loadMonitors();
+        } else {
+            alert(`Error: ${data.error || 'Failed to remove monitor'}`);
+        }
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+    }
+}
+
+// Load monitors on page load
+loadMonitors();
+
+// Refresh every 30 seconds
+setInterval(loadMonitors, 30000);
+</script>
+{% endblock %}

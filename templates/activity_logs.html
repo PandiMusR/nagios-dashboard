@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Activity Logs{% endblock %}
+{% block content %}
+<style>
+    .settings-header {
+        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        color: white;
+        margin-bottom: 2rem;
+    }
+    .settings-header h1 { margin: 0 0 0.5rem 0; font-size: 1.75rem; font-weight: 700; }
+    .settings-header p { margin: 0; opacity: 0.9; font-size: 0.95rem; }
+    .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #f1f5f9;
+    }
+    .section-card h3 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3); }
+    .btn-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(239, 68, 68, 0.3); }
+    .activity-log-container {
+        max-height: 600px;
+        overflow-y: auto;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1rem;
+        font-size: 0.85rem;
+        font-family: 'Monaco', 'Menlo', monospace;
+        white-space: pre-wrap;
+        color: #475569;
+        line-height: 1.6;
+    }
+    .activity-log-container::-webkit-scrollbar { width: 6px; }
+    .activity-log-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .log-toolbar {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .log-toolbar .form-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .log-toolbar label {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #64748b;
+        white-space: nowrap;
+    }
+    .log-toolbar select {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-family: inherit;
+        background: white;
+        cursor: pointer;
+    }
+    .log-toolbar select:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    .empty-state { text-align: center; padding: 3rem; color: #94a3b8; }
+    .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
+    .log-stats {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+    .log-stats span { display: flex; align-items: center; gap: 0.4rem; }
+    .log-stats i { font-size: 0.8rem; }
+    [data-theme="dark"] .activity-log-container { background: #0f172a !important; color: #e2e8f0 !important; border-color: #334155 !important; }
+</style>
+
+<div class="settings-header">
+    <h1><i class="fas fa-clipboard-list"></i> Activity Logs</h1>
+    <p>Catatan aktivitas semua user di sistem</p>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-file-alt"></i> Log Entries</h3>
+    <div class="log-toolbar">
+        <form method="GET" action="/activity-logs" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <div class="form-group">
+                <label for="limit">Show</label>
+                <select name="limit" id="limit" onchange="this.form.submit()">
+                    <option value="100" {% if limit == 100 %}selected{% endif %}>100 lines</option>
+                    <option value="250" {% if limit == 250 %}selected{% endif %}>250 lines</option>
+                    <option value="500" {% if limit == 500 %}selected{% endif %}>500 lines</option>
+                    <option value="1000" {% if limit == 1000 %}selected{% endif %}>1000 lines</option>
+                </select>
+            </div>
+            <button type="button" onclick="refreshLogs()" class="btn-primary"><i class="fas fa-sync-alt"></i> Refresh</button>
+            {% if session.get('role') == 'admin' %}
+            <button type="button" onclick="clearLogs()" class="btn-danger"><i class="fas fa-trash"></i> Clear Logs</button>
+            {% endif %}
+        </form>
+    </div>
+
+    {% set line_count = logs.split('\n')|length if logs else 0 %}
+    <div class="log-stats">
+        <span><i class="fas fa-list-ol"></i> {{ line_count }} lines</span>
+        <span><i class="fas fa-clock"></i> Newest entries first</span>
+    </div>
+
+    {% if logs %}
+    <div class="activity-log-container" id="activityLogs">{{ logs }}</div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-clipboard-list"></i>
+        <p>Belum ada activity log</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function refreshLogs() {
+    const limit = document.getElementById('limit').value;
+    window.location.href = '/activity-logs?limit=' + limit;
+}
+
+function clearLogs() {
+    if (!confirm('Hapus semua activity logs? Aksi ini tidak bisa dibatalkan.')) return;
+    fetch('/global-settings/clear-logs', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('activityLogs').textContent = '';
+                alert('Activity logs berhasil dihapus');
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Request failed: ' + err));
+}
+</script>
+{% endblock %}

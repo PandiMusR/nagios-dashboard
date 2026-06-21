@@ -1,0 +1,1351 @@
+{% extends "base.html" %}
+{% block title %}Monitoring - {{ page|title }}{% endblock %}
+{% block content %}
+<style>
+    .monitoring-header {
+        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
+    }
+    .monitoring-header h1 {
+        margin: 0 0 1rem 0;
+        font-size: 1.75rem;
+        font-weight: 700;
+    }
+    .status-stats {
+        display: flex;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .stat-item {
+        background: rgba(255,255,255,0.15);
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    .filters-section {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #f1f5f9;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    .filter-group label {
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    .filter-group select {
+        padding: 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+    .filter-group select:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    .table-section {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #f1f5f9;
+        overflow: hidden;
+    }
+    .table-header {
+        padding: 2rem;
+        border-bottom: 2px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .table-header h2 {
+        margin: 0;
+        color: #1e293b;
+        font-size: 1.25rem;
+    }
+    .btn-batch-ack {
+        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-batch-ack:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
+    }
+    .hosts-table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow-x: auto;
+    }
+    .hosts-table thead tr {
+        background: #f8fafc;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .hosts-table th {
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+    }
+    .hosts-table th:hover {
+        background: #f1f5f9;
+    }
+    .hosts-table tbody tr {
+        border-bottom: 1px solid #f1f5f9;
+        transition: all 0.2s;
+    }
+    .hosts-table tbody tr:hover {
+        background: #f8fafc;
+    }
+    .hosts-table td {
+        padding: 1.25rem 1rem;
+        font-size: 0.9rem;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 0.4rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .status-down { background: #fee2e2; color: #991b1b; }
+    .status-unreachable { background: #fef3c7; color: #92400e; }
+
+    /* Stage badge styles */
+    .stage-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.3rem 0.65rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        white-space: nowrap;
+        letter-spacing: 0.2px;
+        cursor: default;
+    }
+    .stage-new        { background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; }
+    .stage-cs         { background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd; }
+    .stage-escalated  { background: #fff7ed; color: #c2410c; border: 1.5px solid #fdba74; }
+    .stage-watchlist  { background: #fdf4ff; color: #7e22ce; border: 1.5px solid #d8b4fe; }
+    .stage-resolved   { background: #f0fdf4; color: #15803d; border: 1.5px solid #86efac; }
+
+    .btn-stage {
+        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        color: white;
+        border: none;
+        padding: 0.45rem 0.9rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+    .btn-stage:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(79,70,229,0.35);
+    }
+
+    /* Stage radio buttons */
+    .stage-options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin-top: 0.4rem;
+    }
+    .stage-option {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.55rem 0.85rem;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.15s;
+        user-select: none;
+    }
+    .stage-option:hover { border-color: #a5b4fc; background: #f5f3ff; }
+    .stage-option.selected { border-color: #4f46e5; background: #eef2ff; }
+    .stage-option.selected-resolved { border-color: #16a34a; background: #f0fdf4; }
+    .stage-option input[type="radio"] { accent-color: #4f46e5; width: 16px; height: 16px; }
+    .stage-option-label { flex: 1; }
+    .stage-option-title { font-weight: 600; font-size: 0.9rem; color: #1e293b; }
+    .stage-option-desc  { font-size: 0.78rem; color: #64748b; margin-top: 1px; }
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.2s ease;
+    }
+    .modal.show {
+        display: flex;
+    }
+    .modal-content {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        width: 95%;
+        max-width: 500px;
+        animation: slideUp 0.3s ease;
+        overflow-y: auto;
+        max-height: 90vh;
+    }
+    .modal-header {
+        padding: 2rem;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .modal-header h3 {
+        margin: 0;
+        color: #1e293b;
+        font-size: 1.25rem;
+    }
+    .btn-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #64748b;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    .btn-close:hover {
+        color: #1e293b;
+    }
+    .modal-body {
+        padding: 2rem;
+    }
+    .modal-footer {
+        padding: 1.5rem 2rem;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+    }
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 0.5rem;
+    }
+    .form-group input,
+    .form-group textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-family: inherit;
+        transition: all 0.2s;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    .btn-sm {
+        padding: 0.75rem 1.25rem;
+        font-size: 0.85rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .btn-primary { background: #4f46e5; color: white; }
+    .btn-secondary { background: #94a3b8; color: white; }
+    .btn-primary:hover { background: #4338ca; transform: translateY(-2px); }
+    .btn-secondary:hover { background: #78716c; transform: translateY(-2px); }
+    .notification-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 2000;
+        max-width: 400px;
+    }
+    .notification-item {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border-left: 4px solid;
+        animation: slideIn 0.3s ease-out;
+    }
+    .notification-down { border-left-color: #ef4444; background: #fef2f2; }
+    .notification-up { border-left-color: #10b981; background: #f0fdf4; }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    @media (max-width: 768px) {
+        .monitoring-header {
+            padding: 1.5rem;
+        }
+        .status-stats {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .stat-item {
+            width: 100%;
+        }
+        .hosts-table {
+            font-size: 0.8rem;
+        }
+        .hosts-table th,
+        .hosts-table td {
+            padding: 0.75rem 0.5rem;
+        }
+    }
+</style>
+
+<div id="monitoring-header" class="monitoring-header">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+            <h1><i class="fas fa-heartbeat"></i> Monitoring - {{ page|title }}</h1>
+        </div>
+        <div style="display: flex; gap: 0.6rem; align-items: center;">
+            <a href="/stage-history" target="_blank" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; opacity: 0.8; transition: opacity 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
+                <i class="fas fa-history"></i> History
+            </a>
+            <button id="toggle-view" onclick="toggleViewOnly()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
+                <i class="fas fa-table"></i> View Only
+            </button>
+            <button onclick="exportCSV()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
+                <i class="fas fa-download"></i> Export CSV
+            </button>
+        </div>
+    </div>
+    <div class="status-stats">
+        <div class="stat-item">
+            <i class="fas fa-exclamation-circle" style="font-size: 1.5rem;"></i>
+            <div>
+                <div style="font-size: 0.8rem; opacity: 0.9;">DOWN / UNREACHABLE</div>
+                <div class="stat-value" id="total_down">0</div>
+            </div>
+        </div>
+        <div class="stat-item">
+            <i class="fas fa-sync" style="font-size: 1.5rem;"></i>
+            <div>
+                <div style="font-size: 0.8rem; opacity: 0.9;">Auto-refresh</div>
+                <div class="stat-value"><span id="refresh_countdown">30</span>s</div>
+            </div>
+        </div>
+        <div class="stat-item">
+            <i class="fas fa-clock" style="font-size: 1.5rem;"></i>
+            <div>
+                <div style="font-size: 0.8rem; opacity: 0.9;">Last Update</div>
+                <div class="stat-value" style="font-size: 0.9rem;" id="last_update">-</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Toast -->
+<div id="notificationToast" class="notification-toast"></div>
+
+<!-- Exit View Only Button -->
+<div id="exit-view-only" style="position: fixed; top: 5px; right: 5px; z-index: 99999; display: none;">
+    <button onclick="exitViewOnly()" style="background: rgba(239,68,68,0.9); border: none; color: white; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.7rem; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+        <i class="fas fa-times" style="font-size: 0.6rem;"></i>
+    </button>
+</div>
+
+<!-- Filters -->
+<div id="filters-section" class="filters-section">
+    <h3 style="margin: 0 0 1.5rem 0; color: #1e293b;">Filters</h3>
+    <div class="filters-grid">
+        <div class="filter-group">
+            <label for="filter_server"><i class="fas fa-server"></i> Server</label>
+            <select id="filter_server" onchange="applyFilters()">
+                <option value="">All Servers</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filter_detail"><i class="fas fa-info-circle"></i> Status Info</label>
+            <select id="filter_detail" onchange="applyFilters()">
+                <option value="">All</option>
+                <option value="LOS">LOS</option>
+                <option value="DyingGasp">DyingGasp</option>
+                <option value="Unknown">Unknown</option>
+                <option value="error">Error</option>
+                <option value="PING">PING</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filter_stage"><i class="fas fa-layer-group"></i> Stage</label>
+            <select id="filter_stage" onchange="applyFilters()">
+                <option value="">All Stages</option>
+                <option value="new">🔴 New / Unacknowledged</option>
+                <option value="cs">🔵 CR Verification</option>
+                <option value="escalated">🟠 Escalated / Pending</option>
+                <option value="watchlist">🟣 Watchlist / Flapping</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filter_search"><i class="fas fa-search"></i> Detail</label>
+            <input type="text" id="filter_search" placeholder="Search host, IP, detail..." oninput="applyFilters()" style="padding: 0.5rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.85rem; width: 100%; box-sizing: border-box;">
+        </div>
+    </div>
+</div>
+
+<!-- Hosts Table -->
+<div class="table-section">
+    <div class="table-header">
+        <h2><i class="fas fa-list"></i> Host Status (<span id="filtered_count">0</span>)</h2>
+        <button class="btn-batch-ack" onclick="batchStage()"><i class="fas fa-layer-group"></i> Batch Set Stage</button>
+    </div>
+    <div style="overflow-x: auto;">
+        <table class="hosts-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()" style="cursor: pointer;"></th>
+                    <th onclick="sortTable('container')" style="cursor: pointer;">Server <span id="sort_container">?</span></th>
+                    <th onclick="sortTable('host_name')" style="cursor: pointer;">Host <span id="sort_host_name">?</span></th>
+                    <th onclick="sortTable('ip_address')" style="cursor: pointer;">IP Address</th>
+                    <th onclick="sortTable('status')" style="cursor: pointer;">Status <span id="sort_status">?</span></th>
+                    <th onclick="sortTable('stage')" style="cursor: pointer;">Stage <span id="sort_stage">?</span></th>
+                    <th onclick="sortTable('duration_str')" style="cursor: pointer;">Duration <span id="sort_duration_str">?</span></th>
+                    <th onclick="sortTable('last_check')" style="cursor: pointer;">Last Check <span id="sort_last_check">?</span></th>
+                    <th onclick="sortTable('status_information')" style="cursor: pointer;">Detail</th>
+                    <th style="width: 90px;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="hosts_table">
+                <tr>
+                    <td colspan="10" style="padding: 3rem; text-align: center; color: #94a3b8;">
+                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Stage Modal -->
+<div id="stageModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-layer-group"></i> Set Stage</h3>
+            <button class="btn-close" onclick="closeStageModal()">&#x2715;</button>
+        </div>
+        <div class="modal-body" style="padding: 1.25rem 2rem;">
+            <div class="form-group" style="margin-bottom: 0.75rem;">
+                <label>Host:</label>
+                <input type="text" id="stage_host_display" readonly style="background: #f1f5f9; width: 100%; padding: 0.6rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+            </div>
+
+            <label style="font-weight: 600; color: #334155; display: block; margin-bottom: 0.5rem;">Stage:</label>
+            <div class="stage-options" id="stage-options-list">
+                <label class="stage-option" onclick="selectStage('new', this)">
+                    <input type="radio" name="stage_choice" value="new">
+                    <div class="stage-option-label">
+                        <div class="stage-option-title">🔴 New / Unacknowledged</div>
+                        <div class="stage-option-desc">Alert baru masuk, belum ada tindakan</div>
+                    </div>
+                </label>
+                <label class="stage-option" onclick="selectStage('cs', this)">
+                    <input type="radio" name="stage_choice" value="cs">
+                    <div class="stage-option-label">
+                        <div class="stage-option-title">🔵 CR Verification</div>
+                        <div class="stage-option-desc">Konfirmasi ke PIC sedang berlangsung</div>
+                    </div>
+                </label>
+                <label class="stage-option" onclick="selectStage('escalated', this)">
+                    <input type="radio" name="stage_choice" value="escalated">
+                    <div class="stage-option-label">
+                        <div class="stage-option-title">🟠 Escalated / Pending</div>
+                        <div class="stage-option-desc">Menunggu pihak lain (FE, PLN, dll)</div>
+                    </div>
+                </label>
+                <label class="stage-option" onclick="selectStage('watchlist', this)">
+                    <input type="radio" name="stage_choice" value="watchlist">
+                    <div class="stage-option-label">
+                        <div class="stage-option-title">🟣 Watchlist / Flapping</div>
+                        <div class="stage-option-desc">Monitor flapping — naik turun tidak stabil</div>
+                    </div>
+                </label>
+                <label class="stage-option" onclick="selectStage('resolved', this)">
+                    <input type="radio" name="stage_choice" value="resolved">
+                    <div class="stage-option-label">
+                        <div class="stage-option-title">✅ Resolved / Completed</div>
+                        <div class="stage-option-desc">Masalah selesai — akan ACK ke Nagios dan hilang dari list</div>
+                    </div>
+                </label>
+            </div>
+
+            <div id="stage-note-section" style="margin-top: 1rem; margin-bottom: 0;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="stage_comment">Catatan <span style="font-weight: 400; color: #64748b; font-size: 0.8rem;">(opsional, wajib untuk Resolved)</span>:</label>
+                    <textarea id="stage_comment" placeholder="Tuliskan catatan atau keterangan..." style="min-height: 80px; resize: vertical; width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; font-family: inherit;"></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-sm btn-secondary" onclick="closeStageModal()">Cancel</button>
+            <button type="button" class="btn-sm btn-primary" id="submitStageBtn" onclick="submitStage()">Set Stage</button>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Stage Modal -->
+<div id="batchStageModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-layer-group"></i> Batch Set Stage</h3>
+            <button class="btn-close" onclick="closeBatchStageModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="batch_hosts">
+            <div class="form-group">
+                <label>Selected Hosts:</label>
+                <input type="text" id="batch_host_count" readonly style="background: #f1f5f9;">
+            </div>
+            <div class="form-group" style="margin-bottom: 0.5rem;">
+                <label>Pilih Stage:</label>
+                <div class="stage-options">
+                    <label class="stage-option" onclick="selectBatchStage('new', this)">
+                        <input type="radio" name="batch_stage_choice" value="new">
+                        <div class="stage-option-label">
+                            <div class="stage-option-title">🔴 New / Unacknowledged</div>
+                            <div class="stage-option-desc">Alert baru masuk, belum ada tindakan</div>
+                        </div>
+                    </label>
+                    <label class="stage-option" onclick="selectBatchStage('cs', this)">
+                        <input type="radio" name="batch_stage_choice" value="cs">
+                        <div class="stage-option-label">
+                            <div class="stage-option-title">🔵 CR Verification</div>
+                            <div class="stage-option-desc">Konfirmasi ke PIC sedang berlangsung</div>
+                        </div>
+                    </label>
+                    <label class="stage-option" onclick="selectBatchStage('escalated', this)">
+                        <input type="radio" name="batch_stage_choice" value="escalated">
+                        <div class="stage-option-label">
+                            <div class="stage-option-title">🟠 Escalated / Pending</div>
+                            <div class="stage-option-desc">Menunggu pihak lain (FE, PLN, dll)</div>
+                        </div>
+                    </label>
+                    <label class="stage-option" onclick="selectBatchStage('watchlist', this)">
+                        <input type="radio" name="batch_stage_choice" value="watchlist">
+                        <div class="stage-option-label">
+                            <div class="stage-option-title">🟣 Watchlist / Flapping</div>
+                            <div class="stage-option-desc">Monitor flapping — naik turun tidak stabil</div>
+                        </div>
+                    </label>
+                    <label class="stage-option" onclick="selectBatchStage('resolved', this)">
+                        <input type="radio" name="batch_stage_choice" value="resolved">
+                        <div class="stage-option-label">
+                            <div class="stage-option-title">✅ Resolved / Completed</div>
+                            <div class="stage-option-desc">Masalah selesai — akan ACK ke Nagios dan hilang dari list</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="batch_note">Catatan <span style="font-weight: 400; color: #64748b; font-size: 0.8rem;">(opsional, wajib untuk Resolved)</span>:</label>
+                <textarea id="batch_note" placeholder="Catatan untuk semua host yang dipilih..." style="min-height: 80px; resize: vertical; width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; font-family: inherit;"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-sm btn-secondary" onclick="closeBatchStageModal()">Cancel</button>
+            <button type="button" class="btn-sm btn-primary" id="submitBatchStageBtn" onclick="submitBatchStage()">Set Stage</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let refreshInterval;
+let countdownInterval;
+let countdown = 30;
+let configRefreshInterval = 30;
+let previousHosts = [];
+let alarmDown = false;
+let alarmUp = false;
+let downSound = null;
+let upSound = null;
+let allHosts = [];
+let currentFilteredHosts = [];
+let sortColumn = '';
+let sortDirection = 'asc';
+let isViewOnlyMode = false;
+
+function loadMonitoringData() {
+    fetch('/monitoring/{{ page }}/data')
+        .then(response => response.json())
+        .then(data => {
+            detectChanges(data.hosts);
+            allHosts = data.hosts;
+            updateServerFilter();
+            applyFilters();
+            document.getElementById('total_down').textContent = data.total_down;
+            document.getElementById('last_update').textContent = new Date().toLocaleTimeString('en-US', {hour12: false});
+            countdown = configRefreshInterval;
+            
+            // Update view only table if in view only mode
+            if (isViewOnlyMode) {
+                updateViewOnlyTable();
+            }
+        })
+        .catch(error => console.error('Error loading data:', error));
+}
+
+function updateServerFilter() {
+    const serverFilter = document.getElementById('filter_server');
+    const servers = [...new Set(allHosts.map(h => h.container))];
+    const currentValue = serverFilter.value;
+    
+    serverFilter.innerHTML = '<option value="">All Servers</option>' + 
+        servers.map(s => `<option value="${s}">${s}</option>`).join('');
+    
+    if (servers.includes(currentValue)) {
+        serverFilter.value = currentValue;
+    }
+}
+
+function applyFilters() {
+    const serverFilter = document.getElementById('filter_server').value;
+    const detailFilter = document.getElementById('filter_detail').value;
+    const stageFilter  = document.getElementById('filter_stage').value;
+    const searchFilter = document.getElementById('filter_search').value.toLowerCase().trim();
+
+    let filtered = [...allHosts].filter(host => {
+        if (serverFilter && host.container !== serverFilter) return false;
+        if (stageFilter  && host.stage !== stageFilter)   return false;
+        if (detailFilter) {
+            const detail = host.status_information.toLowerCase();
+            if (detailFilter === 'error' && !detail.includes('error')) return false;
+            if (detailFilter !== 'error' && !detail.includes(detailFilter.toLowerCase())) return false;
+        }
+        if (searchFilter) {
+            const searchable = [
+                host.host_name || '',
+                host.ip_address || '',
+                host.status_information || '',
+                host.stage_note || '',
+                host.container || ''
+            ].join(' ').toLowerCase();
+            if (!searchable.includes(searchFilter)) return false;
+        }
+        return true;
+    });
+
+    document.getElementById('filtered_count').textContent = filtered.length;
+    currentFilteredHosts = filtered;
+    updateTable(filtered);
+}
+
+function sortTable(column) {
+    if (sortColumn === column) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumn = column;
+        sortDirection = 'asc';
+    }
+    
+    document.querySelectorAll('[id^="sort_"]').forEach(el => el.textContent = '?');
+    document.getElementById('sort_' + column).textContent = sortDirection === 'asc' ? '?' : '?';
+    
+    applyFilters();
+}
+
+function detectChanges(newHosts) {
+    const newHostNames = newHosts.map(h => h.host_name);
+    const prevHostNames = previousHosts.map(h => h.host_name);
+    
+    const newDown = newHosts.filter(h => !prevHostNames.includes(h.host_name));
+    if (newDown.length > 0 && previousHosts.length > 0) {
+        newDown.forEach(h => showNotification(h.host_name, 'DOWN'));
+    }
+    
+    const wentUp = previousHosts.filter(h => !newHostNames.includes(h.host_name));
+    if (wentUp.length > 0) {
+        wentUp.forEach(h => showNotification(h.host_name, 'UP'));
+    }
+    
+    previousHosts = [...newHosts];
+}
+
+function showNotification(hostName, status) {
+    const toast = document.getElementById('notificationToast');
+    const notification = document.createElement('div');
+    notification.className = `notification-item notification-${status.toLowerCase()}`;
+    notification.innerHTML = `<strong>${hostName}</strong> is <strong>${status}</strong>`;
+    toast.appendChild(notification);
+    
+    if (status === 'DOWN' && alarmDown && downSound) {
+        downSound.currentTime = 0;
+        downSound.play().catch(err => console.error('Audio play error:', err));
+    } else if (status === 'UP' && alarmUp && upSound) {
+        upSound.currentTime = 0;
+        upSound.play().catch(err => console.error('Audio play error:', err));
+    }
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideIn 0.3s ease-out reverse';
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
+}
+
+function updateTable(hosts) {
+    const tbody = document.getElementById('hosts_table');
+    if (hosts.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="padding: 3rem; text-align: center; color: #94a3b8;"><i class="fas fa-inbox"></i> No hosts with issues found</td></tr>';
+        return;
+    }
+    
+    let sortedHosts = [...hosts];
+    if (sortColumn) {
+        sortedHosts.sort((a, b) => {
+            let aVal = a[sortColumn];
+            let bVal = b[sortColumn];
+            
+            if (sortColumn === 'last_state_change') {
+                aVal = parseInt(aVal);
+                bVal = parseInt(bVal);
+            }
+            
+            if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+    
+    tbody.innerHTML = sortedHosts.map(host => {
+        const stageClass = {
+            'new': 'stage-new',
+            'cs': 'stage-cs',
+            'escalated': 'stage-escalated',
+            'watchlist': 'stage-watchlist',
+            'resolved': 'stage-resolved'
+        }[host.stage] || 'stage-new';
+
+        const stageIcon = {
+            'new': '🔴',
+            'cs': '🔵',
+            'escalated': '🟠',
+            'watchlist': '🟣',
+            'resolved': '✅'
+        }[host.stage] || '🔴';
+
+        const stageTooltip = host.stage_updated_by ? `Updated by ${host.stage_updated_by}` : '';
+        const stageNote = host.stage_note ? `\n📝 ${host.stage_note}` : '';
+        const escapedNote = (host.stage_note || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
+
+        return `
+        <tr onclick="toggleRowSelect(this, event)" style="cursor: pointer; transition: background 0.15s;">
+            <td><input type="checkbox" class="host-checkbox" data-host="${host.host_name}" data-port="${host.port}" data-container="${host.container}" style="cursor: pointer; pointer-events: none;"></td>
+            <td>${host.container}</td>
+            <td><strong>${host.host_name}</strong></td>
+            <td>${host.ip_address}</td>
+            <td><span class="status-badge status-${host.status === 'DOWN' ? 'down' : 'unreachable'}"><i class="fas fa-circle"></i> ${host.status}</span></td>
+            <td>
+                <span class="stage-badge ${stageClass}" title="${stageTooltip}${stageNote}">${stageIcon} ${host.stage_label}</span>
+                ${host.stage_note ? `<div style="font-size: 0.75rem; color: #64748b; margin-top: 2px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${host.stage_note.replace(/"/g, '&quot;')}">📝 ${host.stage_note}</div>` : ''}
+            </td>
+            <td>${host.duration_str}</td>
+            <td>${host.last_check}</td>
+            <td style="font-size: 0.85rem; color: #64748b;">${host.status_information}</td>
+            <td><button onclick="event.stopPropagation(); showStageModal('${host.host_name}', '${host.container}', '${host.port}', '${host.stage}', '${escapedNote}')" class="btn-stage"><i class="fas fa-layer-group"></i> Stage</button></td>
+        </tr>
+    `}).join('');
+}
+
+function startAutoRefresh() {
+    fetch('/monitoring/{{ page }}/config?t=' + Date.now())
+        .then(response => response.json())
+        .then(config => {
+            configRefreshInterval = config.refresh_interval;
+            countdown = config.refresh_interval;
+            alarmDown = config.alarm_down;
+            alarmUp = config.alarm_up;
+            
+            if (config.sound_down) {
+                downSound = new Audio('/alarm-sound/' + config.sound_down.split('/').pop());
+                downSound.preload = 'auto';
+            }
+            if (config.sound_up) {
+                upSound = new Audio('/alarm-sound/' + config.sound_up.split('/').pop());
+                upSound.preload = 'auto';
+            }
+            
+            loadMonitoringData();
+            
+            if (refreshInterval) clearInterval(refreshInterval);
+            if (countdownInterval) clearInterval(countdownInterval);
+            
+            refreshInterval = setInterval(loadMonitoringData, config.refresh_interval * 1000);
+            countdownInterval = setInterval(() => {
+                countdown--;
+                if (countdown < 0) countdown = configRefreshInterval;
+                document.getElementById('refresh_countdown').textContent = countdown;
+            }, 1000);
+        });
+}
+
+window.addEventListener('load', startAutoRefresh);
+window.addEventListener('beforeunload', () => {
+    if (refreshInterval) clearInterval(refreshInterval);
+    if (countdownInterval) clearInterval(countdownInterval);
+});
+
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.host-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+}
+
+// ---- Batch Stage Modal ----
+let batchStageSelection = null;
+
+function batchStage() {
+    const checkboxes = document.querySelectorAll('.host-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('Please select at least one host');
+        return;
+    }
+    
+    const hosts = [];
+    checkboxes.forEach(cb => {
+        hosts.push({ name: cb.dataset.host, port: cb.dataset.port, container: cb.dataset.container || '' });
+    });
+    
+    document.getElementById('batch_hosts').value = JSON.stringify(hosts);
+    document.getElementById('batch_host_count').value = `${hosts.length} host(s) selected`;
+    document.getElementById('batch_note').value = '';
+    batchStageSelection = null;
+    
+    // Reset radio + highlight
+    document.querySelectorAll('#batchStageModal .stage-option').forEach(el => {
+        el.classList.remove('selected', 'selected-resolved');
+        el.querySelector('input[type="radio"]').checked = false;
+    });
+    document.getElementById('submitBatchStageBtn').textContent = 'Set Stage';
+    
+    document.getElementById('batchStageModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function selectBatchStage(stage, labelEl) {
+    batchStageSelection = stage;
+    document.querySelectorAll('#batchStageModal .stage-option').forEach(el => el.classList.remove('selected', 'selected-resolved'));
+    labelEl.classList.add(stage === 'resolved' ? 'selected-resolved' : 'selected');
+    document.getElementById('submitBatchStageBtn').textContent = stage === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
+}
+
+function submitBatchStage() {
+    if (!batchStageSelection) {
+        alert('Please select a stage');
+        return;
+    }
+    
+    const note = document.getElementById('batch_note').value.trim();
+    if (batchStageSelection === 'resolved' && !note) {
+        document.getElementById('batch_note').focus();
+        document.getElementById('batch_note').style.borderColor = '#ef4444';
+        setTimeout(() => document.getElementById('batch_note').style.borderColor = '', 2000);
+        return;
+    }
+    
+    const hosts = JSON.parse(document.getElementById('batch_hosts').value);
+    const btn = document.getElementById('submitBatchStageBtn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+    
+    fetch('/monitoring/batch-set-stage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            hosts: hosts,
+            stage: batchStageSelection,
+            note: note
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            closeBatchStageModal();
+            const msg = data.fail_count > 0
+                ? `${data.success_count} host(s) set to ${data.stage_label}, ${data.fail_count} failed`
+                : `${data.success_count} host(s) set to ${data.stage_label}`;
+            showToast('Batch', data.stage === 'resolved' ? 'RESOLVED' : 'STAGE_UPDATED', msg);
+            loadMonitoringData();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => alert('Request failed: ' + err))
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = batchStageSelection === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
+    });
+}
+
+function closeBatchStageModal() {
+    document.getElementById('batchStageModal').classList.remove('show');
+    document.getElementById('batch_note').value = '';
+    batchStageSelection = null;
+    document.body.style.overflow = '';
+}
+
+// ---- Stage Modal ----
+let currentStageHost = null;
+let currentStageContainer = null;
+let currentStagePort = null;
+let currentStageSelection = null;
+
+function showStageModal(hostName, container, port, currentStage, currentNote) {
+    currentStageHost = hostName;
+    currentStageContainer = container;
+    currentStagePort = port;
+    currentStageSelection = currentStage || 'new';
+
+    document.getElementById('stage_host_display').value = hostName;
+    document.getElementById('stage_comment').value = currentNote || '';
+
+    // Reset radio + highlight
+    document.querySelectorAll('.stage-option').forEach(el => {
+        el.classList.remove('selected', 'selected-resolved');
+        el.querySelector('input[type="radio"]').checked = false;
+    });
+
+    // Pre-select current stage
+    const currentOpt = document.querySelector(`.stage-option input[value="${currentStageSelection}"]`);
+    if (currentOpt) {
+        currentOpt.checked = true;
+        const label = currentOpt.closest('.stage-option');
+        label.classList.add(currentStageSelection === 'resolved' ? 'selected-resolved' : 'selected');
+    }
+
+    document.getElementById('submitStageBtn').textContent = currentStageSelection === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
+    document.getElementById('stageModal').classList.add('show');
+    document.body.style.overflow = 'hidden';  // lock background scroll
+}
+
+function selectStage(stage, labelEl) {
+    currentStageSelection = stage;
+    document.querySelectorAll('.stage-option').forEach(el => el.classList.remove('selected', 'selected-resolved'));
+    labelEl.classList.add(stage === 'resolved' ? 'selected-resolved' : 'selected');
+    document.getElementById('submitStageBtn').textContent = stage === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
+}
+
+function closeStageModal() {
+    document.getElementById('stageModal').classList.remove('show');
+    document.body.style.overflow = '';  // restore scroll
+}
+
+function submitStage() {
+    if (!currentStageSelection) {
+        alert('Please select a stage');
+        return;
+    }
+    const comment = document.getElementById('stage_comment').value.trim();
+    if (currentStageSelection === 'resolved' && !comment) {
+        document.getElementById('stage_comment').focus();
+        document.getElementById('stage_comment').style.borderColor = '#ef4444';
+        setTimeout(() => document.getElementById('stage_comment').style.borderColor = '', 2000);
+        return;
+    }
+
+    const btn = document.getElementById('submitStageBtn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    fetch('/monitoring/set-stage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            host_name: currentStageHost,
+            container: currentStageContainer,
+            port: currentStagePort,
+            stage: currentStageSelection,
+            comment: comment
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            closeStageModal();
+            if (data.action === 'resolved_and_acked') {
+                showToast(currentStageHost, 'RESOLVED');
+            } else {
+                showToast(currentStageHost, 'STAGE_UPDATED', data.stage_label);
+            }
+            // Refresh table immediately
+            loadMonitoringData();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => alert('Request failed: ' + err))
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = currentStageSelection === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
+    });
+}
+
+function showToast(hostName, type, stageLabel) {
+    const toast = document.getElementById('notificationToast');
+    const item = document.createElement('div');
+    item.className = 'notification-item';
+    if (type === 'RESOLVED') {
+        item.style.cssText = 'border-left: 4px solid #16a34a; background: #f0fdf4;';
+        item.innerHTML = `<strong>${hostName}</strong> marked as <strong>Resolved</strong> & ACK sent to Nagios`;
+    } else {
+        item.style.cssText = 'border-left: 4px solid #4f46e5; background: #eef2ff;';
+        item.innerHTML = `<strong>${hostName}</strong> stage updated to <strong>${stageLabel}</strong>`;
+    }
+    toast.appendChild(item);
+    setTimeout(() => {
+        item.style.animation = 'slideIn 0.3s ease-out reverse';
+        setTimeout(() => item.remove(), 300);
+    }, 4000);
+}
+
+function closeAckModal() {
+    document.getElementById('stageModal').classList.remove('show');
+}
+
+// Close Stage modal when clicking outside
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('stageModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('stageModal')) closeStageModal();
+    });
+    document.getElementById('batchStageModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('batchStageModal')) closeBatchStageModal();
+    });
+});
+
+window.addEventListener('load', startAutoRefresh);
+
+function toggleRowSelect(row, event) {
+    // Don't toggle if clicking the Stage button
+    if (event.target.closest('.btn-stage') || event.target.closest('button')) return;
+
+    const checkbox = row.querySelector('.host-checkbox');
+    if (!checkbox) return;
+
+    checkbox.checked = !checkbox.checked;
+
+    // Visual highlight
+    if (checkbox.checked) {
+        row.style.background = 'rgba(79, 70, 229, 0.08)';
+        row.classList.add('row-selected');
+    } else {
+        row.style.background = '';
+        row.classList.remove('row-selected');
+    }
+}
+
+// Update row highlights when checkboxes change directly
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('host-checkbox')) {
+        const row = e.target.closest('tr');
+        if (row) {
+            if (e.target.checked) {
+                row.style.background = 'rgba(79, 70, 229, 0.08)';
+                row.classList.add('row-selected');
+            } else {
+                row.style.background = '';
+                row.classList.remove('row-selected');
+            }
+        }
+    }
+});
+
+function exportCSV() {
+    const hosts = currentFilteredHosts.length > 0 ? currentFilteredHosts : allHosts;
+    if (hosts.length === 0) {
+        alert('No data to export');
+        return;
+    }
+
+    // CSV header
+    const header = ['Server', 'Host', 'IP Address', 'Status', 'Stage', 'Stage Note', 'Duration', 'Last Check', 'Detail', 'Updated By', 'Updated At'];
+    const rows = hosts.map(h => [
+        h.container || '',
+        h.host_name || '',
+        h.ip_address || '',
+        h.status || '',
+        h.stage_label || '',
+        h.stage_note || '',
+        h.duration_str || '',
+        h.last_check || '',
+        h.status_information || '',
+        h.stage_updated_by || '',
+        h.stage_updated_at || ''
+    ]);
+
+    // Build CSV with BOM for Excel compatibility
+    const csvContent = [header, ...rows].map(row =>
+        row.map(cell => {
+            const str = String(cell);
+            // Escape quotes and wrap in quotes if contains comma, newline, or quote
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return '"' + str.replace(/"/g, '""') + '"';
+            }
+            return str;
+        }).join(',')
+    ).join('\n');
+
+    const bom = '\ufeff';
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+
+    const now = new Date();
+    const ts = now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') + '_' +
+        String(now.getHours()).padStart(2, '0') +
+        String(now.getMinutes()).padStart(2, '0');
+    a.download = `monitoring_{{ page }}_${ts}.csv`;
+
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function toggleViewOnly() {
+    isViewOnlyMode = true;
+    const body = document.body;
+    const html = document.documentElement;
+    
+    // Hide all page elements except exit button
+    const allElements = document.querySelectorAll('body > *:not(#exit-view-only)');
+    allElements.forEach(el => el.style.display = 'none');
+    
+    // Create and show exit button
+    let exitBtn = document.getElementById('exit-view-only');
+    if (!exitBtn) {
+        exitBtn = document.createElement('div');
+        exitBtn.id = 'exit-view-only';
+        exitBtn.innerHTML = '<button onclick="exitViewOnly()" style="background: rgba(239,68,68,0.9); border: none; color: white; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.7rem; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"><i class="fas fa-times" style="font-size: 0.6rem;"></i></button>';
+        exitBtn.style.cssText = 'position: fixed; top: 5px; right: 5px; z-index: 99999;';
+        body.appendChild(exitBtn);
+    }
+    exitBtn.style.display = 'block';
+    
+    // Full screen setup
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    body.style.margin = '0';
+    body.style.padding = '0';
+    body.style.overflow = 'auto';
+    body.style.background = isDark ? '#0f172a' : 'white';
+    html.style.margin = '0';
+    html.style.padding = '0';
+    
+    // Create minimal table
+    const viewOnlyTable = document.createElement('div');
+    viewOnlyTable.id = 'view-only-table';
+    viewOnlyTable.style.cssText = 'width: 100vw; height: 100vh; overflow: auto; padding: 10px; box-sizing: border-box;';
+    
+    viewOnlyTable.innerHTML = `
+        <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 16px; table-layout: fixed;">
+            <colgroup>
+                <col style="width: 22%;">
+                <col style="width: 14%;">
+                <col style="width: 10%;">
+                <col style="width: 18%;">
+                <col style="width: 14%;">
+                <col style="width: 22%;">
+            </colgroup>
+            <thead>
+                <tr style="background: ${isDark ? '#334155' : '#1e293b'}; color: white;">
+                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? '#475569' : '#334155'};">HOST</th>
+                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? '#475569' : '#334155'};">IP ADDRESS</th>
+                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? '#475569' : '#334155'};">STATUS</th>
+                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? '#475569' : '#334155'};">STAGE</th>
+                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? '#475569' : '#334155'};">DURATION</th>
+                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? '#475569' : '#334155'};">DETAIL</th>
+                </tr>
+            </thead>
+            <tbody id="view-only-tbody">
+                <tr><td colspan="6" style="padding: 30px; text-align: center; color: ${isDark ? '#94a3b8' : '#64748b'}; font-size: 18px; font-weight: 600;">Loading...</td></tr>
+            </tbody>
+        </table>
+    `;
+    
+    body.appendChild(viewOnlyTable);
+    
+    // Update table with current data
+    updateViewOnlyTable();
+}
+
+function exitViewOnly() {
+    isViewOnlyMode = false;
+    const body = document.body;
+    const html = document.documentElement;
+    const exitBtn = document.getElementById('exit-view-only');
+    const viewOnlyTable = document.getElementById('view-only-table');
+    
+    // Remove view only table
+    if (viewOnlyTable) {
+        viewOnlyTable.remove();
+    }
+    
+    // Show all page elements
+    const allElements = document.querySelectorAll('body > *:not(#exit-view-only)');
+    allElements.forEach(el => el.style.display = '');
+    
+    // Hide exit button
+    exitBtn.style.display = 'none';
+    
+    // Restore body/html
+    body.style.margin = '';
+    body.style.padding = '';
+    body.style.overflow = '';
+    body.style.background = '';
+    html.style.margin = '';
+    html.style.padding = '';
+}
+
+function updateViewOnlyTable() {
+    const tbody = document.getElementById('view-only-tbody');
+    if (!tbody || !allHosts) return;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    
+    const newHosts = allHosts.filter(h => !h.stage || h.stage === 'new');
+    
+    if (newHosts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="padding: 30px; text-align: center; color: #64748b; font-size: 18px; font-weight: 600;">No unassigned hosts</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = newHosts.map(host => {
+        const statusColor = host.status === 'DOWN' ? '#dc2626' : '#d97706';
+        const statusBg   = host.status === 'DOWN' ? (isDark ? '#4c1d1d' : '#fee2e2') : (isDark ? '#451a03' : '#fef3c7');
+        const stageMeta = {
+            'new':       isDark ? { bg: '#1e293b', color: '#94a3b8', border: '#475569', icon: '🔴' } : { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', icon: '🔴' },
+            'cs':        isDark ? { bg: '#1e3a5f', color: '#93c5fd', border: '#1d4ed8', icon: '🔵' } : { bg: '#eff6ff', color: '#1d4ed8', border: '#93c5fd', icon: '🔵' },
+            'escalated': isDark ? { bg: '#431407', color: '#fdba74', border: '#c2410c', icon: '🟠' } : { bg: '#fff7ed', color: '#c2410c', border: '#fdba74', icon: '🟠' },
+            'watchlist': isDark ? { bg: '#3b0764', color: '#d8b4fe', border: '#7e22ce', icon: '🟣' } : { bg: '#fdf4ff', color: '#7e22ce', border: '#d8b4fe', icon: '🟣' },
+            'resolved':  isDark ? { bg: '#052e16', color: '#86efac', border: '#15803d', icon: '✅' } : { bg: '#f0fdf4', color: '#15803d', border: '#86efac', icon: '✅' },
+        }[host.stage] || (isDark ? { bg: '#1e293b', color: '#94a3b8', border: '#475569', icon: '🔴' } : { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', icon: '🔴' });
+        return `
+        <tr style="border-bottom: 2px solid ${isDark ? '#334155' : '#e2e8f0'}; background: ${isDark ? '#1e293b' : (host.status === 'DOWN' ? '#fef2f2' : '#fffbeb')};">
+            <td style="padding: 14px; font-weight: 800; font-size: 15px; color: ${isDark ? '#e2e8f0' : '#1e293b'}; word-break: break-word; line-height: 1.3;" title="${host.host_name}">${host.host_name}</td>
+            <td style="padding: 14px; font-weight: 700; font-size: 15px; color: ${isDark ? '#94a3b8' : '#374151'};">${host.ip_address}</td>
+            <td style="padding: 14px;"><span style="background: ${statusBg}; color: ${isDark ? (host.status === 'DOWN' ? '#fca5a5' : '#fdba74') : statusColor}; font-weight: 900; font-size: 14px; padding: 6px 10px; border-radius: 6px; border: 2px solid ${statusColor}; white-space: nowrap;">${host.status}</span></td>
+            <td style="padding: 14px;">
+                <div>
+                    <span style="display: inline-flex; align-items: center; gap: 4px; background: ${stageMeta.bg}; color: ${stageMeta.color}; border: 2px solid ${stageMeta.border}; font-weight: 700; font-size: 13px; padding: 5px 10px; border-radius: 20px; white-space: nowrap;">${stageMeta.icon} ${host.stage_label}</span>
+                    ${host.stage_note ? `<div style="font-size: 0.7rem; color: ${isDark ? '#94a3b8' : '#64748b'}; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${host.stage_note.replace(/"/g, '&quot;')}">📝 ${host.stage_note}</div>` : ''}
+                </div>
+            </td>
+            <td style="padding: 14px; font-weight: 700; font-size: 14px; color: ${isDark ? '#94a3b8' : '#374151'}; white-space: nowrap;">${host.duration_str}</td>
+            <td style="padding: 14px; font-weight: 600; font-size: 13px; color: ${isDark ? '#94a3b8' : '#4b5563'}; overflow: hidden; text-overflow: ellipsis;" title="${host.status_information}">${host.status_information}</td>
+        </tr>
+        `;
+    }).join('');
+}
+
+function testAlarmSound() {
+    console.log('Testing alarm sound...');
+    console.log('downSound:', downSound);
+    console.log('upSound:', upSound);
+    console.log('alarmDown:', alarmDown);
+    console.log('alarmUp:', alarmUp);
+    
+    if (downSound) {
+        downSound.play()
+            .then(() => console.log('DOWN sound played successfully'))
+            .catch(err => console.error('Error playing DOWN sound:', err));
+    } else {
+        console.log('No DOWN sound loaded');
+    }
+    
+    setTimeout(() => {
+        if (upSound) {
+            upSound.play()
+                .then(() => console.log('UP sound played successfully'))
+                .catch(err => console.error('Error playing UP sound:', err));
+        } else {
+            console.log('No UP sound loaded');
+        }
+    }, 2000);
+}
+</script>
+<style>
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+</style>
+{% endblock %}

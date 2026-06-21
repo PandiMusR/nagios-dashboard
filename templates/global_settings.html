@@ -1,0 +1,473 @@
+{% extends "base.html" %}
+{% block title %}Global Settings{% endblock %}
+{% block content %}
+<style>
+    .global-header {
+        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
+    }
+    .global-header h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.75rem;
+        font-weight: 700;
+    }
+    .global-header p {
+        margin: 0;
+        opacity: 0.95;
+    }
+    .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #f1f5f9;
+    }
+    .section-card h3 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #1e293b;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        font-family: inherit;
+        box-sizing: border-box;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+    .info-box {
+        padding: 1rem;
+        background: #f0f9ff;
+        border-left: 4px solid #3b82f6;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    .info-box strong {
+        color: #1e40af;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    .info-box ol {
+        margin: 0.5rem 0 0 0;
+        padding-left: 1.5rem;
+        color: #475569;
+        font-size: 0.9rem;
+    }
+    .info-box li {
+        margin-bottom: 0.25rem;
+    }
+    .btn-primary {
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+    }
+    .btn-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    .btn-success:hover {
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    }
+    .btn-danger {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    }
+    .btn-danger:hover {
+        box-shadow: 0 6px 20px rgba(220, 38, 38, 0.3);
+    }
+    .backup-item {
+        padding: 1rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s;
+    }
+    .backup-item:hover {
+        background: #f1f5f9;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .backup-info {
+        flex: 1;
+    }
+    .backup-info strong {
+        color: #1e293b;
+        display: block;
+    }
+    .backup-info small {
+        color: #64748b;
+        font-size: 0.8rem;
+    }
+    .backup-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .btn-small {
+        padding: 0.375rem 0.75rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        color: white;
+        transition: all 0.2s;
+    }
+    .btn-restore {
+        background: #f59e0b;
+    }
+    .btn-restore:hover {
+        background: #d97706;
+    }
+    .btn-delete {
+        background: #dc2626;
+    }
+    .btn-delete:hover {
+        background: #b91c1c;
+    }
+    .activity-log {
+        max-height: 500px;
+        overflow-y: auto;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1rem;
+        font-size: 0.85rem;
+        font-family: 'Monaco', 'Menlo', monospace;
+        white-space: pre-wrap;
+        color: #475569;
+    }
+    .two-column {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+    @media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        .two-column {
+            grid-template-columns: 1fr;
+        }
+        .backup-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .backup-actions {
+            width: 100%;
+            margin-top: 0.75rem;
+        }
+    }
+</style>
+
+<div class="global-header">
+    <h1><i class="fas fa-cog"></i> Global Settings</h1>
+    <p>Configure system-wide settings and backups</p>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-globe"></i> Domain Configuration</h3>
+    <form method="POST" action="/global-settings/update-domain">
+        <div class="form-group">
+            <label>Domain Name</label>
+            <input type="text" name="domain" value="{{ global_config.get('domain', '') }}" placeholder="e.g. nagios.example.com">
+            <small style="color: #64748b; font-size: 0.85rem;"><i class="fas fa-info-circle"></i> Leave empty to use IP address. Used for generating URLs and links.</small>
+        </div>
+        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Domain</button>
+    </form>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-cloud"></i> Nextcloud Backup Configuration</h3>
+    <form method="POST" action="/global-settings/update-nextcloud">
+        <div class="form-grid">
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label>Share Link</label>
+                <input type="text" name="nextcloud_share" value="{{ global_config.get('nextcloud_share', '') }}" placeholder="https://cloud.example.com/index.php/s/SHAREID">
+                <small style="color: #64748b; font-size: 0.85rem;">Format: https://cloud.example.com/index.php/s/SHAREID</small>
+            </div>
+            <div class="form-group">
+                <label>Share Password</label>
+                <input type="password" name="nextcloud_password" value="{{ global_config.get('nextcloud_password', '') }}" placeholder="Enter share password">
+            </div>
+        </div>
+        
+        <div class="info-box">
+            <strong>How to get Share Link:</strong>
+            <ol>
+                <li>Open Nextcloud and create/select a folder</li>
+                <li>Click "Share" icon → "Share link"</li>
+                <li>Set password and copy the share link</li>
+                <li>Paste link here (format: https://cloud.example.com/index.php/s/SHAREID)</li>
+            </ol>
+        </div>
+
+        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Nextcloud Config</button>
+    </form>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-database"></i> Backup & Restore</h3>
+    <div class="two-column">
+        <div>
+            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-weight: 600;"><i class="fas fa-save"></i> Create Backup</h4>
+            <form method="POST" action="/global-settings/backup">
+                <div class="form-group">
+                    <label>Backup Name</label>
+                    <input type="text" name="backup_name" placeholder="e.g. before_update">
+                    <small style="color: #64748b; font-size: 0.85rem;">Leave empty for auto-generated name</small>
+                </div>
+                <button type="submit" class="btn-primary btn-success" style="width: 100%;"><i class="fas fa-download"></i> Create Backup</button>
+            </form>
+        </div>
+        <div>
+            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-weight: 600;"><i class="fas fa-upload"></i> Upload Backup</h4>
+            <form method="POST" action="/global-settings/upload-backup" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>Backup File</label>
+                    <input type="file" name="backup_file" accept=".tar.gz" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;"><i class="fas fa-cloud-upload-alt"></i> Upload Backup</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-history"></i> Backup History & Rollback</h3>
+    <div style="margin-bottom: 1.5rem;">
+        <button onclick="loadBackups()" class="btn-primary btn-success"><i class="fas fa-sync-alt"></i> Refresh</button>
+    </div>
+    <div id="backupList">
+        <p style="text-align: center; color: #94a3b8; padding: 2rem;"><i class="fas fa-spinner"></i> Loading backups...</p>
+    </div>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-heartbeat"></i> Uptime Kuma Configuration</h3>
+    <form method="POST" action="/global-settings/update-uptime-kuma">
+        <div class="info-box">
+            <strong><i class="fas fa-info-circle"></i> Uptime Kuma Integration</strong>
+            <p style="margin: 0.5rem 0; color: #475569; font-size: 0.9rem;">
+                Enable monitoring of hosts in Uptime Kuma. Hosts can be added to Uptime Kuma when created or edited in the Host Manager. Uses Socket.IO with user credentials.
+            </p>
+        </div>
+        
+        <div class="form-group">
+            <label>Uptime Kuma URL</label>
+            <input type="url" name="uptime_kuma_url" value="{{ global_config.get('uptime_kuma_url', '') }}" placeholder="https://uptime-kuma.example.com">
+            <small style="color: #64748b; font-size: 0.85rem;"><i class="fas fa-info-circle"></i> Base URL of your Uptime Kuma instance (e.g., http://localhost:3001)</small>
+        </div>
+
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" name="uptime_kuma_username" value="{{ global_config.get('uptime_kuma_username', '') }}" placeholder="admin">
+            <small style="color: #64748b; font-size: 0.85rem;"><i class="fas fa-info-circle"></i> Uptime Kuma account username for authentication</small>
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" name="uptime_kuma_password" placeholder="Enter password (leave empty to keep current)">
+            <small style="color: #64748b; font-size: 0.85rem;"><i class="fas fa-info-circle"></i> Uptime Kuma account password for authentication</small>
+        </div>
+
+        <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" name="uptime_kuma_enabled" value="1" {% if global_config.get('uptime_kuma_enabled') %}checked{% endif %} style="width: auto;">
+                <span>Enable Uptime Kuma Integration</span>
+            </label>
+            <small style="color: #64748b; font-size: 0.85rem;"><i class="fas fa-info-circle"></i> Check to enable automatic host monitoring in Uptime Kuma</small>
+        </div>
+
+        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Uptime Kuma Config</button>
+    </form>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-key"></i> API Key</h3>
+    <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.5rem;">
+        API Key untuk integrasi dengan server lain. Gunakan header <code>X-API-Key</code> atau query param <code>?api_key=YOUR_KEY</code>.
+    </p>
+    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="flex: 1; min-width: 300px; margin-bottom: 0;">
+            <label>Current API Key</label>
+            <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="apiKeyDisplay" value="{{ global_config.get('api_key', 'Not generated') }}" readonly style="font-family: monospace; background: #f8fafc;">
+                <button type="button" onclick="copyApiKey()" class="btn-small" title="Copy"><i class="fas fa-copy"></i></button>
+            </div>
+        </div>
+        <button type="button" onclick="generateApiKey()" class="btn-primary" style="white-space: nowrap;"><i class="fas fa-sync-alt"></i> Generate New Key</button>
+    </div>
+    <div style="margin-top: 1rem; padding: 1rem; background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; font-size: 0.85rem; color: #92400e;">
+        <i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> Generating a new key will invalidate the previous key. Update all integrations immediately.
+    </div>
+</div>
+
+<div class="section-card">
+    <h3><i class="fas fa-file-alt"></i> Activity Logs</h3>
+    <div style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem;">
+        <button onclick="refreshLogs()" class="btn-primary"><i class="fas fa-sync-alt"></i> Refresh</button>
+        <button onclick="clearLogs()" class="btn-primary btn-danger"><i class="fas fa-trash"></i> Clear Logs</button>
+    </div>
+    <div class="activity-log" id="activityLogs">{{ activity_logs }}</div>
+</div>
+
+<script>
+function generateApiKey() {
+    if (!confirm('Generate a new API Key? The old key will stop working immediately.')) return;
+    fetch('/global-settings/generate-api-key', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('apiKeyDisplay').value = data.api_key;
+                alert('New API Key generated! Update all integrations.');
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Request failed: ' + err));
+}
+
+function copyApiKey() {
+    const input = document.getElementById('apiKeyDisplay');
+    navigator.clipboard.writeText(input.value).then(() => {
+        alert('API Key copied to clipboard');
+    }).catch(() => {
+        input.select();
+        document.execCommand('copy');
+        alert('API Key copied');
+    });
+}
+
+function loadBackups() {
+    fetch('/global-settings/backups')
+        .then(r => r.json())
+        .then(data => {
+            const list = document.getElementById('backupList');
+            if (!data.backups || data.backups.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 2rem;"><i class="fas fa-inbox"></i> No backups yet</p>';
+                return;
+            }
+            
+            list.innerHTML = data.backups.map((b, i) => `
+                <div class="backup-item">
+                    <div class="backup-info">
+                        <strong>${b.name}</strong>
+                        <small>${b.date} (${b.size})</small>
+                    </div>
+                    <div class="backup-actions">
+                        <button onclick="restoreBackup('${b.name}')" class="btn-small btn-restore"><i class="fas fa-redo"></i> Restore</button>
+                        <button onclick="deleteBackup('${b.name}')" class="btn-small btn-delete"><i class="fas fa-trash"></i> Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        })
+        .catch(err => {
+            document.getElementById('backupList').innerHTML = '<p style="color: #dc2626;"><i class="fas fa-exclamation-circle"></i> Error loading backups</p>';
+        });
+}
+
+function restoreBackup(name) {
+    if (!confirm(`Restore "${name}"? This will overwrite current config.`)) return;
+    
+    fetch('/global-settings/restore', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({backup_name: name})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('Restored successfully!');
+            location.reload();
+        } else {
+            alert('Restore failed: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => alert('Error: ' + err.message));
+}
+
+function deleteBackup(name) {
+    if (!confirm(`Delete "${name}"?`)) return;
+    
+    fetch(`/global-settings/delete-backup/${name}`, {method: 'DELETE'})
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            loadBackups();
+        } else {
+            alert('Delete failed');
+        }
+    });
+}
+
+function refreshLogs() {
+    fetch('/global-settings/logs')
+        .then(r => r.text())
+        .then(data => {
+            document.getElementById('activityLogs').textContent = data || 'No logs yet';
+        });
+}
+
+function clearLogs() {
+    if (!confirm('Clear all activity logs?')) return;
+    
+    fetch('/global-settings/clear-logs', {method: 'POST'})
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('activityLogs').textContent = '';
+            alert('Logs cleared');
+        }
+    });
+}
+
+loadBackups();
+</script>
+{% endblock %}

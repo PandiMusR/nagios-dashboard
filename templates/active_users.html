@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Users — Nagios Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, sans-serif; background: #f1f5f9; color: #1e293b; padding: 2rem; }
+        h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 1.5rem; }
+        .stats { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: white; border-radius: 12px; padding: 1rem 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .stat-card .num { font-size: 2rem; font-weight: 700; color: #4f46e5; }
+        .stat-card .label { font-size: 0.85rem; color: #64748b; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        th { background: #f8fafc; text-align: left; padding: 0.75rem 1rem; font-size: 0.8rem; text-transform: uppercase; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 0.75rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+        tr:last-child td { border-bottom: none; }
+        .role-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+        .role-admin { background: #fef3c7; color: #92400e; }
+        .role-user { background: #e0e7ff; color: #3730a3; }
+        .idle-low { color: #16a34a; }
+        .idle-mid { color: #d97706; }
+        .idle-high { color: #dc2626; }
+        .back-link { display: inline-block; margin-bottom: 1rem; color: #4f46e5; text-decoration: none; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        .empty { text-align: center; padding: 3rem; color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <a href="/dashboard" class="back-link">&larr; Back to Dashboard</a>
+    <h1><i class="fas fa-users"></i> Active Users</h1>
+    <p class="subtitle">Users with activity in the last 5 minutes. Auto-refresh requests count as activity.</p>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="num">{{ total }}</div>
+            <div class="label">Online Now</div>
+        </div>
+    </div>
+
+    {% if users %}
+    <table>
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Role</th>
+                <th>IP Address</th>
+                <th>Login At</th>
+                <th>Last Active</th>
+                <th>Idle</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td><strong>{{ user.username }}</strong></td>
+                <td><span class="role-badge role-{{ user.role }}">{{ user.role }}</span></td>
+                <td>{{ user.ip }}</td>
+                <td>{{ user.login_at }}</td>
+                <td>{{ user.last_active }}</td>
+                <td class="{{ 'idle-low' if user.idle_seconds < 60 else ('idle-mid' if user.idle_seconds < 180 else 'idle-high') }}">{{ user.idle_str }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty">No active users</div>
+    {% endif %}
+
+    <script>
+        setTimeout(() => location.reload(), 30000);
+    </script>
+</body>
+</html>

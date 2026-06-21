@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  nagios:
+    build: .
+    container_name: nagios1
+    ports:
+      - "0.0.0.0:81:80"
+    volumes:
+      - /svr/nagios1/etc/:/opt/nagios/etc/
+    restart: unless-stopped

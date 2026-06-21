@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+*.env.local
+
+# Runtime config (contains credentials, secrets, and instance-specific data)
+config/*.json
+config/secret_key
+config/activity_logs/
+config/stage_history/
+config/backups/
+config/activity_log.txt
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sound files (binary, uploaded per-deployment)
+static/assets/sound/
+
+# Temporary files
+tmp/
+*.tmp
+*.bak
+*.orig
+
+# Old/deprecated templates
+templates/*_old.html
+
+# Internal development docs
+CHANGE_PASSWORD_FEATURE.md
+IMPROVEMENT_PLAN.md
