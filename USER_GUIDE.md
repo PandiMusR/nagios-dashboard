@@ -42,6 +42,9 @@ Panduan lengkap penggunaan Nagios Dashboard untuk tim operasional.
   - [Activity Logs](#activity-logs)
 - [Monitoring Intens (Uptime Kuma)](#monitoring-intens-uptime-kuma)
 - [Active Users](#active-users)
+- [Audit](#audit)
+  - [Stage History](#stage-history-1)
+  - [Activity Logs](#activity-logs-1)
 - [Tips & Trik](#tips--trik)
 
 ---
@@ -167,8 +170,8 @@ File CSV mencakup: Server, Host, IP, Status, Stage, Catatan, Duration, Last Chec
 
 Melihat catatan lengkap semua perubahan stage:
 
-1. Klik tombol **History** di header monitoring (buka tab baru)
-2. Gunakan filter: Host, Container, Limit
+1. Buka **Audit → Stage History** di sidebar (atau klik tombol **History** di header monitoring)
+2. Gunakan filter: Host, Container, Limit (auto-submit saat ganti limit)
 3. Tabel menampilkan: Timestamp, Host, Container, Perubahan Stage (dari → ke), User, Catatan
 
 > Catatan: History bersifat **persisten** — tidak bisa dihapus dan tersimpan selamanya.
@@ -466,6 +469,42 @@ Akses via URL: `/active-users`
 | **Idle Time** | Lama tidak aktif |
 
 > User dianggap aktif selama masih ada request (termasuk auto-refresh monitoring). User idle > 5 menit otomatis dihapus dari daftar.
+
+---
+
+## Audit
+
+Menu **Audit** di sidebar menyediakan dua sub-halaman untuk tracking aktivitas sistem.
+
+### Stage History
+
+Catatan persisten semua perubahan stage host, tersimpan di `config/stage_history/` sebagai file JSONL bulanan.
+
+**Akses:** Sidebar → **Audit → Stage History** (atau langsung ke `/stage-history`)
+
+| Fitur | Keterangan |
+|---|---|
+| **Filter Host** | Cari berdasarkan nama host |
+| **Filter Container** | Cari berdasarkan server Nagios |
+| **Limit** | Jumlah entri (50/100/250/500), auto-submit saat diganti |
+| **Data** | Timestamp, Host, Container, Perubahan Stage, User, Catatan |
+
+> History bersifat **persisten** dan tidak bisa dihapus. Semua perubahan stage (manual, batch, auto-reset) tercatat.
+
+### Activity Logs
+
+Halaman standalone untuk melihat log aktivitas semua user di sistem.
+
+**Akses:** Sidebar → **Audit → Activity Logs** (atau langsung ke `/activity-logs`)
+
+| Fitur | Keterangan |
+|---|---|
+| **Limit** | Jumlah baris (100/250/500/1000), auto-submit saat diganti |
+| **Refresh** | Muat ulang log terbaru |
+| **Clear Logs** | Hapus semua log (admin only) |
+| **Format** | Timestamp, User, IP, Aksi, Detail |
+
+> Log tersimpan per bulan (`config/activity_logs/activity_log_YYYY_MM.txt`) dan tidak dihapus otomatis.
 
 ---
 

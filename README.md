@@ -22,13 +22,15 @@ A web-based management dashboard for multi-server Nagios deployments. Built with
   - [Global Settings](#global-settings)
   - [Uptime Kuma Integration](#uptime-kuma-integration)
   - [Active Users](#active-users)
-  - [Stage History](#stage-history)
+  - [Audit](#audit)
   - [API](#api)
 - [Stage Tracking System](#stage-tracking-system)
 - [Configuration Files](#configuration-files)
 - [Permission System](#permission-system)
 - [Security](#security)
 - [Project Structure](#project-structure)
+- [Development](#development)
+- [Deployment](#deployment)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -328,18 +330,35 @@ Auto-refreshes every 30 seconds. Users idle > 5 minutes are automatically remove
 
 ---
 
-### Stage History
+### Audit
+
+The **Audit** menu in the sidebar provides two sub-pages for tracking system activity:
+
+#### Stage History
 
 Persistent audit log of all stage changes, stored in `config/stage_history/` as monthly JSONL files.
 
-Access via **Monitoring → History** button or directly at `/stage-history`.
+Access via **Audit → Stage History** in the sidebar or directly at `/stage-history`.
 
 Features:
-- Filter by Host, Container, Limit
+- Filter by Host, Container, Limit (auto-submit on change)
 - Newest entries first
 - Shows: Timestamp, Host, Container, Stage Change (from → to), User, Note
 - Entries are written for all stage changes: manual, batch, and auto-reset
 - Data is append-only and never deleted
+
+#### Activity Logs
+
+Standalone page for viewing user activity logs across the system.
+
+Access via **Audit → Activity Logs** in the sidebar or directly at `/activity-logs`.
+
+Features:
+- Limit selector (100/250/500/1000 lines, auto-submit on change)
+- Monospace log viewer with scrollbar
+- Refresh and Clear Logs buttons (clear is admin only)
+- Monthly log rotation — logs are split into `config/activity_logs/activity_log_YYYY_MM.txt`
+- Logs are kept forever (no auto-cleanup)
 
 ---
 
@@ -523,6 +542,8 @@ nagiosDashboard/
 ├── .gitignore
 ├── README.md
 ├── USER_GUIDE.md                # End-user guide (Bahasa Indonesia)
+├── AGENTS.md                    # AI agent context (architecture, conventions, deployment)
+├── IMPROVEMENT_PLAN.md          # Development roadmap, QA review, technical debt
 │
 ├── services/                    # Service modules
 │   ├── config.py                # Centralized constants (APP_ROOT auto-detect, LDAP, paths, stages)
@@ -581,6 +602,69 @@ nagiosDashboard/
     ├── active_users.html        # Active users page (admin only)
     ├── activity_logs.html       # User activity logs (standalone page)
     └── stage_history.html       # Stage change history with filters
+```
+
+---
+
+## Development
+
+### Project Layout
+
+- **Dev server:** `/root/apps/nagiosDashboard/` (VPS, SSH port 21212)
+- **Prod server:** `/svr/dashboard-nagios/` (Alpine Linux, OpenRC)
+- **Git:** `git@github.com:PandiMusR/nagios-dashboard.git` (branch: `main`)
+
+### Making Changes
+
+1. Edit files on the dev server
+2. Test locally: `python app.py` (runs on port 80 by default)
+3. Commit: `git add -A && git commit -m "type: description"`
+4. Deploy to production: run `deploy_from_dev.sh` from prod server
+
+### Path Auto-Detection
+
+The app auto-detects its root directory via `APP_ROOT` in `services/config.py`. No hardcoded paths need to change when relocating the project — `os.path.dirname(os.path.abspath(__file__))` handles it automatically.
+
+---
+
+## Deployment
+
+### Production Deploy
+
+```bash
+# Run on production server
+cd /svr/dashboard-nagios
+./deploy_from_dev.sh
+```
+
+The deploy script:
+1. Backs up current files + module directories
+2. Pulls new files from dev server via SCP (SSH ControlMaster for single password prompt)
+3. Cleans `__pycache__`
+4. Installs Python dependencies
+5. Runs creds encryption migration (idempotent)
+6. Restarts proxy daemons for running Nagios containers
+7. Verifies app imports (auto-rollback on failure)
+8. Starts service (auto-rollback on failure)
+9. Health check (`GET /health`)
+
+### Rollback
+
+Backup is created at `config/backups/deploy_backup_<timestamp>/` before each deploy. Auto-rollback triggers if:
+- SCP fails for any file or module directory
+- App module import verification fails
+- Service fails to start after deploy
+
+Manual rollback:
+```bash
+rc-service dashboard-nagios stop
+cp config/backups/deploy_backup_<timestamp>/app.py app.py
+rm -rf services/ utils/ blueprints/
+cp -r config/backups/deploy_backup_<timestamp>/services services/
+cp -r config/backups/deploy_backup_<timestamp>/utils utils/
+cp -r config/backups/deploy_backup_<timestamp>/blueprints blueprints/
+pip install -r config/backups/deploy_backup_<timestamp>/requirements.txt
+rc-service dashboard-nagios start
 ```
 
 ---
