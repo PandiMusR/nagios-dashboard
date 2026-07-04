@@ -9,9 +9,11 @@ This file provides comprehensive context for AI agents working on the Nagios Das
 **Nagios Dashboard** is a Flask-based web application that serves as a centralized management and monitoring dashboard for multiple Nagios server instances running in Docker containers. It uses LDAP for authentication and stores configuration in flat JSON files (no database).
 
 **Repository:** https://github.com/PandiMusR/nagios-dashboard  
-**Production path:** `/svr/dashboard-nagios` (on prod server)  
-**Dev path:** `/root/apps/nagiosDashboard` (on dev VPS)  
-**Production OS:** Alpine Linux (OpenRC init system, not systemd)
+**Production path:** `/svr/dashboard-nagios` (on prod server `103.73.74.98:2325`, user `rif`)  
+**Dev path:** `/root/apps/nagiosDashboard` (on dev VPS `194.233.73.24:5000`)  
+**Production OS:** Alpine Linux (OpenRC init system, not systemd)  
+**Prod SSH:** `ssh -p 2325 rif@103.73.74.98` (authorized key configured)  
+**Docker sudo:** `echo "<pass>" | sudo -S docker ...` (rif user needs sudo for docker)
 
 ---
 
@@ -78,7 +80,7 @@ nagiosDashboard/
 │   ├── global_settings.py    # /global-settings — domain, Nextcloud, Uptime Kuma, API key, backup, logs
 │   ├── nagios_proxy.py       # /nagios/*, /proxy/* — reverse proxy to Nagios containers
 │   ├── monitoring_intens.py  # /monitoring-intens — Uptime Kuma monitors page
-│   └── api.py                # REST API: /api/hosts/*, /api/servers, /api/monitoring, /api/stage-history
+│   └── api.py                # REST API: /api/hosts/*, /api/servers, /api/monitoring, /api/stage-history (ONU auto-parse)
 │
 ├── config/                   # Runtime data (GITIGNORED — not versioned)
 │   ├── global_config.json    # Nextcloud, Uptime Kuma, domain, API key, CR last reset tracking
@@ -219,9 +221,19 @@ Admin bypasses all checks. Admin = all main permissions enabled OR `nagiosadmins
 
 ---
 
-## Recent Changes (as of 2026-06-28)
+## Recent Changes (as of 2026-07-03)
 
-### Navigation Redesign
+### API: ONU Host Auto-Parse (2026-07-03)
+- `POST /api/hosts/add` and `POST /api/hosts/batch-add` now auto-parse host_name in ONU format
+- **Input format:** `<Customer ID> - <ID NE> - <site name>` (3 parts separated by ` - `)
+- **Auto-transform:** Rearranges to `<ID NE> - <site name> - <Customer ID>` for Nagios host_name
+- **Auto-service:** Adds `check_status_onu` service with ID NE as argument (if no explicit `service_plugin`)
+- **Response:** Includes `original_host_name` field when transformation occurs
+- **Not server-specific:** Works for any Nagios server, no hardcoded container names
+- Helper function: `_parse_onu_host_name()` in `blueprints/api.py`
+- If host_name doesn't match 3-part format, behavior is unchanged (backwards compatible)
+
+### Navigation Redesign (2026-06-28)
 - Added **"Audit"** top-level sidebar menu with two sub-menus:
   - **Stage History** (`/stage-history`) — persistent audit log of stage changes
   - **Activity Logs** (`/activity-logs`) — new standalone page for user activity logs
@@ -311,3 +323,6 @@ See `IMPROVEMENT_PLAN.md` for full details. Key items:
 - **All `log_activity()` calls** have been audited — no credentials logged
 - **Dark mode** scaffolding exists in `base.html` but button is disabled (needs color refinement)
 - **Sound files** are uploaded per-deployment via Monitoring Settings UI
+- **Nagios Trends** are built from log archives (`/opt/nagios/var/archives/`), not config files. To fake historical data for demos, inject `CURRENT HOST STATE` entries into archive logs + update `last_state_change`/`last_hard_state_change` in `status.dat` and `retention.dat` via Python script inside container. Always backup before modifying.
+- **Nagios container internals:** Archives at `/opt/nagios/var/archives/`, status at `/opt/nagios/var/status.dat`, retention at `/opt/nagios/var/retention.dat`. Alpine Linux containers use BusyBox sed — use Python for file modifications.
+- **Venv note:** If venv pip has broken shebang (points to non-existent path), recreate with `rm -rf venv && python3 -m venv venv` then `pip install -r requirements.txt`

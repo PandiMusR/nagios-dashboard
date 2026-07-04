@@ -36,6 +36,22 @@ def _error(message: str, status: int = 400) -> tuple[Response, int]:
     return jsonify({'success': False, 'error': message}), status
 
 
+def _parse_onu_host_name(host_name: str) -> tuple[str, str | None]:
+    """Parse ONU host_name format and return (transformed_name, id_ne).
+
+    Input:  "<Customer ID> - <ID NE> - <nama site>"
+    Output: ("<ID NE> - <nama site> - <Customer ID>", "<ID NE>")
+
+    If host_name doesn't match the 3-part format, returns (host_name, None).
+    """
+    parts = [p.strip() for p in host_name.split(' - ')]
+    if len(parts) == 3 and all(parts):
+        customer_id, id_ne, site_name = parts
+        transformed = f"{id_ne} - {site_name} - {customer_id}"
+        return transformed, id_ne
+    return host_name, None
+
+
 @api_bp.route('/api/hosts/add', methods=['POST'])
 def api_add_host() -> tuple[Response, int]:
     """POST /api/hosts/add — Add a host to a Nagios server via API.
@@ -54,10 +70,18 @@ def api_add_host() -> tuple[Response, int]:
         "uptime_kuma": false                // optional — add to Uptime Kuma monitoring
     }
 
+    ONU Auto-Parse:
+        If host_name matches "<Customer ID> - <ID NE> - <site name>" format
+        (3 non-empty parts separated by " - "), it is automatically:
+        1. Rearranged to "<ID NE> - <site name> - <Customer ID>"
+        2. A check_status_onu service is added with ID NE as argument
+        This behavior is skipped if service_plugin is explicitly provided.
+
     Response:
     {
         "success": true,
-        "host_name": "switch-gedung-a",
+        "host_name": "10303 - Bank PT Bank Mandiri Persero Tbk - 110103210273001",
+        "original_host_name": "110103210273001 - 10303 - Bank PT Bank Mandiri Persero Tbk",
         "server": "BhomeTest",
         "message": "Host added and Nagios restarted"
     }
@@ -90,6 +114,10 @@ def api_add_host() -> tuple[Response, int]:
     host_name = re.sub(r'[^a-zA-Z0-9_. -]', '', host_name)
     if not host_name:
         return _error('Invalid host_name after sanitization')
+
+    # Auto-parse ONU format
+    original_host_name = host_name
+    host_name, id_ne = _parse_onu_host_name(host_name)
 
     # Check server exists
     config_path = f'/svr/{server}/etc/objects/localhost.cfg'
@@ -130,6 +158,17 @@ def api_add_host() -> tuple[Response, int]:
             host_def += '    notifications_enabled   1\n'
             host_def += '}\n'
 
+        # Auto-add check_status_onu if ONU format detected and no explicit service
+        if id_ne and not service_plugin:
+            host_def += '\n'
+            host_def += 'define service {\n'
+            host_def += '    use                     generic-service\n'
+            host_def += f'    host_name               {host_name}\n'
+            host_def += '    service_description     Status ONU\n'
+            host_def += f'    check_command           check_status_onu!{id_ne}\n'
+            host_def += '    notifications_enabled   1\n'
+            host_def += '}\n'
+
         # Append to config file
         if content and not content.endswith('\n'):
             host_def = '\n' + host_def
@@ -155,12 +194,15 @@ def api_add_host() -> tuple[Response, int]:
 
         log_activity('API: Add Host', f'Host: {host_name} ({address}) to {server}{uptime_kuma_msg}', username='API')
 
-        return jsonify({
+        response_data = {
             'success': True,
             'host_name': host_name,
             'server': server,
             'message': f'Host added and Nagios restarted{uptime_kuma_msg}'
-        }), 201
+        }
+        if original_host_name != host_name:
+            response_data['original_host_name'] = original_host_name
+        return jsonify(response_data), 201
 
     except subprocess.CalledProcessError as e:
         return _error(f'Failed to restart Nagios container: {str(e)}', 500)
@@ -185,6 +227,11 @@ def api_batch_add_hosts() -> tuple[Response, int]:
         "service_args": "100,20%!500,60%",   // optional
         "uptime_kuma": false                  // optional
     }
+
+    ONU Auto-Parse:
+        Each host_name is checked for "<Customer ID> - <ID NE> - <site name>" format.
+        If matched, host_name is rearranged and check_status_onu service is auto-added.
+        Skipped if service_plugin is explicitly provided.
     """
     if not _check_api_key(request):
         return _error('Invalid or missing API key', 401)
@@ -233,7 +280,11 @@ def api_batch_add_hosts() -> tuple[Response, int]:
             fail_count += 1
             continue
 
-        if f'host_name               {host_name}' in content or f'host_name    {host_name}' in content:
+        # Auto-parse ONU format
+        original_host_name = host_name
+        host_name, id_ne = _parse_onu_host_name(host_name)
+
+        if f'host_name               {host_name}' in content or f'host_name    {host_name}' in content or f'host_name               {host_name}' in new_entries:
             results.append({'host_name': host_name, 'success': False, 'error': 'Already exists'})
             fail_count += 1
             continue
@@ -261,8 +312,22 @@ def api_batch_add_hosts() -> tuple[Response, int]:
             host_def += '    notifications_enabled   1\n'
             host_def += '}\n'
 
+        # Auto-add check_status_onu if ONU format detected and no explicit service
+        if id_ne and not service_plugin:
+            host_def += '\n'
+            host_def += 'define service {\n'
+            host_def += '    use                     generic-service\n'
+            host_def += f'    host_name               {host_name}\n'
+            host_def += '    service_description     Status ONU\n'
+            host_def += f'    check_command           check_status_onu!{id_ne}\n'
+            host_def += '    notifications_enabled   1\n'
+            host_def += '}\n'
+
         new_entries += '\n' + host_def
-        results.append({'host_name': host_name, 'success': True, 'address': address})
+        result_entry = {'host_name': host_name, 'success': True, 'address': address}
+        if original_host_name != host_name:
+            result_entry['original_host_name'] = original_host_name
+        results.append(result_entry)
         success_count += 1
 
         if uptime_kuma:

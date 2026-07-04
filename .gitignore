@@ -28,6 +28,7 @@ logs/
 # IDE
 .vscode/
 .idea/
+.kilo/
 *.swp
 *.swo
 *~

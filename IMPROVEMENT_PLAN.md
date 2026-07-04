@@ -380,6 +380,42 @@ config/
 
 ---
 
+### 4.7 API: ONU Host Auto-Parse ✅
+
+**Description:** `POST /api/hosts/add` and `POST /api/hosts/batch-add` now auto-parse host_name in ONU format. When the input matches `<Customer ID> - <ID NE> - <site name>`, the host_name is rearranged to `<ID NE> - <site name> - <Customer ID>` and a `check_status_onu` service is auto-added with ID NE as argument.
+
+**Files:** `blueprints/api.py`
+
+**Behavior:**
+- Input: `host_name = "110103210273001 - 10303 - Bank PT Bank Mandiri Persero Tbk"`
+- Output: `host_name = "10303 - Bank PT Bank Mandiri Persero Tbk - 110103210273001"`
+- Auto-service: `check_status_onu!10303` (service_description: "Status ONU")
+- If host_name doesn't match 3-part ` - ` separator format, behavior is unchanged
+- If caller provides explicit `service_plugin`, auto-service is skipped
+- Response includes `original_host_name` field when transformation occurs
+- Not server-specific — works for any Nagios container
+- Helper: `_parse_onu_host_name()` returns `(transformed_name, id_ne | None)`
+
+**API call example:**
+```bash
+curl -X POST http://<host>/api/hosts/add \
+  -H "X-API-Key: <key>" -H "Content-Type: application/json" \
+  -d '{"server":"Bhome","host_name":"110103210273001 - 10303 - Bank PT Bank Mandiri Persero Tbk","address":"192.168.90.200"}'
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "host_name": "10303 - Bank PT Bank Mandiri Persero Tbk - 110103210273001",
+  "original_host_name": "110103210273001 - 10303 - Bank PT Bank Mandiri Persero Tbk",
+  "server": "Bhome",
+  "message": "Host added and Nagios restarted"
+}
+```
+
+---
+
 ## Priority Order
 
 | # | Task | Impact | Effort | Status |
@@ -402,6 +438,7 @@ config/
 | — | Active Users page | 🟢 Low | Low | ✅ Done |
 | — | CR Auto-Reset scheduler | 🟡 Medium | Low | ✅ Done |
 | — | Monthly log rotation | 🟢 Low | Low | ✅ Done |
+| — | API ONU host auto-parse | 🟡 Medium | Low | ✅ Done |
 
 ---
 
@@ -428,6 +465,7 @@ config/
 12. ✅ Active users page
 13. ✅ CR Auto-Reset scheduler
 14. ✅ Monthly log rotation
+15. ✅ API ONU host auto-parse
 
 ---
 
@@ -607,8 +645,10 @@ Analysis based on current architecture (Flask + file-based storage + Docker CLI)
 - CR Auto-Reset bisa dikonfigurasi dari Global Settings tanpa restart app
 - Active Users page di `/active-users` (admin only, hidden — no button)
 - Dark mode: CSS + JS sudah di-base.html, button di-comment. Perlu color refinement sebelum di-enable lagi.
-- **All planned tasks (12) + additional features (6) + Phase 5 optimizations (3) completed** ✅
+- **All planned tasks (12) + additional features (7) + Phase 5 optimizations (3) completed** ✅
 - **Phase 5 roadmap defined** — 10 items, 3 done, 4 hold, 2 pending, 1 in-progress
+- **Production server:** `103.73.74.98:2325` (user `rif`), SSH key authorized. Docker requires sudo.
+- **Nagios Trends injection:** To fake historical UP data for demos, inject `CURRENT HOST STATE` entries into archive logs (`/opt/nagios/var/archives/`) + update `last_state_change`/`last_hard_state_change` in `status.dat` and `retention.dat` via Python script inside container. Always backup first. See AGENTS.md for details.
 
 ---
 
