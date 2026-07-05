@@ -62,6 +62,7 @@ nagiosDashboard/
 │   ├── active_users.py       # In-memory active session tracker (5min idle timeout, background cleanup)
 │   ├── scheduler.py          # Per-category CR Verification auto-reset (background thread, 30s loop)
 │   ├── docker_cache.py       # In-memory Docker CLI cache (TTL 15s, thread-safe)
+│   ├── shared_helpers.py      # Centralized get_nagios_servers/get_monitoring_categories with TTL cache
 │   ├── uptime_kuma.py        # Socket.IO client for Uptime Kuma (add/remove monitors)
 │   └── nextcloud.py          # WebDAV upload to Nextcloud share
 │
@@ -202,10 +203,10 @@ Admin bypasses all checks. Admin = all main permissions enabled OR `nagiosadmins
 - Shell scripts (`deploy_from_dev.sh`, `full_backup.sh`) have hardcoded `PROD_PATH` — manually edited per environment
 
 ### Helper Functions
-- `get_nagios_servers()` — duplicated in 7 blueprints (returns running Nagios container names)
-- `get_monitoring_categories()` — duplicated in 7 blueprints (returns deduplicated category list from config files)
-- `_get_nagios_servers()` / `_get_monitoring_categories()` — private versions in `auth.py`
-- These are low-priority refactoring candidates (see IMPROVEMENT_PLAN.md section 6.2)
+- `get_nagios_servers()` — centralized in `services/shared_helpers.py` with Docker CLI cache (8/8 blueprints migrated)
+- `get_monitoring_categories()` — centralized in `services/shared_helpers.py` with JSON config cache (TTL 30s)
+- Shared helpers module provides TTL-based JSON caching and thread-safe Docker operations
+- All blueprint files import from `services.shared_helpers`, eliminating 16 duplicate copies
 
 ### Thread Safety
 - `host_stages.json` protected by `threading.Lock` via `host_stages_transaction()` context manager
@@ -290,6 +291,89 @@ If you create a new file that needs to be deployed:
 
 ---
 
+## Production Access
+
+### SSH
+
+```bash
+ssh -p 2325 rif@103.73.74.98
+```
+
+- **Host:** `103.73.74.98`
+- **Port:** `2325`
+- **User:** `rif`
+- **Auth:** SSH authorized key (passwordless)
+- **OS:** Alpine Linux (OpenRC)
+
+### Docker (requires sudo)
+
+User `rif` tidak punya akses Docker langsung. Semua perintah Docker harus pakai sudo:
+
+```bash
+echo "<password>" | sudo -S docker ps
+echo "<password>" | sudo -S docker exec <container> <command>
+echo "<password>" | sudo -S docker restart <container>
+echo "<password>" | sudo -S docker logs <container>
+```
+
+### Remote Command via SSH
+
+```bash
+# Contoh: cek status container
+ssh -p 2325 rif@103.73.74.98 "echo '<password>' | sudo -S docker ps --filter 'ancestor=nagios-ldap:latest' --format '{{.Names}}'"
+
+# Contoh: exec command di dalam container
+ssh -p 2325 rif@103.73.74.98 "echo '<password>' | sudo -S docker exec Adiarsa cat /opt/nagios/var/status.dat"
+
+# Contoh: jalankan Python script di dalam container
+ssh -p 2325 rif@103.73.74.98 "echo '<password>' | sudo -S docker exec Adiarsa python3 -c 'print(\"hello\")'"
+```
+
+### File Locations on Production
+
+| Path | Description |
+|---|---|
+| `/svr/dashboard-nagios/` | Dashboard app root |
+| `/svr/<server>/etc/` | Nagios config (mounted to `/opt/nagios/etc/` in container) |
+| `/svr/<server>/plugin/` | Nagios plugins (mounted to `/opt/nagios/libexec/` in container) |
+
+### Nagios Container Internals
+
+| Path (inside container) | Description |
+|---|---|
+| `/opt/nagios/etc/objects/localhost.cfg` | Host + service definitions |
+| `/opt/nagios/etc/objects/commands.cfg` | Command definitions |
+| `/opt/nagios/var/nagios.log` | Current log file |
+| `/opt/nagios/var/archives/` | Rotated log archives (used by Trends) |
+| `/opt/nagios/var/status.dat` | Current host/service status |
+| `/opt/nagios/var/retention.dat` | Persistent status across restarts |
+
+### Modifying Files Inside Containers
+
+Alpine Linux containers use BusyBox `sed` yang berbeda dari GNU sed. **Gunakan Python** untuk modifikasi file:
+
+```bash
+# Salah (BusyBox sed escaping berbeda)
+ssh -p 2325 rif@103.73.74.98 "echo '<pass>' | sudo -S docker exec Adiarsa sed -i 's/old/new/' /opt/nagios/var/status.dat"
+
+# Benar (pakai Python)
+ssh -p 2325 rif@103.73.74.98 "echo '<pass>' | sudo -S docker exec Adiarsa python3 -c '
+with open(\"/opt/nagios/var/status.dat\") as f: lines = f.readlines()
+lines[123] = \"new_value\n\"
+with open(\"/opt/nagios/var/status.dat\", \"w\") as f: f.writelines(lines)
+'"
+```
+
+### Known Container Names (as of 2026-07-03)
+
+```
+LaurensiaEnergiCorp_SPPBE, BackupLink-USB-LTE, TIF, Adiarsa,
+Wifi-Public, OPD, Kelurahan, Kecamatan, TanjungMekar,
+Tamelang-Cilamaya, Klari, Niaga, Bhome
+```
+
+---
+
 ## Environment Variables
 
 | Variable | Default | Description |
@@ -303,12 +387,12 @@ If you create a new file that needs to be deployed:
 
 See `IMPROVEMENT_PLAN.md` for full details. Key items:
 
-1. **Duplicated helpers:** `get_nagios_servers()` and `get_monitoring_categories()` copy-pasted across 7 blueprints
-2. **No database:** File-based JSON storage — fragile under concurrent writes
-3. **No CSRF protection:** Hold (local network only)
-4. **Docker volume paths hardcoded:** `/svr/<server>/` — intentional, not planned to change
-5. **LDAP injection:** `username` used unsanitized in DN — accepted risk for internal tool
-6. **`monitoring_config.json`:** Contains hardcoded sound file paths — needs migration script if relocated
+1. **No CSRF protection:** Hold (local network only)
+2. **Docker volume paths hardcoded:** `/svr/<server>/` — intentional, not planned to change
+3. **`monitoring_config.json`:** Contains hardcoded sound file paths — needs migration script if relocated
+4. **Security items (SEC-1 through SEC-10):** All on hold — dashboard is internal network only, not public-facing
+5. **Dark mode:** Scaffolding in `base.html` but button is disabled (needs color refinement)
+6. **SQLite migration:** Not yet started — file-based JSON storage still in use
 
 ---
 
@@ -323,6 +407,6 @@ See `IMPROVEMENT_PLAN.md` for full details. Key items:
 - **All `log_activity()` calls** have been audited — no credentials logged
 - **Dark mode** scaffolding exists in `base.html` but button is disabled (needs color refinement)
 - **Sound files** are uploaded per-deployment via Monitoring Settings UI
-- **Nagios Trends** are built from log archives (`/opt/nagios/var/archives/`), not config files. To fake historical data for demos, inject `CURRENT HOST STATE` entries into archive logs + update `last_state_change`/`last_hard_state_change` in `status.dat` and `retention.dat` via Python script inside container. Always backup before modifying.
+- **Nagios Trends** are built from log archives (`/opt/nagios/var/archives/`), not config files. To fake historical data for demos, inject `CURRENT HOST STATE` entries into archive logs + update `last_state_change`/`last_hard_state_change` in `status.dat` and `retention.dat` via Python script inside container. Always backup before modifying. See `TRENDS_DUMMY_GUIDE.md` for full guide.
 - **Nagios container internals:** Archives at `/opt/nagios/var/archives/`, status at `/opt/nagios/var/status.dat`, retention at `/opt/nagios/var/retention.dat`. Alpine Linux containers use BusyBox sed — use Python for file modifications.
 - **Venv note:** If venv pip has broken shebang (points to non-existent path), recreate with `rm -rf venv && python3 -m venv venv` then `pip install -r requirements.txt`

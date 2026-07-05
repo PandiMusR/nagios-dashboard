@@ -1,76 +1,14 @@
 from __future__ import annotations
 
 from flask import Blueprint, render_template, request, redirect, session, jsonify, flash, send_file, Response
-import os, json, subprocess, re
+import os, json, re
 
-from services.config import APP_ROOT, CONFIG_DIR, MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH
+from services.config import APP_ROOT, MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH
 from services.ldap_service import log_activity
+from services.shared_helpers import get_nagios_servers, get_monitoring_categories
 from utils.permissions import check_permission
 
 monitoring_settings_bp = Blueprint('monitoring_settings', __name__)
-
-
-def get_nagios_servers() -> list[str]:
-    """Return a list of running Nagios container names."""
-    result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'], 
-                          capture_output=True, text=True)
-    return result.stdout.strip().split('\n') if result.stdout.strip() else []
-
-
-def get_monitoring_categories() -> list[str]:
-    """Return a deduplicated list of all known monitoring categories."""
-    categories: list[str] = []
-    seen: set[str] = set()
-
-    def add_category(value: object) -> None:
-        if not isinstance(value, str):
-            return
-        normalized = value.strip().lower()
-        if normalized and normalized not in seen:
-            seen.add(normalized)
-            categories.append(normalized)
-
-    for default_category in ['prioritas', 'bhome', 'diskominfo']:
-        add_category(default_category)
-
-    try:
-        if os.path.exists(MONITORING_CATEGORIES_PATH):
-            with open(MONITORING_CATEGORIES_PATH, 'r') as f:
-                stored_categories = json.load(f)
-                if isinstance(stored_categories, list):
-                    for category in stored_categories:
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    try:
-        if os.path.exists(MONITORING_SERVER_MAPPINGS_PATH):
-            with open(MONITORING_SERVER_MAPPINGS_PATH, 'r') as f:
-                mappings = json.load(f)
-                if isinstance(mappings, dict):
-                    for category in mappings.keys():
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    try:
-        if os.path.exists(MONITORING_CONFIG_PATH):
-            with open(MONITORING_CONFIG_PATH, 'r') as f:
-                config = json.load(f)
-                category_settings = config.get('category_settings', {})
-                alarm_settings = config.get('alarm_settings', {})
-
-                if isinstance(category_settings, dict):
-                    for category in category_settings.keys():
-                        add_category(category)
-
-                if isinstance(alarm_settings, dict):
-                    for category in alarm_settings.keys():
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    return categories
 
 
 @monitoring_settings_bp.route('/monitoring-settings')

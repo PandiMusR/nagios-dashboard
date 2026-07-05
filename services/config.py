@@ -4,7 +4,7 @@ import os
 # services/config.py -> services/ -> <project_root>/
 APP_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_DIR = os.path.join(APP_ROOT, 'config')
-APP_PORT = int(os.environ.get('APP_PORT', '80'))
+APP_PORT = int(os.environ.get('APP_PORT', '5000'))
 ACTIVITY_LOG_PATH = f'{CONFIG_DIR}/activity_log.txt'
 MONITORING_CATEGORIES_PATH = f'{CONFIG_DIR}/monitoring_categories.json'
 MONITORING_SERVER_MAPPINGS_PATH = f'{CONFIG_DIR}/monitoring_server_mappings.json'

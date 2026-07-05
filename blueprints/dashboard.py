@@ -1,48 +1,15 @@
 from __future__ import annotations
 
-from flask import Blueprint, Response, render_template, request, redirect, session, jsonify
-import subprocess, json, base64, requests, os
+import base64, json, subprocess
+
+from flask import Blueprint, Response, render_template, redirect, session, jsonify
+import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from services.config import MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH
 from services.encryption import decrypt_session_value
 from services.docker_cache import docker_cache
+from services.shared_helpers import get_nagios_servers, get_monitoring_categories
 
 dashboard_bp = Blueprint('dashboard', __name__)
-
-def get_nagios_servers() -> list[str]:
-    """Return list of running Nagios container names (cached 15s)."""
-    output = docker_cache.get_or_run(
-        'nagios_containers_names',
-        ['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}']
-    )
-    return output.strip().split('\n') if output.strip() else []
-
-def get_monitoring_categories() -> list[str]:
-    """Collect and return deduplicated monitoring category names from config files."""
-    categories = []
-    seen = set()
-    def add_category(value: object) -> None:
-        if not isinstance(value, str): return
-        normalized = value.strip().lower()
-        if normalized and normalized not in seen:
-            seen.add(normalized)
-            categories.append(normalized)
-    for default_category in ['prioritas', 'bhome', 'diskominfo']:
-        add_category(default_category)
-    for path in [MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH]:
-        try:
-            if os.path.exists(path):
-                with open(path, 'r') as f:
-                    data = json.load(f)
-                    if isinstance(data, list):
-                        for item in data: add_category(item)
-                    elif isinstance(data, dict):
-                        for key in data.keys(): add_category(key)
-                        for key in data.get('category_settings', {}).keys(): add_category(key)
-                        for key in data.get('alarm_settings', {}).keys(): add_category(key)
-        except (json.JSONDecodeError, OSError):
-            pass
-    return categories
 
 
 @dashboard_bp.route('/dashboard')
@@ -61,13 +28,11 @@ def _fetch_server_stats(container_name: str, auth_header: str) -> dict | None:
     """Fetch stats for a single Nagios container. Runs in a thread."""
     try:
         # Get container port (cached)
-        port = docker_cache.get_or_run(
+        port_output = docker_cache.get_or_run(
             f'port_{container_name}',
             ['docker', 'port', container_name, '80']
-        ).strip().split(':')[-1] if docker_cache.get_or_run(
-            f'port_{container_name}',
-            ['docker', 'port', container_name, '80']
-        ).strip() else None
+        ).strip()
+        port = port_output.split(':')[-1] if port_output else None
 
         if not port:
             return None

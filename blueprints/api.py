@@ -1,13 +1,24 @@
 from __future__ import annotations
 
 from flask import Blueprint, request, jsonify, Response
-import os, json, subprocess, re
+import os, json, subprocess, re, threading
 
-from services.config import CONFIG_DIR, GLOBAL_CONFIG_PATH
+from services.config import GLOBAL_CONFIG_PATH
 from services.ldap_service import log_activity
 from services.uptime_kuma import add_host_to_uptime_kuma
 
 api_bp = Blueprint('api', __name__)
+
+
+def _add_to_uptime_kuma_async(host_name: str, address: str) -> None:
+    try:
+        monitor_id, error = add_host_to_uptime_kuma(host_name, address)
+        if monitor_id:
+            log_activity('API: Add Host to Uptime Kuma', f'Host: {host_name}, Monitor ID: {monitor_id}', username='API')
+        elif error:
+            log_activity('API: Add Host to Uptime Kuma Failed', f'Host: {host_name}, Error: {error}', username='API')
+    except Exception as e:
+        print(f'Uptime Kuma async error for {host_name}: {e}')
 
 
 def _get_api_key() -> str:
@@ -50,6 +61,47 @@ def _parse_onu_host_name(host_name: str) -> tuple[str, str | None]:
         transformed = f"{id_ne} - {site_name} - {customer_id}"
         return transformed, id_ne
     return host_name, None
+
+
+def _build_host_definition(
+    host_name: str, address: str, alias: str = '', parents: str = '',
+    service_plugin: str = '', service_args: str = '', id_ne: str | None = None
+) -> str:
+    """Build a Nagios host+service definition string."""
+    host_def = 'define host{\n'
+    host_def += '    use                     linux-server\n'
+    host_def += f'    host_name               {host_name}\n'
+    if alias:
+        host_def += f'    alias                   {alias}\n'
+    host_def += f'    address                 {address}\n'
+    if parents:
+        host_def += f'    parents                 {parents}\n'
+    host_def += '}\n'
+
+    if service_plugin:
+        host_def += '\n'
+        host_def += 'define service {\n'
+        host_def += '    use                     generic-service\n'
+        host_def += f'    host_name               {host_name}\n'
+        host_def += f'    service_description     {service_plugin.replace("check_", "").replace("_", " ").title()}\n'
+        if service_args:
+            host_def += f'    check_command           {service_plugin}!{service_args}\n'
+        else:
+            host_def += f'    check_command           {service_plugin}\n'
+        host_def += '    notifications_enabled   1\n'
+        host_def += '}\n'
+
+    if id_ne and not service_plugin:
+        host_def += '\n'
+        host_def += 'define service {\n'
+        host_def += '    use                     generic-service\n'
+        host_def += f'    host_name               {host_name}\n'
+        host_def += '    service_description     Status ONU\n'
+        host_def += f'    check_command           check_status_onu!{id_ne}\n'
+        host_def += '    notifications_enabled   1\n'
+        host_def += '}\n'
+
+    return host_def
 
 
 @api_bp.route('/api/hosts/add', methods=['POST'])
@@ -125,49 +177,14 @@ def api_add_host() -> tuple[Response, int]:
         return _error(f'Server "{server}" not found or config missing', 404)
 
     try:
-        # Read existing content
+        # Read existing content and check for duplicates
         with open(config_path, 'r') as f:
             content = f.read()
 
-        # Check for duplicate host_name
         if f'host_name               {host_name}' in content or f'host_name    {host_name}' in content:
             return _error(f'Host "{host_name}" already exists on server "{server}"', 409)
 
-        # Build host definition
-        host_def = 'define host{\n'
-        host_def += '    use                     linux-server\n'
-        host_def += f'    host_name               {host_name}\n'
-        if alias:
-            host_def += f'    alias                   {alias}\n'
-        host_def += f'    address                 {address}\n'
-        if parents:
-            host_def += f'    parents                 {parents}\n'
-        host_def += '}\n'
-
-        # Add service definition if plugin specified
-        if service_plugin:
-            host_def += '\n'
-            host_def += 'define service {\n'
-            host_def += '    use                     generic-service\n'
-            host_def += f'    host_name               {host_name}\n'
-            host_def += f'    service_description     {service_plugin.replace("check_", "").replace("_", " ").title()}\n'
-            if service_args:
-                host_def += f'    check_command           {service_plugin}!{service_args}\n'
-            else:
-                host_def += f'    check_command           {service_plugin}\n'
-            host_def += '    notifications_enabled   1\n'
-            host_def += '}\n'
-
-        # Auto-add check_status_onu if ONU format detected and no explicit service
-        if id_ne and not service_plugin:
-            host_def += '\n'
-            host_def += 'define service {\n'
-            host_def += '    use                     generic-service\n'
-            host_def += f'    host_name               {host_name}\n'
-            host_def += '    service_description     Status ONU\n'
-            host_def += f'    check_command           check_status_onu!{id_ne}\n'
-            host_def += '    notifications_enabled   1\n'
-            host_def += '}\n'
+        host_def = _build_host_definition(host_name, address, alias, parents, service_plugin, service_args, id_ne)
 
         # Append to config file
         if content and not content.endswith('\n'):
@@ -179,26 +196,23 @@ def api_add_host() -> tuple[Response, int]:
             f.write(host_def)
 
         # Restart Nagios container
-        subprocess.run(['docker', 'restart', server], check=True, capture_output=True)
+        subprocess.run(['docker', 'restart', server], check=True, capture_output=True, timeout=60)
 
-        # Uptime Kuma integration
-        uptime_kuma_msg = ''
+        # Uptime Kuma integration (background thread to avoid blocking API response)
         if uptime_kuma:
-            monitor_id, error = add_host_to_uptime_kuma(host_name, address)
-            if monitor_id:
-                uptime_kuma_msg = ' + Uptime Kuma'
-                log_activity('API: Add Host to Uptime Kuma', f'Host: {host_name}, IP: {address}, Monitor ID: {monitor_id}', username='API')
-            elif error:
-                uptime_kuma_msg = f' (Uptime Kuma error: {error})'
-                log_activity('API: Add Host to Uptime Kuma Failed', f'Host: {host_name}, Error: {error}', username='API')
+            threading.Thread(
+                target=_add_to_uptime_kuma_async,
+                args=(host_name, address),
+                daemon=True
+            ).start()
 
-        log_activity('API: Add Host', f'Host: {host_name} ({address}) to {server}{uptime_kuma_msg}', username='API')
+        log_activity('API: Add Host', f'Host: {host_name} ({address}) to {server}', username='API')
 
         response_data = {
             'success': True,
             'host_name': host_name,
             'server': server,
-            'message': f'Host added and Nagios restarted{uptime_kuma_msg}'
+            'message': f'Host added and Nagios restarted'
         }
         if original_host_name != host_name:
             response_data['original_host_name'] = original_host_name
@@ -289,39 +303,7 @@ def api_batch_add_hosts() -> tuple[Response, int]:
             fail_count += 1
             continue
 
-        host_def = 'define host{\n'
-        host_def += '    use                     linux-server\n'
-        host_def += f'    host_name               {host_name}\n'
-        if alias:
-            host_def += f'    alias                   {alias}\n'
-        host_def += f'    address                 {address}\n'
-        if parents:
-            host_def += f'    parents                 {parents}\n'
-        host_def += '}\n'
-
-        if service_plugin:
-            host_def += '\n'
-            host_def += 'define service {\n'
-            host_def += '    use                     generic-service\n'
-            host_def += f'    host_name               {host_name}\n'
-            host_def += f'    service_description     {service_plugin.replace("check_", "").replace("_", " ").title()}\n'
-            if service_args:
-                host_def += f'    check_command           {service_plugin}!{service_args}\n'
-            else:
-                host_def += f'    check_command           {service_plugin}\n'
-            host_def += '    notifications_enabled   1\n'
-            host_def += '}\n'
-
-        # Auto-add check_status_onu if ONU format detected and no explicit service
-        if id_ne and not service_plugin:
-            host_def += '\n'
-            host_def += 'define service {\n'
-            host_def += '    use                     generic-service\n'
-            host_def += f'    host_name               {host_name}\n'
-            host_def += '    service_description     Status ONU\n'
-            host_def += f'    check_command           check_status_onu!{id_ne}\n'
-            host_def += '    notifications_enabled   1\n'
-            host_def += '}\n'
+        host_def = _build_host_definition(host_name, address, alias, parents, service_plugin, service_args, id_ne)
 
         new_entries += '\n' + host_def
         result_entry = {'host_name': host_name, 'success': True, 'address': address}
@@ -331,9 +313,11 @@ def api_batch_add_hosts() -> tuple[Response, int]:
         success_count += 1
 
         if uptime_kuma:
-            monitor_id, error = add_host_to_uptime_kuma(host_name, address)
-            if monitor_id:
-                log_activity('API: Add Host to Uptime Kuma', f'Host: {host_name}, Monitor ID: {monitor_id}', username='API')
+            threading.Thread(
+                target=_add_to_uptime_kuma_async,
+                args=(host_name, address),
+                daemon=True
+            ).start()
 
     # Write all at once
     if new_entries:
@@ -346,7 +330,7 @@ def api_batch_add_hosts() -> tuple[Response, int]:
     # Restart once
     if success_count > 0:
         try:
-            subprocess.run(['docker', 'restart', server], check=True, capture_output=True)
+            subprocess.run(['docker', 'restart', server], check=True, capture_output=True, timeout=60)
         except subprocess.CalledProcessError as e:
             return _error(f'Hosts written but restart failed: {str(e)}', 500)
 
@@ -411,7 +395,7 @@ def api_delete_host() -> tuple[Response, int]:
         with open(config_path, 'w') as f:
             f.write(new_content)
 
-        subprocess.run(['docker', 'restart', server], check=True, capture_output=True)
+        subprocess.run(['docker', 'restart', server], check=True, capture_output=True, timeout=60)
 
         log_activity('API: Delete Host', f'Host: {host_name} from {server}', username='API')
 

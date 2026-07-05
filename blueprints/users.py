@@ -1,78 +1,15 @@
 from __future__ import annotations
 
 from flask import Blueprint, Response, render_template, request, redirect, session, jsonify, flash
-import os, json, subprocess, base64
-from ldap3 import MODIFY_ADD, MODIFY_DELETE, MODIFY_REPLACE
+import json, subprocess
+from ldap3 import MODIFY_ADD
 
-from services.config import CONFIG_DIR, LDAP_BASE_DN, MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH
-from services.encryption import encrypt_session_value, decrypt_session_value
-from services.ldap_service import get_ldap_admin_connection, log_activity
+from services.config import LDAP_BASE_DN
+from services.ldap_service import get_ldap_admin_connection
+from services.shared_helpers import get_nagios_servers, get_monitoring_categories
 from utils.permissions import load_user_permissions, get_default_permissions, save_user_permissions, save_user_password, get_user_password, check_permission
 
 users_bp = Blueprint('users', __name__)
-
-
-def get_nagios_servers() -> list[str]:
-    """Return list of running Nagios container names."""
-    result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'],
-                          capture_output=True, text=True)
-    return result.stdout.strip().split('\n') if result.stdout.strip() else []
-
-
-def get_monitoring_categories() -> list[str]:
-    """Collect and return deduplicated monitoring category names from config files."""
-    categories = []
-    seen = set()
-
-    def add_category(value: object) -> None:
-        if not isinstance(value, str):
-            return
-        normalized = value.strip().lower()
-        if normalized and normalized not in seen:
-            seen.add(normalized)
-            categories.append(normalized)
-
-    for default_category in ['prioritas', 'bhome', 'diskominfo']:
-        add_category(default_category)
-
-    try:
-        if os.path.exists(MONITORING_CATEGORIES_PATH):
-            with open(MONITORING_CATEGORIES_PATH, 'r') as f:
-                stored_categories = json.load(f)
-                if isinstance(stored_categories, list):
-                    for category in stored_categories:
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    try:
-        if os.path.exists(MONITORING_SERVER_MAPPINGS_PATH):
-            with open(MONITORING_SERVER_MAPPINGS_PATH, 'r') as f:
-                mappings = json.load(f)
-                if isinstance(mappings, dict):
-                    for category in mappings.keys():
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    try:
-        if os.path.exists(MONITORING_CONFIG_PATH):
-            with open(MONITORING_CONFIG_PATH, 'r') as f:
-                config = json.load(f)
-                category_settings = config.get('category_settings', {})
-                alarm_settings = config.get('alarm_settings', {})
-
-                if isinstance(category_settings, dict):
-                    for category in category_settings.keys():
-                        add_category(category)
-
-                if isinstance(alarm_settings, dict):
-                    for category in alarm_settings.keys():
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    return categories
 
 
 @users_bp.route('/users')
@@ -199,15 +136,15 @@ def update_user_permissions() -> Response:
         password = get_user_password(username)
         if password:
             result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'],
-                                  capture_output=True, text=True)
+                                  capture_output=True, text=True, timeout=10)
             if result.stdout:
                 for container in result.stdout.strip().split('\n'):
                     if container:
                         subprocess.run(['docker', 'exec', container, 'htpasswd', '-D', '/opt/nagios/etc/htpasswd.users', username],
-                                     capture_output=True)
+                                     capture_output=True, timeout=10)
                         if permissions.get(f'nagios_{container}'):
                             subprocess.run(['docker', 'exec', container, 'htpasswd', '-b', '/opt/nagios/etc/htpasswd.users', username, password],
-                                         capture_output=True)
+                                         capture_output=True, timeout=10)
 
         flash(f'Permissions updated for user "{username}"!', 'success')
     else:
@@ -268,13 +205,13 @@ def add_user() -> Response:
         save_user_password(uid, password)
 
         result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'],
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, timeout=10)
         if result.stdout:
             for container in result.stdout.strip().split('\n'):
                 if container:
                     if role == 'admin' or request.form.get(f'nagios_{container}') == 'on':
                         subprocess.run(['docker', 'exec', container, 'htpasswd', '-b', '/opt/nagios/etc/htpasswd.users', uid, password],
-                                     capture_output=True)
+                                     capture_output=True, timeout=10)
 
         flash(f'User "{uid}" added successfully as {role}!', 'success')
     except Exception as e:

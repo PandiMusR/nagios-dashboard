@@ -59,9 +59,9 @@ def read_stage_history(host: str | None = None, container: str | None = None, li
     for filepath in files:
         try:
             with open(filepath, 'r') as f:
-                lines = f.readlines()
-                # Read lines in reverse (newest first within each file)
-                for line in reversed(lines):
+                file_lines = f.readlines()
+                start = max(0, len(file_lines) - limit)
+                for line in reversed(file_lines[start:]):
                     line = line.strip()
                     if not line:
                         continue

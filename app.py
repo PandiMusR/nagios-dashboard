@@ -1,7 +1,5 @@
 from flask import Flask, request, session
 import os
-import subprocess
-import json
 
 from services.encryption import load_or_create_secret_key, init_encryption
 from services.ldap_service import check_ldap_server, setup_ldap_structure, CONFIG_DIR

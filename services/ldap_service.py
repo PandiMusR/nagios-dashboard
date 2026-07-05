@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import subprocess
-import json
 from datetime import datetime
 
 from flask import session, request
@@ -24,7 +23,7 @@ def check_ldap_server() -> str:
     """Check the LDAP Docker container status, creating or starting it if needed."""
     try:
         result = subprocess.run(['docker', 'ps', '-a', '--filter', 'name=ldap-server', '--format', '{{.Names}}'],
-                                capture_output=True, text=True)
+                                capture_output=True, text=True, timeout=10)
 
         if not result.stdout.strip():
             print("LDAP container not found. Creating LDAP server...")
@@ -37,18 +36,18 @@ def check_ldap_server() -> str:
                 '-e', 'LDAP_DOMAIN=bnet.id',
                 '-e', 'LDAP_ADMIN_PASSWORD=admin',
                 'osixia/openldap:latest'
-            ], check=True)
+            ], check=True, timeout=120)
             print("LDAP server created. Waiting for initialization...")
             import time
             time.sleep(5)
             return 'created'
 
         result = subprocess.run(['docker', 'ps', '--filter', 'name=ldap-server', '--format', '{{.Names}}'],
-                                capture_output=True, text=True)
+                                capture_output=True, text=True, timeout=10)
 
         if not result.stdout.strip():
             print("LDAP server is stopped. Starting...")
-            subprocess.run(['docker', 'start', 'ldap-server'], check=True)
+            subprocess.run(['docker', 'start', 'ldap-server'], check=True, timeout=30)
             import time
             time.sleep(3)
             return 'started'
@@ -148,15 +147,13 @@ def read_activity_logs(max_lines: int = 500) -> str:
     for filepath in files:
         try:
             with open(filepath, 'r') as f:
-                lines = f.readlines()
-                # Reverse so newest entries come first
-                all_lines.extend(reversed(lines))
+                file_lines = f.readlines()[-max_lines:]
+                all_lines.extend(reversed(file_lines))
             if len(all_lines) >= max_lines:
                 break
         except OSError:
             continue
 
-    # Take first N (newest) — already in newest-first order
     return ''.join(all_lines[:max_lines])
 
 

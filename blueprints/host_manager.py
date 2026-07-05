@@ -1,80 +1,32 @@
 from __future__ import annotations
 
-from flask import Blueprint, render_template, request, redirect, session, jsonify, flash, Response
-import os, json, subprocess, base64, re, requests
+import base64
 from datetime import datetime
 
-from services.config import CONFIG_DIR, MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH
+from flask import Blueprint, render_template, request, redirect, session, jsonify, flash, Response
+import os, json, subprocess, re, requests, threading
+
+from services.config import CONFIG_DIR
 from services.encryption import decrypt_session_value, load_encrypted_json
 from services.ldap_service import log_activity
 from services.uptime_kuma import add_host_to_uptime_kuma, get_uptime_kuma_config
 from services.nextcloud import upload_to_nextcloud
+from services.shared_helpers import get_nagios_servers, get_monitoring_categories
 from utils.permissions import check_permission
 
 host_manager_bp = Blueprint('host_manager', __name__)
 
 
-def get_nagios_servers() -> list[str]:
-    """Return a list of running Nagios container names."""
-    result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'], 
-                          capture_output=True, text=True)
-    return result.stdout.strip().split('\n') if result.stdout.strip() else []
-
-
-def get_monitoring_categories() -> list[str]:
-    """Return a deduplicated list of all known monitoring categories."""
-    categories: list[str] = []
-    seen: set[str] = set()
-
-    def add_category(value: object) -> None:
-        if not isinstance(value, str):
-            return
-        normalized = value.strip().lower()
-        if normalized and normalized not in seen:
-            seen.add(normalized)
-            categories.append(normalized)
-
-    for default_category in ['prioritas', 'bhome', 'diskominfo']:
-        add_category(default_category)
-
+def _add_to_uptime_kuma_async(host_name: str, address: str) -> None:
     try:
-        if os.path.exists(MONITORING_CATEGORIES_PATH):
-            with open(MONITORING_CATEGORIES_PATH, 'r') as f:
-                stored_categories = json.load(f)
-                if isinstance(stored_categories, list):
-                    for category in stored_categories:
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
+        monitor_id, error = add_host_to_uptime_kuma(host_name, address)
+        if monitor_id:
+            log_activity('Add Host to Uptime Kuma', f'Host: {host_name}, IP: {address}, Monitor ID: {monitor_id}')
+        elif error:
+            log_activity('Add Host to Uptime Kuma Failed', f'Host: {host_name}, Error: {error}')
+    except Exception as e:
+        print(f'Uptime Kuma background error for {host_name}: {e}')
 
-    try:
-        if os.path.exists(MONITORING_SERVER_MAPPINGS_PATH):
-            with open(MONITORING_SERVER_MAPPINGS_PATH, 'r') as f:
-                mappings = json.load(f)
-                if isinstance(mappings, dict):
-                    for category in mappings.keys():
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    try:
-        if os.path.exists(MONITORING_CONFIG_PATH):
-            with open(MONITORING_CONFIG_PATH, 'r') as f:
-                config = json.load(f)
-                category_settings = config.get('category_settings', {})
-                alarm_settings = config.get('alarm_settings', {})
-
-                if isinstance(category_settings, dict):
-                    for category in category_settings.keys():
-                        add_category(category)
-
-                if isinstance(alarm_settings, dict):
-                    for category in alarm_settings.keys():
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    return categories
 
 
 @host_manager_bp.route('/host-manager/backup', methods=['POST'])
@@ -96,7 +48,7 @@ def backup_localhost_cfg() -> Response | tuple[Response, int]:
         config_path = f'/svr/{server}/etc/objects/localhost.cfg'
         backup_path = f'{backup_dir}/{backup_name}.cfg'
         
-        subprocess.run(['cp', config_path, backup_path])
+        subprocess.run(['cp', config_path, backup_path], timeout=10)
         
         # Upload to Nextcloud
         cloud_success = upload_to_nextcloud(server, backup_path, backup_name)
@@ -156,8 +108,8 @@ def restore_localhost_cfg() -> Response | tuple[Response, int]:
         if not os.path.exists(backup_path):
             return jsonify({'success': False, 'error': 'Backup not found'})
         
-        subprocess.run(['cp', backup_path, config_path])
-        subprocess.run(['docker', 'restart', server], capture_output=True)
+        subprocess.run(['cp', backup_path, config_path], timeout=10)
+        subprocess.run(['docker', 'restart', server], capture_output=True, timeout=60)
         
         log_activity('Restore Config', f'Restored {backup_name} for {server}')
         return jsonify({'success': True})
@@ -190,7 +142,7 @@ def get_host_status_endpoint(server: str) -> Response | tuple[Response, int]:
     
     try:
         # Resolve container port using docker CLI (same approach as monitoring_data).
-        result = subprocess.run(['docker', 'port', server, '80'], capture_output=True, text=True)
+        result = subprocess.run(['docker', 'port', server, '80'], capture_output=True, text=True, timeout=10)
         if not result.stdout:
             return jsonify({'hosts': {}})
         port = result.stdout.strip().split(':')[-1]
@@ -391,20 +343,17 @@ def add_host() -> str | Response:
         with open(config_path, 'a') as f:
             f.write(host_definition)
         
-        # Add to Uptime Kuma if enabled
-        uptime_kuma_msg = ""
+        # Add to Uptime Kuma if enabled (background thread)
         if uptime_kuma_enabled:
-            monitor_id, error = add_host_to_uptime_kuma(host_name, address)
-            if monitor_id:
-                uptime_kuma_msg = " and added to Uptime Kuma"
-                log_activity('Add Host to Uptime Kuma', f'Host: {host_name}, IP: {address}, Monitor ID: {monitor_id}')
-            elif error:
-                uptime_kuma_msg = f" (Uptime Kuma: {error})"
-                log_activity('Add Host to Uptime Kuma Failed', f'Host: {host_name}, Error: {error}')
+            threading.Thread(
+                target=_add_to_uptime_kuma_async,
+                args=(host_name, address),
+                daemon=True
+            ).start()
         
         # Restart container immediately
-        subprocess.run(['docker', 'restart', server], check=True, capture_output=True)
-        flash(f'Host "{host_name}" added to {server}{uptime_kuma_msg} and restarted!', 'success')
+        subprocess.run(['docker', 'restart', server], check=True, capture_output=True, timeout=60)
+        flash(f'Host "{host_name}" added to {server} and restarted!', 'success')
     except Exception as e:
         flash(f'Failed to add host: {str(e)}', 'error')
     
@@ -481,21 +430,22 @@ def batch_add_hosts() -> str | Response:
             with open(config_path, 'a') as f:
                 f.write(host_def)
             
-            # Add to Uptime Kuma if enabled
+            # Add to Uptime Kuma if enabled (background thread)
             if i < len(uptime_kuma_enabled) and uptime_kuma_enabled[i] == 'on':
-                try:
-                    uptime_config = get_uptime_kuma_config()
-                    if uptime_config and uptime_config.get('enabled'):
-                        add_host_to_uptime_kuma(host_name, address)
-                except Exception as uk_error:
-                    print(f'Uptime Kuma add failed for {host_name}: {str(uk_error)}')
+                uptime_config = get_uptime_kuma_config()
+                if uptime_config and uptime_config.get('enabled'):
+                    threading.Thread(
+                        target=_add_to_uptime_kuma_async,
+                        args=(host_name, address),
+                        daemon=True
+                    ).start()
             
             if server not in added_by_server:
                 added_by_server[server] = 0
             added_by_server[server] += 1
         
         for server in added_by_server:
-            subprocess.run(['docker', 'restart', server], check=True, capture_output=True)
+            subprocess.run(['docker', 'restart', server], check=True, capture_output=True, timeout=60)
         
         total = sum(added_by_server.values())
         if total > 0:
@@ -534,29 +484,32 @@ def delete_host() -> str | Response:
         # Split by host definitions
         host_blocks = re.split(r'(define host\s*\{[^}]*\})', content, flags=re.DOTALL)
         
-        # Build host tree
+        # Build host tree and parent → children map (O(n))
         all_hosts = []
+        parent_map: dict[str, list[str]] = {}
         for block in host_blocks:
             if 'define host' in block:
                 name_match = re.search(r'host_name\s+(.+?)\s*$', block, re.MULTILINE)
                 parent_match = re.search(r'parents\s+(.+?)\s*$', block, re.MULTILINE)
                 if name_match:
+                    name = name_match.group(1).strip()
+                    parent = parent_match.group(1).strip() if parent_match else ''
                     all_hosts.append({
-                        'name': name_match.group(1).strip(),
-                        'parent': parent_match.group(1).strip() if parent_match else '',
+                        'name': name,
+                        'parent': parent,
                         'block': block
                     })
+                    if parent:
+                        parent_map.setdefault(parent, []).append(name)
         
-        # Find all descendants recursively
-        def find_descendants(parent_name: str) -> list[str]:
-            descendants = []
-            for host in all_hosts:
-                if host['parent'] == parent_name:
-                    descendants.append(host['name'])
-                    descendants.extend(find_descendants(host['name']))
-            return descendants
-        
-        hosts_to_delete = [host_name] + find_descendants(host_name)
+        # BFS to find all descendants (O(n))
+        hosts_to_delete = [host_name]
+        queue: list[str] = [host_name]
+        while queue:
+            parent = queue.pop(0)
+            for child in parent_map.get(parent, []):
+                hosts_to_delete.append(child)
+                queue.append(child)
         
         # Remove hosts and their services
         new_blocks = []
@@ -582,7 +535,7 @@ def delete_host() -> str | Response:
             f.write(updated_content)
         
         # Direct restart without verification
-        subprocess.run(['docker', 'restart', server], check=True, capture_output=True)
+        subprocess.run(['docker', 'restart', server], check=True, capture_output=True, timeout=60)
         msg = f'Deleted {len(hosts_to_delete)} host(s): {host_name}'
         if len(hosts_to_delete) > 1:
             msg += f' and {len(hosts_to_delete)-1} descendant(s)'
@@ -593,121 +546,120 @@ def delete_host() -> str | Response:
     return redirect('/host-manager')
 
 
+def _rebuild_host_config(content: str, old_host_name: str, host_name: str, alias: str, address: str, parents: str) -> str:
+    """Rebuild Nagios config content with updated host definition and child references."""
+    host_blocks = re.split(r'(define host\s*\{[^}]*\})', content, flags=re.DOTALL)
+
+    new_blocks = []
+    for block in host_blocks:
+        if 'define host' in block:
+            if re.search(rf'host_name\s+{re.escape(old_host_name)}\s*$', block, re.MULTILINE):
+                new_block = 'define host{\n'
+                new_block += '    use                     linux-server\n'
+                new_block += f'    host_name               {host_name}\n'
+                if alias:
+                    new_block += f'    alias                   {alias}\n'
+                new_block += f'    address                 {address}\n'
+                if parents:
+                    new_block += f'    parents                 {parents}\n'
+                new_block += '}'
+                block = new_block
+            elif old_host_name != host_name:
+                block = re.sub(
+                    rf'(parents\s+){re.escape(old_host_name)}(\s*$)',
+                    lambda m: m.group(1) + host_name + m.group(2),
+                    block, flags=re.MULTILINE
+                )
+        new_blocks.append(block)
+
+    return ''.join(new_blocks)
+
+
+def _remove_and_rebuild_services(content: str, old_host_name: str, host_name: str, service_plugin: str, service_args: str) -> str:
+    """Remove existing service blocks for the host and optionally rebuild a new one."""
+    service_block_pattern = re.compile(r'^define service\s*\{\s*.*?^\}\s*', re.DOTALL | re.MULTILINE)
+    hosts_to_replace = {host_name}
+    if old_host_name:
+        hosts_to_replace.add(old_host_name)
+
+    def _should_remove(match: re.Match) -> str:
+        block = match.group(0)
+        host_match = re.search(r'^\s*host_name\s+(.+?)\s*$', block, re.MULTILINE)
+        if host_match and host_match.group(1).strip() in hosts_to_replace:
+            return ''
+        return block
+
+    updated = service_block_pattern.sub(_should_remove, content)
+    updated = re.sub(r'\n{3,}', '\n\n', updated).rstrip()
+
+    if service_plugin:
+        new_service = '\ndefine service {\n'
+        new_service += '    use                     generic-service\n'
+        new_service += f'    host_name               {host_name}\n'
+        new_service += f'    service_description     {service_plugin.replace("check_", "").replace("_", " ").title()}\n'
+        if service_args:
+            new_service += f'    check_command           {service_plugin}!{service_args}\n'
+        else:
+            new_service += f'    check_command           {service_plugin}\n'
+        new_service += '    notifications_enabled   1\n'
+        new_service += '}\n'
+        updated += new_service
+    else:
+        updated = re.sub(r'\n\n\n+', '\n\n', updated)
+
+    return updated
+
+
 @host_manager_bp.route('/host-manager/edit', methods=['POST'])
 def edit_host() -> str | Response:
     """POST /host-manager/edit — edit an existing host configuration."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
+
     server = request.form.get('server')
-    
-    # Check if user has permission for this server
+
     if session.get('role') != 'admin':
         user_perms = session.get('permissions', {})
         if not user_perms.get(f'nagios_{server}'):
             flash('Access denied. You do not have permission to modify this server.', 'error')
             return redirect('/host-manager')
-    
+
     old_host_name = request.form.get('old_host_name')
     host_name = request.form.get('host_name')
     alias = request.form.get('alias')
     address = request.form.get('address')
     parents = request.form.get('parents', '').strip()
     uptime_kuma_enabled = request.form.get('uptime_kuma_enabled') == 'on'
-    
-    # Get service/plugin info
     service_enabled = request.form.get('service_enabled') == 'on'
     service_plugin = request.form.get('service_plugin', '')
     service_args = request.form.get('service_args', '')
-    
-    # Sanitize host_name
+
     host_name = re.sub(r'[^a-zA-Z0-9_. -]', '', host_name)
-    
     config_path = f'/svr/{server}/etc/objects/localhost.cfg'
-    
+
     try:
         with open(config_path, 'r') as f:
             content = f.read()
-        
-        # Split by host definitions
-        host_blocks = re.split(r'(define host\s*\{[^}]*\})', content, flags=re.DOTALL)
-        
-        new_blocks = []
-        for block in host_blocks:
-            if 'define host' in block:
-                # Check if this is the host to edit
-                if re.search(rf'host_name\s+{re.escape(old_host_name)}\s*$', block, re.MULTILINE):
-                    # Rebuild host definition
-                    new_block = 'define host{\n'
-                    new_block += '    use                     linux-server\n'
-                    new_block += f'    host_name               {host_name}\n'
-                    if alias:
-                        new_block += f'    alias                   {alias}\n'
-                    new_block += f'    address                 {address}\n'
-                    if parents:
-                        new_block += f'    parents                 {parents}\n'
-                    new_block += '}'
-                    block = new_block
-                
-                # Update children that reference old parent name
-                elif old_host_name != host_name:
-                    block = re.sub(rf'(parents\s+){re.escape(old_host_name)}(\s*$)', lambda m: m.group(1) + host_name + m.group(2), block, flags=re.MULTILINE)
-            
-            new_blocks.append(block)
-        
-        updated_content = ''.join(new_blocks)
-        
-        # Remove existing service blocks for the old/new host first so we can rebuild cleanly.
-        service_block_pattern = re.compile(r'^define service\s*\{\s*.*?^\}\s*', re.DOTALL | re.MULTILINE)
-        service_hosts_to_replace = {host_name}
-        if old_host_name:
-            service_hosts_to_replace.add(old_host_name)
 
-        def remove_matching_service_blocks(match: re.Match) -> str:
-            block = match.group(0)
-            host_match = re.search(r'^\s*host_name\s+(.+?)\s*$', block, re.MULTILINE)
-            if host_match and host_match.group(1).strip() in service_hosts_to_replace:
-                return ''
-            return block
-
-        updated_content = service_block_pattern.sub(remove_matching_service_blocks, updated_content)
-        updated_content = re.sub(r'\n{3,}', '\n\n', updated_content).rstrip()
-
-        # Handle service definition
-        if service_enabled and service_plugin:
-            new_service = '\ndefine service {\n'
-            new_service += '    use                     generic-service\n'
-            new_service += f'    host_name               {host_name}\n'
-            new_service += f'    service_description     {service_plugin.replace("check_", "").replace("_", " ").title()}\n'
-            if service_args:
-                new_service += f'    check_command           {service_plugin}!{service_args}\n'
-            else:
-                new_service += f'    check_command           {service_plugin}\n'
-            new_service += '    notifications_enabled   1\n'
-            new_service += '}\n'
-            updated_content += new_service
+        updated_content = _rebuild_host_config(content, old_host_name, host_name, alias, address, parents)
+        if service_enabled:
+            updated_content = _remove_and_rebuild_services(updated_content, old_host_name, host_name, service_plugin, service_args)
         else:
-            # Clean up extra newlines after removing service blocks
-            updated_content = re.sub(r'\n\n\n+', '\n\n', updated_content)
+            updated_content = _remove_and_rebuild_services(updated_content, old_host_name, host_name, '', '')
 
         with open(config_path, 'w') as f:
             f.write(updated_content)
-        
-        # Update Uptime Kuma if enabled
-        uptime_kuma_msg = ""
+
         if uptime_kuma_enabled:
-            monitor_id, error = add_host_to_uptime_kuma(host_name, address)
-            if monitor_id:
-                uptime_kuma_msg = " and added to Uptime Kuma"
-                log_activity('Add Host to Uptime Kuma', f'Host: {host_name}, IP: {address}, Monitor ID: {monitor_id}')
-            elif error:
-                uptime_kuma_msg = f" (Uptime Kuma: {error})"
-                log_activity('Add Host to Uptime Kuma Failed', f'Host: {host_name}, Error: {error}')
-        
-        # Direct restart without verification
-        subprocess.run(['docker', 'restart', server], check=True, capture_output=True)
-        flash(f'Host "{host_name}" updated{uptime_kuma_msg} and restarted!', 'success')
+            threading.Thread(
+                target=_add_to_uptime_kuma_async,
+                args=(host_name, address),
+                daemon=True
+            ).start()
+
+        subprocess.run(['docker', 'restart', server], check=True, capture_output=True, timeout=60)
+        flash(f'Host "{host_name}" updated and restarted!', 'success')
     except Exception as e:
         flash(f'Failed to update host: {str(e)}', 'error')
-    
+
     return redirect('/host-manager')

@@ -22,7 +22,7 @@ monitoring_bp = Blueprint('monitoring', __name__)
 def get_nagios_servers() -> list[str]:
     """Return list of running Nagios container names."""
     result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'],
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, timeout=10)
     return result.stdout.strip().split('\n') if result.stdout.strip() else []
 
 

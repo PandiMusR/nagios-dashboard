@@ -1,75 +1,15 @@
 from __future__ import annotations
 
-from flask import Blueprint, render_template, request, redirect, session, jsonify, flash, Response
-import os, json, subprocess, base64, requests
+import subprocess
 
-from services.config import CONFIG_DIR, MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH
-from services.encryption import decrypt_session_value, save_encrypted_json
+from flask import Blueprint, render_template, request, redirect, session, jsonify, flash, Response
+import os, base64, requests
+
+from services.config import CONFIG_DIR
+from services.encryption import decrypt_session_value, save_encrypted_json, load_encrypted_json
+from services.shared_helpers import get_nagios_servers, get_monitoring_categories
 
 nagios_proxy_bp = Blueprint('nagios_proxy', __name__)
-
-
-def get_nagios_servers() -> list[str]:
-    """Return a list of running Nagios container names."""
-    result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'],
-                          capture_output=True, text=True)
-    return result.stdout.strip().split('\n') if result.stdout.strip() else []
-
-
-def get_monitoring_categories() -> list[str]:
-    """Return a deduplicated list of all known monitoring categories."""
-    categories: list[str] = []
-    seen: set[str] = set()
-
-    def add_category(value: object) -> None:
-        if not isinstance(value, str):
-            return
-        normalized = value.strip().lower()
-        if normalized and normalized not in seen:
-            seen.add(normalized)
-            categories.append(normalized)
-
-    for default_category in ['prioritas', 'bhome', 'diskominfo']:
-        add_category(default_category)
-
-    try:
-        if os.path.exists(MONITORING_CATEGORIES_PATH):
-            with open(MONITORING_CATEGORIES_PATH, 'r') as f:
-                stored_categories = json.load(f)
-                if isinstance(stored_categories, list):
-                    for category in stored_categories:
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    try:
-        if os.path.exists(MONITORING_SERVER_MAPPINGS_PATH):
-            with open(MONITORING_SERVER_MAPPINGS_PATH, 'r') as f:
-                mappings = json.load(f)
-                if isinstance(mappings, dict):
-                    for category in mappings.keys():
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    try:
-        if os.path.exists(MONITORING_CONFIG_PATH):
-            with open(MONITORING_CONFIG_PATH, 'r') as f:
-                config = json.load(f)
-                category_settings = config.get('category_settings', {})
-                alarm_settings = config.get('alarm_settings', {})
-
-                if isinstance(category_settings, dict):
-                    for category in category_settings.keys():
-                        add_category(category)
-
-                if isinstance(alarm_settings, dict):
-                    for category in alarm_settings.keys():
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    return categories
 
 
 @nagios_proxy_bp.route('/nagios/<container_name>', methods=['GET'])
@@ -79,7 +19,7 @@ def nagios_proxy_root(container_name: str) -> str | Response:
         return redirect('/')
     
     # Get container port
-    result = subprocess.run(['docker', 'port', container_name, '80'], capture_output=True, text=True)
+    result = subprocess.run(['docker', 'port', container_name, '80'], capture_output=True, text=True, timeout=10)
     if not result.stdout:
         flash('Container not found!', 'error')
         return redirect('/dashboard')
@@ -91,7 +31,9 @@ def nagios_proxy_root(container_name: str) -> str | Response:
     username = session.get('username')
     password = decrypt_session_value(session.get('password'))
     creds_file = f'{CONFIG_DIR}/nagios_creds_{container_name}.json'
-    save_encrypted_json(creds_file, {'username': username, 'password': password})
+    existing = load_encrypted_json(creds_file) if os.path.exists(creds_file) else {}
+    if not existing or existing.get('username') != username or existing.get('password') != password:
+        save_encrypted_json(creds_file, {'username': username, 'password': password})
     
     return render_template('nagios_view.html', username=session['username'], container=container_name, 
                          proxy_port=proxy_port, nagios_servers=get_nagios_servers(), monitoring_categories=get_monitoring_categories())
@@ -112,7 +54,7 @@ def nagios_cgi_proxy(path: str) -> Response | tuple[Response, int]:
     if 'username' not in session or 'password' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    result = subprocess.run(['docker', 'port', container_name, '80'], capture_output=True, text=True)
+    result = subprocess.run(['docker', 'port', container_name, '80'], capture_output=True, text=True, timeout=10)
     if not result.stdout:
         return jsonify({'error': 'Container not found'}), 404
     
@@ -151,7 +93,7 @@ def nagios_static_proxy(path: str) -> Response | tuple[Response, int]:
     if 'username' not in session or 'password' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    result = subprocess.run(['docker', 'port', container_name, '80'], capture_output=True, text=True)
+    result = subprocess.run(['docker', 'port', container_name, '80'], capture_output=True, text=True, timeout=10)
     if not result.stdout:
         return jsonify({'error': 'Container not found'}), 404
     
@@ -180,7 +122,7 @@ def proxy_nagios(container_name: str, path: str = '') -> Response | tuple[Respon
         return jsonify({'error': 'Unauthorized'}), 401
     
     # Get container port
-    result = subprocess.run(['docker', 'port', container_name, '80'], capture_output=True, text=True)
+    result = subprocess.run(['docker', 'port', container_name, '80'], capture_output=True, text=True, timeout=10)
     if not result.stdout:
         return jsonify({'error': 'Container not found'}), 404
     
@@ -224,7 +166,7 @@ def forward_request(method: str, url: str, data: bytes | None, auth_header: str)
     if data and 'Content-Type' not in headers:
         headers['Content-Type'] = 'application/json'
     
-    response = requests.request(method, url, headers=headers, data=data)
+    response = requests.request(method, url, headers=headers, data=data, timeout=30)
     excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'www-authenticate']
     filtered_headers = [(k, v) for k, v in response.headers.items() if k.lower() not in excluded_headers]
     

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint, render_template, request, redirect, session, jsonify, flash, Response
+from flask import Blueprint, render_template, redirect, session, jsonify, flash, Response
 import time, traceback
 
 from services.uptime_kuma import get_uptime_kuma_config, remove_host_from_uptime_kuma

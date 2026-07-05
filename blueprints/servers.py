@@ -1,79 +1,16 @@
 from __future__ import annotations
 
 from flask import Blueprint, Response, render_template, request, redirect, session, jsonify, flash
-import os, json, subprocess, base64, threading, time
-from datetime import datetime
+import os, json, subprocess, threading, time
 
-from services.config import APP_ROOT, CONFIG_DIR, MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH
-from services.encryption import encrypt_session_value, decrypt_session_value, save_encrypted_json
+from services.config import APP_ROOT, CONFIG_DIR
+from services.encryption import decrypt_session_value, save_encrypted_json
 from services.ldap_service import log_activity
+from services.shared_helpers import get_nagios_servers, get_monitoring_categories
 from utils.port_check import _get_all_used_ports, check_proxy_running
 from utils.permissions import check_permission
 
 servers_bp = Blueprint('servers', __name__)
-
-
-def get_nagios_servers() -> list[str]:
-    """Return list of running Nagios container names."""
-    result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'], 
-                          capture_output=True, text=True)
-    return result.stdout.strip().split('\n') if result.stdout.strip() else []
-
-
-def get_monitoring_categories() -> list[str]:
-    """Collect and return deduplicated monitoring category names from config files."""
-    categories = []
-    seen = set()
-
-    def add_category(value: object) -> None:
-        if not isinstance(value, str):
-            return
-        normalized = value.strip().lower()
-        if normalized and normalized not in seen:
-            seen.add(normalized)
-            categories.append(normalized)
-
-    for default_category in ['prioritas', 'bhome', 'diskominfo']:
-        add_category(default_category)
-
-    try:
-        if os.path.exists(MONITORING_CATEGORIES_PATH):
-            with open(MONITORING_CATEGORIES_PATH, 'r') as f:
-                stored_categories = json.load(f)
-                if isinstance(stored_categories, list):
-                    for category in stored_categories:
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    try:
-        if os.path.exists(MONITORING_SERVER_MAPPINGS_PATH):
-            with open(MONITORING_SERVER_MAPPINGS_PATH, 'r') as f:
-                mappings = json.load(f)
-                if isinstance(mappings, dict):
-                    for category in mappings.keys():
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    try:
-        if os.path.exists(MONITORING_CONFIG_PATH):
-            with open(MONITORING_CONFIG_PATH, 'r') as f:
-                config = json.load(f)
-                category_settings = config.get('category_settings', {})
-                alarm_settings = config.get('alarm_settings', {})
-
-                if isinstance(category_settings, dict):
-                    for category in category_settings.keys():
-                        add_category(category)
-
-                if isinstance(alarm_settings, dict):
-                    for category in alarm_settings.keys():
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    return categories
 
 
 @servers_bp.route('/servers')
@@ -88,7 +25,7 @@ def servers() -> str | Response:
     
     # Get list of nagios containers
     result = subprocess.run(['docker', 'ps', '-a', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{json .}}'], 
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, timeout=10)
     
     server_list = []
     if result.stdout:
@@ -227,7 +164,7 @@ def batch_start_servers() -> Response | tuple[Response, int]:
     
     try:
         for server in servers_list:
-            subprocess.run(['docker', 'start', server], capture_output=True)
+            subprocess.run(['docker', 'start', server], capture_output=True, timeout=30)
         log_activity('Batch Start', f'Started {len(servers_list)} servers')
         return jsonify({'success': True})
     except Exception as e:
@@ -290,7 +227,7 @@ def batch_restart_servers() -> Response | tuple[Response, int]:
     
     try:
         for server in servers_list:
-            subprocess.run(['docker', 'restart', server], capture_output=True)
+            subprocess.run(['docker', 'restart', server], capture_output=True, timeout=60)
         log_activity('Batch Restart', f'Restarted {len(servers_list)} servers')
         return jsonify({'success': True})
     except Exception as e:
@@ -312,11 +249,11 @@ def batch_delete_servers() -> Response | tuple[Response, int]:
     try:
         for server in servers_list:
             # Stop container
-            subprocess.run(['docker', 'stop', server], capture_output=True)
+            subprocess.run(['docker', 'stop', server], capture_output=True, timeout=30)
             # Remove container
-            subprocess.run(['docker', 'rm', server], capture_output=True)
+            subprocess.run(['docker', 'rm', server], capture_output=True, timeout=30)
             # Remove volume directory
-            subprocess.run(['rm', '-rf', f'/svr/{server}'], capture_output=True)
+            subprocess.run(['rm', '-rf', f'/svr/{server}'], capture_output=True, timeout=30)
         
         log_activity('Batch Delete', f'Deleted {len(servers_list)} servers: {", ".join(servers_list)}')
         return jsonify({'success': True})
@@ -334,7 +271,7 @@ def check_config(name: str) -> Response | tuple[Response, int]:
     try:
         result = subprocess.run(
             ['docker', 'exec', name, '/opt/nagios/bin/nagios', '-v', '/opt/nagios/etc/nagios.cfg'],
-            capture_output=True, text=True
+            capture_output=True, text=True, timeout=30
         )
         
         output = result.stdout + result.stderr
@@ -357,13 +294,13 @@ def start_all_containers() -> Response | tuple[Response, int]:
     
     try:
         result = subprocess.run(['docker', 'ps', '-a', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'], 
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, timeout=10)
         
         if result.stdout:
             containers = result.stdout.strip().split('\n')
             for container in containers:
                 if container:
-                    subprocess.run(['docker', 'start', container], capture_output=True)
+                    subprocess.run(['docker', 'start', container], capture_output=True, timeout=30)
             
             log_activity('Start All Containers', 'All containers started')
             return jsonify({'success': True})
@@ -381,13 +318,13 @@ def start_all_proxies() -> Response | tuple[Response, int]:
     
     try:
         result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'], 
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, timeout=10)
         
         if result.stdout:
             containers = result.stdout.strip().split('\n')
             for container in containers:
                 if container:
-                    port_result = subprocess.run(['docker', 'port', container, '80'], capture_output=True, text=True)
+                    port_result = subprocess.run(['docker', 'port', container, '80'], capture_output=True, text=True, timeout=10)
                     if port_result.stdout:
                         port = port_result.stdout.strip().split(':')[1]
                         proxy_port = 1000 + int(port)
@@ -397,7 +334,7 @@ def start_all_proxies() -> Response | tuple[Response, int]:
                         creds_file = f'{CONFIG_DIR}/nagios_creds_{container}.json'
                         save_encrypted_json(creds_file, {'username': username, 'password': password})
                         
-                        subprocess.run(['python3', f'{APP_ROOT}/start_proxy_daemon.py', container, port, str(proxy_port)])
+                        subprocess.run(['python3', f'{APP_ROOT}/start_proxy_daemon.py', container, port, str(proxy_port)], timeout=60)
             
             log_activity('Start All Proxies', 'All proxies started')
             return jsonify({'success': True})
@@ -416,17 +353,17 @@ def start_all_servers() -> Response | tuple[Response, int]:
     try:
         # Get all nagios containers
         result = subprocess.run(['docker', 'ps', '-a', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'], 
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, timeout=10)
         
         if result.stdout:
             containers = result.stdout.strip().split('\n')
             for container in containers:
                 if container:
                     # Start container
-                    subprocess.run(['docker', 'start', container], capture_output=True)
+                    subprocess.run(['docker', 'start', container], capture_output=True, timeout=30)
                     
                     # Start proxy
-                    port_result = subprocess.run(['docker', 'port', container, '80'], capture_output=True, text=True)
+                    port_result = subprocess.run(['docker', 'port', container, '80'], capture_output=True, text=True, timeout=10)
                     if port_result.stdout:
                         port = port_result.stdout.strip().split(':')[1]
                         proxy_port = 1000 + int(port)
@@ -438,7 +375,7 @@ def start_all_servers() -> Response | tuple[Response, int]:
                         save_encrypted_json(creds_file, {'username': username, 'password': password})
                         
                         # Start proxy
-                        subprocess.run(['python3', f'{APP_ROOT}/start_proxy_daemon.py', container, port, str(proxy_port)])
+                        subprocess.run(['python3', f'{APP_ROOT}/start_proxy_daemon.py', container, port, str(proxy_port)], timeout=60)
             
             log_activity('Start All', 'All servers and proxies started')
             return jsonify({'success': True})
@@ -455,7 +392,7 @@ def check_server(name: str) -> Response | tuple[Response, int]:
         return jsonify({'error': 'Unauthorized'}), 401
     
     result = subprocess.run(['docker', 'ps', '-a', '--filter', f'name=^{name}$', '--format', '{{.Names}}'], 
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, timeout=10)
     exists = bool(result.stdout.strip())
     return jsonify({'exists': exists})
 
@@ -467,9 +404,9 @@ def delete_server(name: str) -> Response:
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
-        subprocess.run(['docker', 'stop', name], check=True, capture_output=True)
-        subprocess.run(['docker', 'rm', name], check=True, capture_output=True)
-        subprocess.run(['rm', '-rf', f'/svr/{name}'], check=True, capture_output=True)
+        subprocess.run(['docker', 'stop', name], check=True, capture_output=True, timeout=30)
+        subprocess.run(['docker', 'rm', name], check=True, capture_output=True, timeout=30)
+        subprocess.run(['rm', '-rf', f'/svr/{name}'], check=True, capture_output=True, timeout=30)
         flash(f'Server "{name}" deleted successfully!', 'success')
         return redirect('/servers')
     except (subprocess.CalledProcessError, OSError):
@@ -484,7 +421,7 @@ def restart_server(name: str) -> Response:
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
-        subprocess.run(['docker', 'restart', name], check=True, capture_output=True)
+        subprocess.run(['docker', 'restart', name], check=True, capture_output=True, timeout=60)
         flash(f'Server "{name}" restarted successfully!', 'success')
         return redirect('/servers')
     except (subprocess.CalledProcessError, OSError):
@@ -499,7 +436,7 @@ def stop_server(name: str) -> Response:
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
-        subprocess.run(['docker', 'stop', name], check=True, capture_output=True)
+        subprocess.run(['docker', 'stop', name], check=True, capture_output=True, timeout=30)
         flash(f'Server "{name}" stopped successfully!', 'success')
         return redirect('/servers')
     except (subprocess.CalledProcessError, OSError):
@@ -523,8 +460,8 @@ def edit_server_config(name: str) -> str | Response:
             
             # Restart nagios container to apply changes
             subprocess.run(['docker', 'exec', name, '/opt/nagios/bin/nagios', '-v', '/opt/nagios/etc/nagios.cfg'], 
-                         capture_output=True, text=True)
-            subprocess.run(['docker', 'restart', name], check=True, capture_output=True)
+                         capture_output=True, text=True, timeout=30)
+            subprocess.run(['docker', 'restart', name], check=True, capture_output=True, timeout=60)
             
             log_activity('Edit Config', f'Config for "{name}" updated')
             flash(f'Config for "{name}" updated and restarted!', 'success')
@@ -624,7 +561,7 @@ def start_server(name: str) -> Response:
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
-        subprocess.run(['docker', 'start', name], check=True, capture_output=True)
+        subprocess.run(['docker', 'start', name], check=True, capture_output=True, timeout=30)
         flash(f'Server "{name}" started successfully!', 'success')
         return redirect('/servers')
     except (subprocess.CalledProcessError, OSError):
@@ -639,7 +576,7 @@ def start_proxy(name: str) -> Response:
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
-        result = subprocess.run(['docker', 'port', name, '80'], capture_output=True, text=True)
+        result = subprocess.run(['docker', 'port', name, '80'], capture_output=True, text=True, timeout=10)
         if result.stdout:
             port = result.stdout.strip().split(':')[1]
             proxy_port = 1000 + int(port)
@@ -658,7 +595,7 @@ def start_proxy(name: str) -> Response:
             
             # Start proxy using Python daemon script
             result = subprocess.run(['python3', f'{APP_ROOT}/start_proxy_daemon.py', name, port, str(proxy_port)], 
-                                  capture_output=True, text=True)
+                                  capture_output=True, text=True, timeout=60)
             
             with open(f'/tmp/proxy_start_{name}.log', 'a') as log:
                 log.write(f'Return code: {result.returncode}\n')
@@ -668,7 +605,7 @@ def start_proxy(name: str) -> Response:
             time.sleep(2)
             
             # Check if proxy is running
-            check = subprocess.run(['lsof', '-i', f':{proxy_port}', '-t'], capture_output=True, text=True)
+            check = subprocess.run(['lsof', '-i', f':{proxy_port}', '-t'], capture_output=True, text=True, timeout=5)
             
             with open(f'/tmp/proxy_start_{name}.log', 'a') as log:
                 log.write(f'Check running: {check.stdout}\n')
@@ -690,11 +627,11 @@ def stop_proxy(name: str) -> Response:
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
-        result = subprocess.run(['docker', 'port', name, '80'], capture_output=True, text=True)
+        result = subprocess.run(['docker', 'port', name, '80'], capture_output=True, text=True, timeout=10)
         if result.stdout:
             port = result.stdout.strip().split(':')[1]
             proxy_port = 1000 + int(port)
-            subprocess.run(['pkill', '-f', f'proxy.py {name} {port}'], check=True, capture_output=True)
+            subprocess.run(['pkill', '-f', f'proxy.py {name} {port}'], check=True, capture_output=True, timeout=10)
             flash(f'Proxy for "{name}" stopped!', 'success')
         return redirect('/servers')
     except (subprocess.CalledProcessError, OSError):
@@ -709,13 +646,13 @@ def restart_proxy(name: str) -> Response:
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
-        result = subprocess.run(['docker', 'port', name, '80'], capture_output=True, text=True)
+        result = subprocess.run(['docker', 'port', name, '80'], capture_output=True, text=True, timeout=10)
         if result.stdout:
             port = result.stdout.strip().split(':')[1]
             proxy_port = 1000 + int(port)
             
             # Kill existing
-            subprocess.run(['pkill', '-9', '-f', f'proxy.py {name}'], capture_output=True)
+            subprocess.run(['pkill', '-9', '-f', f'proxy.py {name}'], capture_output=True, timeout=10)
             
             # Store credentials
             username = session.get('username')
@@ -724,7 +661,7 @@ def restart_proxy(name: str) -> Response:
             save_encrypted_json(creds_file, {'username': username, 'password': password})
             
             # Start new
-            subprocess.run(['python3', f'{APP_ROOT}/start_proxy_daemon.py', name, port, str(proxy_port)])
+            subprocess.run(['python3', f'{APP_ROOT}/start_proxy_daemon.py', name, port, str(proxy_port)], timeout=60)
             
             flash(f'Proxy for "{name}" restarted!', 'success')
         return redirect('/servers')

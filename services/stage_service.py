@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from collections.abc import Generator
 
 from services.config import (
-    CONFIG_DIR, HOST_STAGES_PATH,
+    HOST_STAGES_PATH,
     STAGE_NEW, STAGE_CS, STAGE_ESCALATED, STAGE_WATCHLIST, STAGE_RESOLVED,
     STAGE_LABELS, STAGE_RETAIN_MINUTES
 )

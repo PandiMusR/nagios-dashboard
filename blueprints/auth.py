@@ -1,61 +1,16 @@
 from __future__ import annotations
 
 from flask import Blueprint, Response, render_template, request, redirect, session, jsonify, flash
-import os, json, subprocess, base64
-from datetime import datetime
-from ldap3 import Server, Connection, ALL
+import os, json
 
-from services.config import LDAP_SERVER, LDAP_BASE_DN, LDAP_ADMIN_DN, HOST_STAGES_PATH, MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH
-from services.encryption import encrypt_session_value, decrypt_session_value
-from services.ldap_service import get_ldap_admin_connection, check_admin_user_exists, ldap_auth, log_activity, check_ldap_server, setup_ldap_structure
+from services.config import LDAP_SERVER, LDAP_BASE_DN, HOST_STAGES_PATH
+from services.encryption import encrypt_session_value
+from services.ldap_service import get_ldap_admin_connection, check_admin_user_exists, ldap_auth, log_activity
 from services.active_users import active_users
-from utils.permissions import load_user_permissions, get_default_permissions
+from services.shared_helpers import get_nagios_servers as _get_nagios_servers, get_monitoring_categories as _get_monitoring_categories
+from utils.permissions import load_user_permissions
 
 auth_bp = Blueprint('auth', __name__)
-
-
-def _get_nagios_servers() -> list[str]:
-    """Return list of running Nagios container names."""
-    import subprocess
-    result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'],
-                          capture_output=True, text=True)
-    return result.stdout.strip().split('\n') if result.stdout.strip() else []
-
-
-def _get_monitoring_categories() -> list[str]:
-    """Collect and return deduplicated monitoring category names from config files."""
-    categories = []
-    seen = set()
-
-    def add_category(value: object) -> None:
-        if not isinstance(value, str):
-            return
-        normalized = value.strip().lower()
-        if normalized and normalized not in seen:
-            seen.add(normalized)
-            categories.append(normalized)
-
-    for default_category in ['prioritas', 'bhome', 'diskominfo']:
-        add_category(default_category)
-
-    for path in [MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH]:
-        try:
-            if os.path.exists(path):
-                with open(path, 'r') as f:
-                    data = json.load(f)
-                    if isinstance(data, list):
-                        for item in data:
-                            add_category(item)
-                    elif isinstance(data, dict):
-                        for key in data.keys():
-                            add_category(key)
-                        for key in data.get('category_settings', {}).keys():
-                            add_category(key)
-                        for key in data.get('alarm_settings', {}).keys():
-                            add_category(key)
-        except (json.JSONDecodeError, OSError):
-            pass
-    return categories
 
 
 @auth_bp.route('/health')
@@ -87,9 +42,7 @@ def health() -> tuple[Response, int]:
 
     # 3. At least one Nagios container running
     try:
-        result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'],
-                                capture_output=True, text=True, timeout=10)
-        containers = [c for c in result.stdout.strip().split('\n') if c]
+        containers = _get_nagios_servers()
         if containers:
             checks['nagios_containers'] = f'ok ({len(containers)} running)'
         else:

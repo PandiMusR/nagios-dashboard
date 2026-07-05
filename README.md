@@ -64,9 +64,9 @@ Browser
   │
   ▼
 Flask App (app.py) — port configurable via APP_PORT (default: 80)
-  ├── Blueprints     → 12 modules (auth, dashboard, servers, users, monitoring, api, ...)
-  ├── Services       → 11 modules (LDAP, encryption, stages, uptime kuma, nextcloud, active users, scheduler, docker cache, stage history, config)
-  ├── Utils          → 3 modules (permissions, port check)
+  ├── Blueprints     → 11 modules (auth, dashboard, servers, users, monitoring, api, ...)
+  ├── Services       → 12 modules (LDAP, encryption, stages, uptime kuma, nextcloud, active users, scheduler, docker cache, stage history, shared_helpers, config)
+  ├── Utils          → 2 modules (permissions, port check)
   ├── LDAP Auth      → OpenLDAP container (port 1389)
   ├── Docker CLI     → Nagios containers (nagios-ldap:latest)
   ├── Docker Cache   → In-memory cache for Docker CLI (TTL 15s)

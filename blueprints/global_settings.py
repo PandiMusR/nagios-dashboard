@@ -1,77 +1,15 @@
 from __future__ import annotations
 
 from flask import Blueprint, render_template, request, redirect, session, jsonify, flash, send_file, Response
-import os, json, subprocess, tarfile
+import os, json, subprocess
 from datetime import datetime
 
-from services.config import CONFIG_DIR, ACTIVITY_LOG_PATH, GLOBAL_CONFIG_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH, MONITORING_CATEGORIES_PATH
+from services.config import CONFIG_DIR, ACTIVITY_LOG_PATH, GLOBAL_CONFIG_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH
 from services.ldap_service import log_activity, read_activity_logs, ACTIVITY_LOG_DIR
+from services.shared_helpers import get_nagios_servers, get_monitoring_categories
 from utils.permissions import check_permission
 
 global_settings_bp = Blueprint('global_settings', __name__)
-
-
-def get_nagios_servers() -> list[str]:
-    """Return a list of running Nagios container names."""
-    result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'],
-                          capture_output=True, text=True)
-    return result.stdout.strip().split('\n') if result.stdout.strip() else []
-
-
-def get_monitoring_categories() -> list[str]:
-    """Return a deduplicated list of all known monitoring categories."""
-    categories: list[str] = []
-    seen: set[str] = set()
-
-    def add_category(value: object) -> None:
-        if not isinstance(value, str):
-            return
-        normalized = value.strip().lower()
-        if normalized and normalized not in seen:
-            seen.add(normalized)
-            categories.append(normalized)
-
-    for default_category in ['prioritas', 'bhome', 'diskominfo']:
-        add_category(default_category)
-
-    try:
-        if os.path.exists(MONITORING_CATEGORIES_PATH):
-            with open(MONITORING_CATEGORIES_PATH, 'r') as f:
-                stored_categories = json.load(f)
-                if isinstance(stored_categories, list):
-                    for category in stored_categories:
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    try:
-        if os.path.exists(MONITORING_SERVER_MAPPINGS_PATH):
-            with open(MONITORING_SERVER_MAPPINGS_PATH, 'r') as f:
-                mappings = json.load(f)
-                if isinstance(mappings, dict):
-                    for category in mappings.keys():
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    try:
-        if os.path.exists(MONITORING_CONFIG_PATH):
-            with open(MONITORING_CONFIG_PATH, 'r') as f:
-                config = json.load(f)
-                category_settings = config.get('category_settings', {})
-                alarm_settings = config.get('alarm_settings', {})
-
-                if isinstance(category_settings, dict):
-                    for category in category_settings.keys():
-                        add_category(category)
-
-                if isinstance(alarm_settings, dict):
-                    for category in alarm_settings.keys():
-                        add_category(category)
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    return categories
 
 
 @global_settings_bp.route('/global-settings')
@@ -151,7 +89,7 @@ def create_backup() -> str | Response:
         
         with tarfile.open(backup_file, 'w:gz') as tar:
             result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'], 
-                                  capture_output=True, text=True)
+                                  capture_output=True, text=True, timeout=10)
             if result.stdout:
                 for server in result.stdout.strip().split('\n'):
                     if server:
@@ -228,10 +166,10 @@ def restore_backup() -> Response | tuple[Response, int]:
                 config_file = f'{server_path}/localhost.cfg'
                 if os.path.exists(config_file):
                     dest = f'/svr/{server_dir}/etc/objects/localhost.cfg'
-                    subprocess.run(['cp', config_file, dest])
-                    subprocess.run(['docker', 'restart', server_dir], capture_output=True)
+                    subprocess.run(['cp', config_file, dest], timeout=10)
+                    subprocess.run(['docker', 'restart', server_dir], capture_output=True, timeout=60)
         
-        subprocess.run(['rm', '-rf', '/tmp/restore_temp'])
+        subprocess.run(['rm', '-rf', '/tmp/restore_temp'], timeout=10)
         
         log_activity('Restore Backup', f'Backup "{backup_name}" restored')
         return jsonify({'success': True})
