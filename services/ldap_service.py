@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import os
+import logging
 import subprocess
+
+logger = logging.getLogger(__name__)
 from datetime import datetime
 
 from flask import session, request
 from ldap3 import Server, Connection, ALL
+from ldap3.utils.conv import escape_filter_chars
 
 from services.config import LDAP_SERVER, LDAP_BASE_DN, LDAP_ADMIN_DN, LDAP_ADMIN_PASSWORD, CONFIG_DIR, ACTIVITY_LOG_PATH
 from utils.permissions import load_user_permissions, get_default_permissions
@@ -69,18 +73,18 @@ def setup_ldap_structure() -> bool:
 
         try:
             conn.add('ou=users,dc=bnet,dc=id', ['organizationalUnit'])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"LDAP OU users creation failed (may already exist): {e}")
 
         try:
             conn.add('ou=groups,dc=bnet,dc=id', ['organizationalUnit'])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"LDAP OU groups creation failed (may already exist): {e}")
 
         try:
             conn.add('cn=nagiosadmins,ou=groups,dc=bnet,dc=id', ['groupOfNames'], {'member': 'cn=admin,dc=bnet,dc=id'})
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"LDAP nagiosadmins group creation failed (may already exist): {e}")
 
         conn.unbind()
         return True
@@ -170,7 +174,7 @@ def ldap_auth(username: str, password: str) -> dict:
 
         if not user_perms or user_perms == get_default_permissions():
             admin_conn = get_ldap_admin_connection()
-            admin_conn.search('ou=groups,dc=bnet,dc=id', f'(member={user_dn})', attributes=['cn'])
+            admin_conn.search('ou=groups,dc=bnet,dc=id', f'(member={escape_filter_chars(user_dn)})', attributes=['cn'])
 
             role = 'user'
             if admin_conn.entries:

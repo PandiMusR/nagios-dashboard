@@ -56,6 +56,8 @@ def edit_monitoring_category() -> str | Response:
     """POST /monitoring-settings/edit-category — update a category's settings."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('monitoring_settings'):
+        return jsonify({'error': 'Access denied'}), 403
     
     category = request.form.get('category')
     use_service_plugin = request.form.get('use_service_plugin', 'false') == 'true'
@@ -142,6 +144,8 @@ def delete_monitoring_category(category: str) -> str | Response:
     """POST /monitoring-settings/delete/<category> — delete a monitoring category."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('monitoring_settings'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         categories = get_monitoring_categories()
@@ -164,6 +168,8 @@ def map_server_to_category() -> str | Response:
     """POST /monitoring-settings/map-server — map a server to a category."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('monitoring_settings'):
+        return jsonify({'error': 'Access denied'}), 403
     
     server = request.form.get('server')
     category = request.form.get('category')
@@ -200,6 +206,8 @@ def update_monitoring_config() -> str | Response:
     """POST /monitoring-settings/update-config — update monitoring configuration."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('monitoring_settings'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         config = {}
@@ -236,13 +244,23 @@ def update_monitoring_config() -> str | Response:
             sound_dir = f'{APP_ROOT}/static/assets/sound'
             os.makedirs(sound_dir, exist_ok=True)
             
+            ALLOWED_SOUND_EXTENSIONS = {'.wav', '.mp3', '.ogg', '.m4a', '.aac'}
+
             if sound_down_file and sound_down_file.filename:
-                filename = f'alarm_down_{category}.{sound_down_file.filename.split(".")[-1]}'
+                ext = os.path.splitext(sound_down_file.filename)[1].lower()
+                if ext not in ALLOWED_SOUND_EXTENSIONS:
+                    flash(f'Invalid file type: {ext}. Allowed: {", ".join(sorted(ALLOWED_SOUND_EXTENSIONS))}', 'danger')
+                    return redirect(url_for('monitoring_settings.monitoring_settings'))
+                filename = f'alarm_down_{category}{ext}'
                 sound_down_path = os.path.join(sound_dir, filename)
                 sound_down_file.save(sound_down_path)
             
             if sound_up_file and sound_up_file.filename:
-                filename = f'alarm_up_{category}.{sound_up_file.filename.split(".")[-1]}'
+                ext = os.path.splitext(sound_up_file.filename)[1].lower()
+                if ext not in ALLOWED_SOUND_EXTENSIONS:
+                    flash(f'Invalid file type: {ext}. Allowed: {", ".join(sorted(ALLOWED_SOUND_EXTENSIONS))}', 'danger')
+                    return redirect(url_for('monitoring_settings.monitoring_settings'))
+                filename = f'alarm_up_{category}{ext}'
                 sound_up_path = os.path.join(sound_dir, filename)
                 sound_up_file.save(sound_up_path)
             
@@ -313,6 +331,8 @@ def monitoring_config(page: str) -> Response | tuple[Response, int]:
     """GET /monitoring/<page>/config — return monitoring config for a page."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('monitoring_settings'):
+        return jsonify({'error': 'Access denied'}), 403
     
     config = {'refresh_interval': 30, 'alarm_settings': {}}
     try:
@@ -348,6 +368,8 @@ def unmap_server_from_category() -> str | Response:
     """POST /monitoring-settings/unmap-server — remove a server from a category."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('monitoring_settings'):
+        return jsonify({'error': 'Access denied'}), 403
     
     server = request.form.get('server')
     category = request.form.get('category')

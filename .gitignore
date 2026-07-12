@@ -46,6 +46,9 @@ tmp/
 *.bak
 *.orig
 
+# Hermes temp files
+.hermes-tmp.*
+
 # Old/deprecated templates
 templates/*_old.html
 

@@ -5,6 +5,7 @@ import json
 import time
 
 from services.config import GLOBAL_CONFIG_PATH
+from services.encryption import decrypt_value
 
 
 def get_uptime_kuma_config() -> dict | None:
@@ -15,7 +16,7 @@ def get_uptime_kuma_config() -> dict | None:
                 config = json.load(f)
                 url = config.get('uptime_kuma_url', '')
                 username = config.get('uptime_kuma_username', '')
-                password = config.get('uptime_kuma_password', '')
+                password = decrypt_value(config.get('uptime_kuma_password', ''))
                 enabled = config.get('uptime_kuma_enabled', False)
 
                 if url and username and password and enabled:

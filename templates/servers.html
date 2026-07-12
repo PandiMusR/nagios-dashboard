@@ -396,23 +396,27 @@
                                 <span class="action-label">Container:</span>
                                 {% if server.container_running %}
                                 <form method="POST" action="/servers/stop/{{ server.name }}" style="display: inline;">
+    {{ csrf_token() }}
                                     <button type="submit" class="btn-sm btn-danger" title="Stop container">
                                         <i class="fas fa-stop"></i> Stop
                                     </button>
                                 </form>
                                 {% else %}
                                 <form method="POST" action="/servers/start/{{ server.name }}" style="display: inline;">
+    {{ csrf_token() }}
                                     <button type="submit" class="btn-sm btn-success" title="Start container">
                                         <i class="fas fa-play"></i> Start
                                     </button>
                                 </form>
                                 {% endif %}
                                 <form method="POST" action="/servers/restart/{{ server.name }}" style="display: inline;">
+    {{ csrf_token() }}
                                     <button type="submit" class="btn-sm btn-warning" title="Restart container">
                                         <i class="fas fa-sync"></i> Restart
                                     </button>
                                 </form>
                                 <form method="POST" action="/servers/delete/{{ server.name }}" style="display: inline;" onsubmit="return confirm('Delete {{ server.name }}?');">
+    {{ csrf_token() }}
                                     <button type="submit" class="btn-sm btn-danger" title="Delete container">
                                         <i class="fas fa-trash"></i> Delete
                                     </button>
@@ -422,18 +426,21 @@
                                 <span class="action-label">Proxy:</span>
                                 {% if server.proxy_running %}
                                 <form method="POST" action="/proxy/stop/{{ server.name }}" style="display: inline;">
+    {{ csrf_token() }}
                                     <button type="submit" class="btn-sm btn-danger" title="Stop proxy">
                                         <i class="fas fa-stop"></i> Stop
                                     </button>
                                 </form>
                                 {% else %}
                                 <form method="POST" action="/proxy/start/{{ server.name }}" style="display: inline;">
+    {{ csrf_token() }}
                                     <button type="submit" class="btn-sm btn-success" title="Start proxy">
                                         <i class="fas fa-play"></i> Start
                                     </button>
                                 </form>
                                 {% endif %}
                                 <form method="POST" action="/proxy/restart/{{ server.name }}" style="display: inline;">
+    {{ csrf_token() }}
                                     <button type="submit" class="btn-sm btn-warning" title="Restart proxy">
                                         <i class="fas fa-sync"></i> Restart
                                     </button>

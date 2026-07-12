@@ -75,7 +75,7 @@ def get_uptime_kuma_monitors() -> tuple[dict, int]:
             login_response.update(res or {})
         
         sio.emit('login', {
-            'username': 'admin',
+            'username': config.get('uptime_kuma_username', 'admin'),
             'password': config['api_key']
         }, callback=on_login_callback)
         

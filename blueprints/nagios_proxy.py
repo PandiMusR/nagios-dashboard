@@ -5,7 +5,7 @@ import subprocess
 from flask import Blueprint, render_template, request, redirect, session, jsonify, flash, Response
 import os, base64, requests
 
-from services.config import CONFIG_DIR
+from services.config import CONFIG_DIR, PROXY_PORT_OFFSET
 from services.encryption import decrypt_session_value, save_encrypted_json, load_encrypted_json
 from services.shared_helpers import get_nagios_servers, get_monitoring_categories
 
@@ -25,7 +25,7 @@ def nagios_proxy_root(container_name: str) -> str | Response:
         return redirect('/dashboard')
     
     port = result.stdout.strip().split(':')[1]
-    proxy_port = 1000 + int(port)
+    proxy_port = PROXY_PORT_OFFSET + int(port)
     
     # Update credentials for current user
     username = session.get('username')

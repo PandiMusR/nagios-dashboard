@@ -56,6 +56,32 @@ def decrypt_session_value(token: str | None) -> str | None:
 ENCRYPTED_MARKER = '__ENC__'
 
 
+def encrypt_value(value: str) -> str:
+    """Encrypt a single value and prefix with __ENC__ marker."""
+    return ENCRYPTED_MARKER + _fernet.encrypt(value.encode()).decode()
+
+
+def decrypt_value(value: str) -> str:
+    """Decrypt a single value, falling back to plaintext if not encrypted.
+
+    Safe to call on both encrypted and plaintext values — if the value
+    doesn't have the __ENC__ marker, it's returned as-is with a warning.
+    """
+    if not isinstance(value, str):
+        return value
+    if not value.startswith(ENCRYPTED_MARKER):
+        import logging
+        logging.getLogger('nagiosDashboard').warning(
+            'Value is not encrypted (missing __ENC__ prefix). '
+            'Run migrate_passwords.py to encrypt.'
+        )
+        return value
+    try:
+        return _fernet.decrypt(value[len(ENCRYPTED_MARKER):].encode()).decode()
+    except Exception:
+        return value
+
+
 def save_encrypted_json(filepath: str, data: dict) -> None:
     """Save a dict to JSON, encrypting all string values at rest."""
     encrypted_data = {}

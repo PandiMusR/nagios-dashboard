@@ -200,6 +200,7 @@
 <div class="section-card">
     <h3><i class="fas fa-user-plus"></i> Add New User</h3>
     <form method="POST" action="/users/add">
+    {{ csrf_token() }}
         <div class="form-grid">
             <div class="form-group">
                 <label>Username (UID)</label>
@@ -319,6 +320,7 @@
                     </td>
                     <td>
                         <form method="POST" action="/users/delete/{{ user.uid }}" style="display: inline;">
+    {{ csrf_token() }}
                             <button type="submit" class="btn-sm btn-delete" onclick="return confirm('Delete user {{ user.uid }}?');"><i class="fas fa-trash"></i></button>
                         </form>
                     </td>

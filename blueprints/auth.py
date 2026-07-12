@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from flask import Blueprint, Response, render_template, request, redirect, session, jsonify, flash
+import logging
 import os, json
 
 from services.config import LDAP_SERVER, LDAP_BASE_DN, HOST_STAGES_PATH
@@ -104,18 +105,18 @@ def setup() -> str | Response:
             # Ensure structure exists
             try:
                 conn.add('ou=users,dc=bnet,dc=id', ['organizationalUnit'])
-            except Exception:
-                pass
+            except Exception as e:
+                logging.getLogger(__name__).warning(f"LDAP OU users creation skipped: {e}")
             
             try:
                 conn.add('ou=groups,dc=bnet,dc=id', ['organizationalUnit'])
-            except Exception:
-                pass
+            except Exception as e:
+                logging.getLogger(__name__).warning(f"LDAP OU groups creation skipped: {e}")
             
             try:
                 conn.add('cn=nagiosadmins,ou=groups,dc=bnet,dc=id', ['groupOfNames'], {'member': 'cn=admin,dc=bnet,dc=id'})
-            except Exception:
-                pass
+            except Exception as e:
+                logging.getLogger(__name__).warning(f"LDAP nagiosadmins group creation skipped: {e}")
             
             user_dn = f'uid={username},ou=users,{LDAP_BASE_DN}'
             uid_num = '1000'

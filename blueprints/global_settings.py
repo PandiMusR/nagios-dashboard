@@ -7,6 +7,7 @@ from datetime import datetime
 from services.config import CONFIG_DIR, ACTIVITY_LOG_PATH, GLOBAL_CONFIG_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH
 from services.ldap_service import log_activity, read_activity_logs, ACTIVITY_LOG_DIR
 from services.shared_helpers import get_nagios_servers, get_monitoring_categories
+from services.encryption import encrypt_value
 from utils.permissions import check_permission
 
 global_settings_bp = Blueprint('global_settings', __name__)
@@ -116,6 +117,8 @@ def list_backups() -> Response | tuple[Response, int]:
     """GET /global-settings/backups — list all config backups as JSON."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('global_settings'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         backup_dir = f'{CONFIG_DIR}/backups'
@@ -158,7 +161,7 @@ def restore_backup() -> Response | tuple[Response, int]:
             return jsonify({'success': False, 'error': 'Backup not found'})
         
         with tarfile.open(backup_file, 'r:gz') as tar:
-            tar.extractall('/tmp/restore_temp')
+            tar.extractall('/tmp/restore_temp', filter='data')
         
         for server_dir in os.listdir('/tmp/restore_temp'):
             server_path = f'/tmp/restore_temp/{server_dir}'
@@ -259,7 +262,7 @@ def update_nextcloud_config() -> str | Response:
                 config = json.load(f)
         
         config['nextcloud_share'] = share_link
-        config['nextcloud_password'] = password
+        config['nextcloud_password'] = encrypt_value(password) if password else ''
         
         with open(GLOBAL_CONFIG_PATH, 'w') as f:
             json.dump(config, f)
@@ -330,7 +333,7 @@ def update_uptime_kuma() -> str | Response:
         
         # Only update password if provided
         if uptime_kuma_password:
-            config['uptime_kuma_password'] = uptime_kuma_password
+            config['uptime_kuma_password'] = encrypt_value(uptime_kuma_password)
         
         with open(GLOBAL_CONFIG_PATH, 'w') as f:
             json.dump(config, f)

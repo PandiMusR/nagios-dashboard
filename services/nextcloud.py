@@ -7,6 +7,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 from services.config import GLOBAL_CONFIG_PATH
+from services.encryption import decrypt_value
 
 
 def get_nextcloud_config() -> dict | None:
@@ -16,7 +17,7 @@ def get_nextcloud_config() -> dict | None:
             with open(GLOBAL_CONFIG_PATH, 'r') as f:
                 config = json.load(f)
                 share_link = config.get('nextcloud_share', '')
-                password = config.get('nextcloud_password', '')
+                password = decrypt_value(config.get('nextcloud_password', ''))
 
                 if share_link and password:
                     match = re.search(r'/s/([^/]+)', share_link)

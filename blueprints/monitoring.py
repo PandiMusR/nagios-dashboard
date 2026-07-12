@@ -87,6 +87,9 @@ def monitoring(page: str) -> str | Response:
     """GET /monitoring/<page> — Monitoring page for a given category."""
     if 'username' not in session:
         return redirect('/')
+    if not check_permission('monitoring'):
+        flash('Access denied. You do not have permission to access this page.', 'error')
+        return redirect('/dashboard')
 
     return render_template('monitoring.html', username=session['username'], page=page,
                          hosts=[], total_down=0,
@@ -308,6 +311,8 @@ def monitoring_data(page: str) -> Response | tuple[Response, int]:
     """GET /monitoring/<page>/data — JSON monitoring data for a category."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('monitoring'):
+        return jsonify({'error': 'Access denied'}), 403
 
     try:
         all_hosts = _fetch_monitoring_hosts(page)
@@ -321,6 +326,8 @@ def export_monitoring_csv(page: str) -> Response | tuple[Response, int]:
     """GET /monitoring/<page>/export-csv — Download monitoring data as CSV."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('monitoring'):
+        return jsonify({'error': 'Access denied'}), 403
 
     try:
         hosts = _fetch_monitoring_hosts(page)
@@ -387,6 +394,8 @@ def acknowledge_host() -> Response:
     """POST /monitoring/acknowledge — Acknowledge a single host problem in Nagios."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('monitoring'):
+        return jsonify({'error': 'Access denied'}), 403
 
     host_name = request.form.get('host_name')
     port = request.form.get('port')
@@ -432,6 +441,8 @@ def set_stage() -> Response | tuple[Response, int]:
     """Set stage for a host. Only sends Nagios ACK when stage is 'resolved'."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('monitoring'):
+        return jsonify({'error': 'Access denied'}), 403
 
     data = request.get_json()
     if not data:
@@ -509,6 +520,8 @@ def batch_set_stage() -> Response | tuple[Response, int]:
     """POST /monitoring/batch-set-stage — Set stage for multiple hosts at once."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('monitoring'):
+        return jsonify({'error': 'Access denied'}), 403
 
     data = request.get_json()
     if not data:

@@ -168,7 +168,7 @@ function refreshLogs() {
 
 function clearLogs() {
     if (!confirm('Hapus semua activity logs? Aksi ini tidak bisa dibatalkan.')) return;
-    fetch('/global-settings/clear-logs', { method: 'POST' })
+    fetch('/global-settings/clear-logs', { method: 'POST', headers: {'X-CSRFToken': document.getElementById('csrf_token').value} })
         .then(r => r.json())
         .then(data => {
             if (data.success) {

@@ -7,6 +7,7 @@
 </div>
 <div class="card">
     <form method="POST" action="/servers/edit-config/{{ server_name }}">
+    {{ csrf_token() }}
         <div style="margin-bottom: 15px;">
             <label style="display: block; margin-bottom: 5px; color: #333; font-weight: bold;">localhost.cfg</label>
             <textarea name="content" required style="width: 100%; min-height: 500px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: monospace; font-size: 14px;">{{ content }}</textarea>

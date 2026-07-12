@@ -64,7 +64,7 @@ def get_stored_creds():
             return {k: _decrypt_value(v) for k, v in data.items()}
     except (json.JSONDecodeError, OSError):
         pass
-    return {'username': 'nagiosadmin', 'password': 'nagiosadmin'}
+    return None
 
 
 def store_creds(username, password):
@@ -87,6 +87,8 @@ def get_auth_header():
         store_creds(username, password)
     else:
         creds = get_stored_creds()
+        if creds is None:
+            return None
         username = creds['username']
         password = creds['password']
 
@@ -141,6 +143,8 @@ def forward_request(path):
         }
 
         headers['Authorization'] = get_auth_header()
+        if headers['Authorization'] is None:
+            return Response('No credentials configured for this Nagios server', status=401)
 
         resp = session.request(
             method=method,

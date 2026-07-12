@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import base64, json, subprocess
+import base64, json, logging, subprocess
 
 from flask import Blueprint, Response, render_template, redirect, session, jsonify
 import requests
@@ -17,9 +17,6 @@ def dashboard() -> str | Response:
     """GET /dashboard — Main dashboard page."""
     if 'username' not in session:
         return redirect('/')
-    
-    # Debug: print session info
-    print(f"DEBUG - Session: role={session.get('role')}, permissions={session.get('permissions')}")
     
     return render_template('dashboard.html', username=session['username'], nagios_servers=get_nagios_servers(), monitoring_categories=get_monitoring_categories())
 
@@ -151,9 +148,10 @@ def dashboard_stats() -> Response | tuple[Response, int]:
                         result = future.result()
                         if result:
                             servers_stats.append(result)
-                    except Exception:
+                    except Exception as e:
+                        logging.getLogger(__name__).warning(f"Container fetch failed: {e}")
                         continue
 
         return jsonify({'servers': servers_stats})
-    except Exception as e:
-        return jsonify({'servers': [], 'error': str(e)})
+    except Exception:
+        return jsonify({'servers': [], 'error': 'Internal server error'})

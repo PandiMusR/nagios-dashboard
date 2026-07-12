@@ -230,6 +230,7 @@
     <div class="modal-content">
         <h3><i class="fas fa-lock"></i> Edit User Permissions</h3>
         <form method="POST" action="/user-permissions/update" id="permForm">
+    {{ csrf_token() }}
             <input type="hidden" name="username" id="edit_username">
             
             <div class="permissions-section">

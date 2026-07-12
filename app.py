@@ -1,6 +1,8 @@
 from flask import Flask, request, session
 import os
 
+from flask_wtf.csrf import CSRFProtect
+
 from services.encryption import load_or_create_secret_key, init_encryption
 from services.ldap_service import check_ldap_server, setup_ldap_structure, CONFIG_DIR
 from services.config import APP_PORT
@@ -11,6 +13,9 @@ app = Flask(__name__)
 
 # Persistent secret key — survives restarts, used for session encryption + Fernet
 app.secret_key = load_or_create_secret_key()
+
+# CSRF Protection
+csrf = CSRFProtect(app)
 
 # Initialize Fernet encryption (derived from secret key)
 init_encryption(app.secret_key)
@@ -63,6 +68,14 @@ app.register_blueprint(global_settings_bp)
 app.register_blueprint(nagios_proxy_bp)
 app.register_blueprint(monitoring_intens_bp)
 app.register_blueprint(api_bp)
+
+# Exempt API blueprint from CSRF (uses API key auth, not session)
+csrf.exempt(api_bp)
+
+# Exempt auth blueprint from CSRF (login/setup — no session yet)
+csrf.exempt(auth_bp)
+csrf.exempt(monitoring_bp)
+csrf.exempt(nagios_proxy_bp)
 
 if __name__ == '__main__':
     from waitress import serve

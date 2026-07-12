@@ -3,7 +3,7 @@ from __future__ import annotations
 from flask import Blueprint, Response, render_template, request, redirect, session, jsonify, flash
 import os, json, subprocess, threading, time
 
-from services.config import APP_ROOT, CONFIG_DIR
+from services.config import APP_ROOT, CONFIG_DIR, PROXY_PORT_OFFSET
 from services.encryption import decrypt_session_value, save_encrypted_json
 from services.ldap_service import log_activity
 from services.shared_helpers import get_nagios_servers, get_monitoring_categories
@@ -36,7 +36,7 @@ def servers() -> str | Response:
                 port = ports.split(':')[1].split('->')[0] if '->' in ports else 'N/A'
                 
                 # Check proxy status
-                proxy_port = 1000 + int(port) if port != 'N/A' else 0
+                proxy_port = PROXY_PORT_OFFSET + int(port) if port != 'N/A' else 0
                 proxy_status = check_proxy_running(proxy_port)
                 
                 # Check container status
@@ -59,6 +59,8 @@ def add_server() -> Response | tuple[Response, int]:
     """POST /servers/add — Create a new Nagios server container."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     if not check_permission('servers'):
         return jsonify({'success': False, 'error': 'Access denied. You do not have permission to create servers.'}), 403
@@ -157,6 +159,8 @@ def batch_start_servers() -> Response | tuple[Response, int]:
     """POST /servers/batch-start — Start multiple Nagios containers."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     servers_list = request.json.get('servers', [])
     if not servers_list:
@@ -176,6 +180,8 @@ def check_port_available(port: int) -> Response | tuple[Response, int]:
     """Check if a port is available for use"""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     if port < 1000 or port > 65535:
         return jsonify({'available': False, 'reason': 'Port must be between 1000 and 65535'})
@@ -198,6 +204,8 @@ def get_available_port() -> Response | tuple[Response, int]:
     """Find and return an available port"""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     used_ports = _get_all_used_ports()
     
@@ -220,6 +228,8 @@ def batch_restart_servers() -> Response | tuple[Response, int]:
     """POST /servers/batch-restart — Restart multiple Nagios containers."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     servers_list = request.json.get('servers', [])
     if not servers_list:
@@ -239,6 +249,8 @@ def batch_delete_servers() -> Response | tuple[Response, int]:
     """POST /servers/batch-delete — Delete multiple Nagios containers and their data."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     data = request.get_json()
     servers_list = data.get('servers', []) if data else []
@@ -248,11 +260,15 @@ def batch_delete_servers() -> Response | tuple[Response, int]:
     
     try:
         for server in servers_list:
-            # Stop container
+            # Validate server exists before deleting
+            from services.shared_helpers import get_nagios_servers as _get_servers
+            valid_servers = _get_servers()
+            if server not in valid_servers:
+                log_activity('Batch Delete Failed', f'Unknown server: {server}')
+                continue
+            # Stop and remove container
             subprocess.run(['docker', 'stop', server], capture_output=True, timeout=30)
-            # Remove container
             subprocess.run(['docker', 'rm', server], capture_output=True, timeout=30)
-            # Remove volume directory
             subprocess.run(['rm', '-rf', f'/svr/{server}'], capture_output=True, timeout=30)
         
         log_activity('Batch Delete', f'Deleted {len(servers_list)} servers: {", ".join(servers_list)}')
@@ -267,6 +283,8 @@ def check_config(name: str) -> Response | tuple[Response, int]:
     """GET /servers/check-config/<name> — Validate Nagios config for a server."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         result = subprocess.run(
@@ -291,6 +309,8 @@ def start_all_containers() -> Response | tuple[Response, int]:
     """POST /servers/start-all-containers — Start all stopped Nagios containers."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         result = subprocess.run(['docker', 'ps', '-a', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'], 
@@ -315,6 +335,8 @@ def start_all_proxies() -> Response | tuple[Response, int]:
     """POST /servers/start-all-proxies — Start proxies for all running Nagios containers."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'], 
@@ -327,7 +349,7 @@ def start_all_proxies() -> Response | tuple[Response, int]:
                     port_result = subprocess.run(['docker', 'port', container, '80'], capture_output=True, text=True, timeout=10)
                     if port_result.stdout:
                         port = port_result.stdout.strip().split(':')[1]
-                        proxy_port = 1000 + int(port)
+                        proxy_port = PROXY_PORT_OFFSET + int(port)
                         
                         username = session.get('username')
                         password = decrypt_session_value(session.get('password'))
@@ -349,6 +371,8 @@ def start_all_servers() -> Response | tuple[Response, int]:
     """POST /servers/start-all — Start all containers and their proxies."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         # Get all nagios containers
@@ -366,7 +390,7 @@ def start_all_servers() -> Response | tuple[Response, int]:
                     port_result = subprocess.run(['docker', 'port', container, '80'], capture_output=True, text=True, timeout=10)
                     if port_result.stdout:
                         port = port_result.stdout.strip().split(':')[1]
-                        proxy_port = 1000 + int(port)
+                        proxy_port = PROXY_PORT_OFFSET + int(port)
                         
                         # Store credentials
                         username = session.get('username')
@@ -390,6 +414,8 @@ def check_server(name: str) -> Response | tuple[Response, int]:
     """GET /servers/check/<name> — Check if a Docker container exists."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     result = subprocess.run(['docker', 'ps', '-a', '--filter', f'name=^{name}$', '--format', '{{.Names}}'], 
                           capture_output=True, text=True, timeout=10)
@@ -402,6 +428,8 @@ def delete_server(name: str) -> Response:
     """POST /servers/delete/<name> — Stop and remove a Nagios server container."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         subprocess.run(['docker', 'stop', name], check=True, capture_output=True, timeout=30)
@@ -419,6 +447,8 @@ def restart_server(name: str) -> Response:
     """POST /servers/restart/<name> — Restart a Nagios server container."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         subprocess.run(['docker', 'restart', name], check=True, capture_output=True, timeout=60)
@@ -434,6 +464,8 @@ def stop_server(name: str) -> Response:
     """POST /servers/stop/<name> — Stop a Nagios server container."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         subprocess.run(['docker', 'stop', name], check=True, capture_output=True, timeout=30)
@@ -449,6 +481,8 @@ def edit_server_config(name: str) -> str | Response:
     """GET/POST /servers/edit-config/<name> — View or update Nagios config file."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     config_path = f'/svr/{name}/etc/objects/localhost.cfg'
     
@@ -489,6 +523,8 @@ def list_plugins(name: str) -> Response | tuple[Response, int]:
     """GET /servers/plugins/<name> — List plugins for a Nagios server."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     plugin_dir = f'/svr/{name}/plugin'
     plugins = []
@@ -501,8 +537,8 @@ def list_plugins(name: str) -> Response | tuple[Response, int]:
                     size = os.path.getsize(filepath)
                     size_str = f"{size} bytes" if size < 1024 else f"{size/1024:.1f} KB"
                     plugins.append({'name': filename, 'size': size_str})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        return jsonify({'error': 'Internal server error'}), 500
     
     return jsonify({'plugins': plugins})
 
@@ -512,6 +548,8 @@ def upload_plugin() -> Response | tuple[Response, int]:
     """POST /servers/plugins/upload — Upload a plugin file to a server."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     server = request.form.get('server')
     plugin_file = request.files.get('plugin_file')
@@ -522,8 +560,13 @@ def upload_plugin() -> Response | tuple[Response, int]:
     try:
         plugin_dir = f'/svr/{server}/plugin'
         os.makedirs(plugin_dir, exist_ok=True)
-        
-        filepath = os.path.join(plugin_dir, plugin_file.filename)
+
+        from werkzeug.utils import secure_filename
+        safe_name = secure_filename(plugin_file.filename)
+        if not safe_name:
+            flash('Invalid filename', 'danger')
+            return jsonify({'success': False, 'error': 'Invalid filename'})
+        filepath = os.path.join(plugin_dir, safe_name)
         plugin_file.save(filepath)
         
         # Make executable
@@ -541,6 +584,8 @@ def delete_plugin(name: str, filename: str) -> Response | tuple[Response, int]:
     """DELETE /servers/plugins/<name>/<filename> — Remove a plugin file from a server."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         filepath = os.path.join(f'/svr/{name}/plugin', filename)
@@ -559,6 +604,8 @@ def start_server(name: str) -> Response:
     """POST /servers/start/<name> — Start a stopped Nagios server container."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         subprocess.run(['docker', 'start', name], check=True, capture_output=True, timeout=30)
@@ -574,12 +621,14 @@ def start_proxy(name: str) -> Response:
     """POST /proxy/start/<name> — Start the proxy for a Nagios server."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         result = subprocess.run(['docker', 'port', name, '80'], capture_output=True, text=True, timeout=10)
         if result.stdout:
             port = result.stdout.strip().split(':')[1]
-            proxy_port = 1000 + int(port)
+            proxy_port = PROXY_PORT_OFFSET + int(port)
             
             # Store credentials for proxy
             username = session.get('username')
@@ -625,12 +674,14 @@ def stop_proxy(name: str) -> Response:
     """POST /proxy/stop/<name> — Stop the proxy for a Nagios server."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         result = subprocess.run(['docker', 'port', name, '80'], capture_output=True, text=True, timeout=10)
         if result.stdout:
             port = result.stdout.strip().split(':')[1]
-            proxy_port = 1000 + int(port)
+            proxy_port = PROXY_PORT_OFFSET + int(port)
             subprocess.run(['pkill', '-f', f'proxy.py {name} {port}'], check=True, capture_output=True, timeout=10)
             flash(f'Proxy for "{name}" stopped!', 'success')
         return redirect('/servers')
@@ -644,12 +695,14 @@ def restart_proxy(name: str) -> Response:
     """POST /proxy/restart/<name> — Restart the proxy for a Nagios server."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('servers'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         result = subprocess.run(['docker', 'port', name, '80'], capture_output=True, text=True, timeout=10)
         if result.stdout:
             port = result.stdout.strip().split(':')[1]
-            proxy_port = 1000 + int(port)
+            proxy_port = PROXY_PORT_OFFSET + int(port)
             
             # Kill existing
             subprocess.run(['pkill', '-9', '-f', f'proxy.py {name}'], capture_output=True, timeout=10)

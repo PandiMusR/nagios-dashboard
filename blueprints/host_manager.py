@@ -34,6 +34,8 @@ def backup_localhost_cfg() -> Response | tuple[Response, int]:
     """POST /host-manager/backup — create a backup of a server's localhost.cfg."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('host_manager'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         data = request.get_json()
@@ -70,6 +72,8 @@ def list_localhost_backups(server: str) -> Response | tuple[Response, int]:
     """GET /host-manager/backups/<server> — list config backups for a server."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('host_manager'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         backup_dir = f'/svr/{server}/etc/objects/backups'
@@ -96,6 +100,8 @@ def restore_localhost_cfg() -> Response | tuple[Response, int]:
     """POST /host-manager/restore — restore a backup of localhost.cfg."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('host_manager'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         data = request.get_json()
@@ -122,6 +128,8 @@ def delete_localhost_backup(server: str, name: str) -> Response | tuple[Response
     """DELETE /host-manager/delete-backup/<server>/<name> — delete a config backup."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('host_manager'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         backup_path = f'/svr/{server}/etc/objects/backups/{name}.cfg'
@@ -139,6 +147,8 @@ def get_host_status_endpoint(server: str) -> Response | tuple[Response, int]:
     """GET /host-manager/host-status/<server> — get host status from Nagios."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('host_manager'):
+        return jsonify({'error': 'Access denied'}), 403
     
     try:
         # Resolve container port using docker CLI (same approach as monitoring_data).
@@ -156,14 +166,13 @@ def get_host_status_endpoint(server: str) -> Response | tuple[Response, int]:
         if (not username or not password) and os.path.exists(creds_file):
             try:
                 creds = load_encrypted_json(creds_file)
-                username = creds.get('username', 'nagiosadmin')
-                password = creds.get('password', 'nagiosadmin')
+                username = creds.get('username')
+                password = creds.get('password')
             except (json.JSONDecodeError, OSError):
                 pass
         
         if not username or not password:
-            username = 'nagiosadmin'
-            password = 'nagiosadmin'
+            return jsonify({'error': f'No credentials found for server {server}'}), 400
         
         # Create auth header
         auth_str = base64.b64encode(f'{username}:{password}'.encode()).decode()
@@ -278,6 +287,8 @@ def add_host() -> str | Response:
     """POST /host-manager/add — add a new host to a Nagios server."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('host_manager'):
+        return jsonify({'error': 'Access denied'}), 403
     
     server = request.form.get('server')
     
@@ -365,6 +376,8 @@ def batch_add_hosts() -> str | Response:
     """POST /host-manager/batch-add — add multiple hosts in bulk."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('host_manager'):
+        return jsonify({'error': 'Access denied'}), 403
     
     servers = request.form.getlist('batch_servers[]')
     hostnames = request.form.getlist('batch_hostnames[]')
@@ -463,6 +476,8 @@ def delete_host() -> str | Response:
     """POST /host-manager/delete — delete a host and its descendants."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('host_manager'):
+        return jsonify({'error': 'Access denied'}), 403
     
     server = request.form.get('server')
     
