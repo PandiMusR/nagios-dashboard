@@ -41,7 +41,7 @@ def get_monitoring_categories() -> list[str]:
         seen.add(default_category)
         categories.append(default_category)
 
-    for path in [MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH]:
+    for path in [MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH]:
         data = _cached_json(path)
         if data is None:
             continue
@@ -53,4 +53,18 @@ def get_monitoring_categories() -> list[str]:
             if normalized and normalized not in seen:
                 seen.add(normalized)
                 categories.append(normalized)
+
+    config = _cached_json(MONITORING_CONFIG_PATH)
+    if config and isinstance(config, dict):
+        for sub_key in ['category_settings', 'alarm_settings']:
+            sub_dict = config.get(sub_key, {})
+            if isinstance(sub_dict, dict):
+                for key in sub_dict:
+                    if not isinstance(key, str):
+                        continue
+                    normalized = key.strip().lower()
+                    if normalized and normalized not in seen:
+                        seen.add(normalized)
+                        categories.append(normalized)
+
     return categories
