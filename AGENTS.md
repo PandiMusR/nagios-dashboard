@@ -21,17 +21,19 @@ This file provides comprehensive context for AI agents working on the Nagios Das
 
 | Layer | Technology | Version |
 |---|---|---|
-| Language | Python | 3.8+ |
+| Language | Python | 3.12+ |
 | Web Framework | Flask | 3.0.0 |
 | WSGI Server | Waitress | 2.1.2 |
 | Auth | LDAP (OpenLDAP via `ldap3`) | 2.9.1 |
+| CSRF Protection | Flask-WTF | 1.3.0 |
 | Container Runtime | Docker CLI | — |
 | Encryption | Fernet (AES-128-CBC via `cryptography`) | ≥41.0.0 |
-| HTTP Client | `requests` | 2.31.0 |
+| HTTP Client | `requests` | ≥2.32.0 |
 | Socket.IO | `python-socketio` | 5.9.0 |
 | Frontend | Jinja2 + Bootstrap 5.3 + vanilla JS | — |
 | Font | Inter (Google Fonts) | — |
 | Icons | Font Awesome 6.4 | — |
+| Linting | ruff | 0.15+ |
 
 ---
 
@@ -217,12 +219,73 @@ Admin bypasses all checks. Admin = all main permissions enabled OR `nagiosadmins
 ### Error Handling
 - All bare `except:` blocks replaced with specific exception types (47 total, fixed)
 - JSON reads: `except (json.JSONDecodeError, OSError):`
-- LDAP operations: `except Exception:`
+- LDAP operations: `except Exception:` → `logger.warning()`
 - subprocess/Docker: `except (subprocess.CalledProcessError, OSError):`
+- Error responses use generic messages, no `str(e)` leak
+
+### CSRF Protection
+- Flask-WTF global protection with 4 exempts: `api_bp`, `auth_bp`, `monitoring_bp`, `nagios_proxy_bp`
+- Meta tag approach: `<meta name="csrf-token" content="{{ csrf_token() }}">` in base.html head
+- AJAX: `csrfFetch()` reads from meta tag, no DOM search needed
+- Form POST: `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">` inside `<form>`
+- Dynamic forms (JS-created): read token from meta tag
+- No standalone `{{ csrf_token() }}` outside HTML attributes (prevents raw text leak)
+- `WTF_CSRF_TIME_LIMIT = None` (internal dashboard, no token expiry)
+
+### Permission System
+- Dual-mode: `audit` (log-only, default) → `enforce` (403 block)
+- Mode stored in `monitoring_config.json` → `permission_check_mode`
+- `check_permission()` in `utils/permissions.py` with JSONL audit logging
+- Admin bypass: all main permissions enabled OR `nagiosadmins` LDAP group
 
 ---
 
-## Recent Changes (as of 2026-07-03)
+## Recent Changes (as of 2026-07-12)
+
+### Security Audit: Phase 1-4 (2026-07-12)
+Comprehensive security audit covering P0-P3 vulnerabilities.
+
+**Phase 1 (P0) — Critical Security:**
+- CSRF protection via Flask-WTF with meta tag approach for AJAX
+- CSRF exempts: `api_bp`, `auth_bp`, `monitoring_bp`, `nagios_proxy_bp`
+- `WTF_CSRF_TIME_LIMIT = None` (internal dashboard, no expiry)
+- LDAP admin password via env var (`_require_env()` in config.py)
+- Removed hardcoded `nagiosadmin:nagiosadmin` fallback
+- 60+ `check_permission()` calls across 7 blueprints
+- Password encryption at rest (`__ENC__` marker, Fernet)
+- Permission audit mode: `audit` (log-only) → `enforce` (403 block)
+
+**Phase 2 (P1) — High Priority:**
+- `tar.extractall(filter='data')` path traversal fix
+- Sound file upload whitelist (`.wav`, `.mp3`, `.ogg`, `.m4a`, `.aac`)
+- `secure_filename()` for plugin upload
+- Container name validation before `rm -rf`
+- Uptime Kuma username from config (not hardcoded `'admin'`)
+
+**Phase 3 (P2) — Code Quality:**
+- Debug `print()` removed from production paths
+- `str(e)` replaced with generic error messages
+- Silent `except: pass` → `logger.warning()`
+- LDAP injection fix: `escape_filter_chars()` on search filter
+- PROXY_PORT_OFFSET extracted to `services/config.py`
+
+**Phase 4 (P3) — Cleanup:**
+- `requests>=2.32.0` (was 2.31.0)
+- `.env.example` created
+- `*_old.html` templates removed
+- `pyproject.toml` with ruff config
+
+### CSRF Implementation Details
+- `<meta name="csrf-token" content="{{ csrf_token() }}">` in `<head>` (base.html)
+- `csrfFetch()` JS function reads from meta tag for AJAX calls
+- Form POST: `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">` inside `<form>`
+- Dynamic forms (JS-created): read token from meta tag via `document.querySelector`
+- No standalone `{{ csrf_token() }}` outside HTML attributes (prevents raw text leak)
+
+### Monitoring Categories Fix (2026-07-12)
+- `get_monitoring_categories()` in `shared_helpers.py` was extracting ALL top-level keys from `monitoring_config.json`
+- Non-category keys (`refresh_interval`, `category_settings`, `alarm_settings`) appeared as fake categories
+- Fixed: only extract from `category_settings` and `alarm_settings` sub-dicts
 
 ### API: ONU Host Auto-Parse (2026-07-03)
 - `POST /api/hosts/add` and `POST /api/hosts/batch-add` now auto-parse host_name in ONU format
@@ -387,12 +450,13 @@ Tamelang-Cilamaya, Klari, Niaga, Bhome
 
 See `IMPROVEMENT_PLAN.md` for full details. Key items:
 
-1. **No CSRF protection:** Hold (local network only)
+1. **CSRF protection:** Implemented via Flask-WTF (Phase 1). `WTF_CSRF_TIME_LIMIT = None`.
 2. **Docker volume paths hardcoded:** `/svr/<server>/` — intentional, not planned to change
 3. **`monitoring_config.json`:** Contains hardcoded sound file paths — needs migration script if relocated
-4. **Security items (SEC-1 through SEC-10):** All on hold — dashboard is internal network only, not public-facing
-5. **Dark mode:** Scaffolding in `base.html` but button is disabled (needs color refinement)
-6. **SQLite migration:** Not yet started — file-based JSON storage still in use
+4. **Dark mode:** Scaffolding in `base.html` but button is disabled (needs color refinement)
+5. **SQLite migration:** Not yet started — file-based JSON storage still in use
+6. **Race condition in stage tracking:** Not yet addressed (Phase 3.5 — user to decide)
+7. **Connection pooling for Nagios CGI:** Not yet implemented (Phase 3.9 — user to decide)
 
 ---
 

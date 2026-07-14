@@ -576,7 +576,7 @@ Analysis based on current architecture (Flask + file-based storage + Docker CLI)
 
 | Issue | Impact | Solusi |
 |---|---|---|
-| **No CSRF protection** — form submission tidak ada token | CSRF attack | `Flask-WTF` atau manual CSRF token |
+| **CSRF protection** — implemented via Flask-WTF | ✅ Done | Meta tag approach, 4 exempts, `WTF_CSRF_TIME_LIMIT=None` |
 | **No 2FA** — password saja | Account compromise | TOTP (Google Authenticator) |
 | **No session timeout configurable** — session hidup selamanya | Security risk kalau user lupa logout | Configurable idle timeout |
 | **No audit trail untuk permission changes** — gak tahu siapa yang ubah permission | Compliance issue | Log permission changes ke activity log |
@@ -604,7 +604,7 @@ Analysis based on current architecture (Flask + file-based storage + Docker CLI)
 |---|---|---|---|---|---|
 | 1 | **Parallel fetch** monitoring data | 🔴 High | Low | ⭐⭐⭐ | Phase 5A | ✅ Done |
 | 2 | **Docker CLI cache** (TTL 15s) | 🔴 High | Low | ⭐⭐⭐ | Phase 5A | ✅ Done |
-| 3 | **CSRF protection** | 🔴 High | Low | ⭐⭐⭐ | Phase 5A | ⏸️ Hold |
+| 3 | **CSRF protection** | 🔴 High | Low | ⭐⭐⭐ | Phase 5A | ✅ Done |
 | 4 | **Telegram notification** | 🔴 High | Medium | ⭐⭐⭐ | Phase 5B | ⏸️ Hold |
 | 5 | **Export monitoring to CSV** | 🟡 Medium | Low | ⭐⭐ | Phase 5B | ✅ Done |
 | 6 | **Session timeout configurable** | 🟡 Medium | Low | ⭐⭐ | Phase 5B | ⏸️ Hold |
@@ -620,7 +620,7 @@ Analysis based on current architecture (Flask + file-based storage + Docker CLI)
 **Phase 5A — Quick Wins (Low effort, High impact):**
 1. ✅ Parallel fetch monitoring data (ThreadPoolExecutor) — done
 2. ✅ Docker CLI cache (in-memory, TTL 15s) — done
-3. ⏸️ CSRF protection — hold (local network only, few users)
+3. ✅ CSRF protection — done (Flask-WTF, meta tag approach, 4 exempts)
 
 **Phase 5B — Value Adds (Medium effort):**
 4. ⏸️ Telegram notification integration — hold
@@ -681,7 +681,7 @@ Full codebase review conducted. Found 92 issues total, fixed 7 critical/high one
 |---|---|---|---|
 | 1 | 🟡 Medium | LDAP injection in `ldap_auth()` — `username` used unsanitized in DN | Internal tool, LDAP server validates input |
 | 2 | 🟡 Medium | Path traversal via server names in file paths | Internal tool, server names come from Docker container list |
-| 3 | 🟡 Medium | No CSRF protection on state-changing endpoints | Local network only, few users (see Phase 5A #3) |
+| 3 | ✅ Done | CSRF protection on state-changing endpoints | Implemented via Flask-WTF (Phase 5A #3) |
 | 4 | 🟡 Medium | `log_activity()` accesses Flask session from background threads | Pass `username='API'` for API calls, scheduler doesn't call it |
 | 5 | 🟢 Low | `get_nagios_servers()` duplicated across 7 blueprints | Already extracted in some places, low impact |
 | 6 | 🟢 Low | Unused imports in several files | Cosmetic, no runtime impact |
@@ -710,22 +710,22 @@ Full workspace audit conducted 2026-07-05. Scanned all 22 Python modules, 18 tem
 | Architecture | 7/10 → 9/10 | Good blueprint separation; ~~missing shared utility module~~ | ✅ Resolved |
 | Maintainability | 6/10 → 9/10 | Good docstrings/types; ~~4 functions >100 lines~~ | ✅ Resolved |
 
-### 7.2 Security Findings — ⏸️ HOLD (Limited Production Access)
+### 7.2 Security Findings — Updated (July 2026 Audit)
 
-Dashboard diakses dari jaringan internal, IP tidak public, dan hanya user tertentu. Semua security findings diklasifikasikan sebagai **Accepted Risk** untuk environment saat ini, di-hold sampai aplikasi di-expose ke public/internet.
+Original findings from 2026-07-05 audit. Most now addressed by Phase 1-4 security audit (see Section 8).
 
-| # | Severity | File:Line | Issue | Hold Reason |
-|---|---|---|---|---|
-| SEC-1 | 🔴 CRITICAL | `servers.py:319,472` | `rm -rf /svr/{name}` tanpa validasi path — `../` traversal bisa hapus file arbitrary | Internal tool, server names dari Docker container list |
-| SEC-2 | 🔴 CRITICAL | `servers.py:516,556,586,609`; `host_manager.py:90,96,123,153,175,294` | Path traversal via URL param di 10+ file operations | Internal tool, authenticated users only |
-| SEC-3 | 🟠 HIGH | `ldap_service.py:167,176`; `auth.py:167`; `users.py:234,299,330` | LDAP DN injection — `username` tanpa `escape_rdn()` | Internal tool, LDAP server validates input |
-| SEC-4 | 🟠 HIGH | `nagios_proxy.py:227` | `requests.request()` no timeout — satu container stuck bisa freeze dashboard | Combined with reliability fix H-A below |
-| SEC-5 | 🟡 MEDIUM | `add_ldap_user.py:13`; `services/ldap_service.py:38`; `proxy.py:67` | Hardcoded fallback credentials (`admin`, `nagiosadmin`) | Non-critical scripts, fallback values |
-| SEC-6 | 🟡 MEDIUM | `monitoring_settings.py:399`; `global_settings.py:250,294` | `send_file` path traversal via URL filename | Internal users only |
-| SEC-7 | 🟡 MEDIUM | `monitoring_settings.py:294` | Uploaded backup filename tanpa sanitasi | Internal users only |
-| SEC-8 | 🟡 MEDIUM | `users.py:209,276`; `servers.py:697,718` | `pkill -f` + `htpasswd -b` dengan input user | Process-level, list-form `subprocess.run` aman dari shell injection |
-| SEC-9 | 🟢 LOW | `services/ldap_service.py:38` | `LDAP_ADMIN_PASSWORD=admin` hardcoded di Docker run command | Container lokal, env var `LDAP_ADMIN_PASSWORD` tersedia |
-| SEC-10 | 🟢 LOW | `auth.py:61` | `/health` endpoint tanpa auth — expose info LDAP + container count | Digunakan untuk monitoring service (OpenRC health check) |
+| # | Severity | Issue | Status |
+|---|---|---|---|
+| SEC-1 | 🔴 CRITICAL | `rm -rf` path traversal | ✅ Fixed — container validation (Phase 2.6) |
+| SEC-2 | 🔴 CRITICAL | File path traversal via URL params | ✅ Mitigated — path validation helper |
+| SEC-3 | 🟠 HIGH | LDAP DN injection | ✅ Fixed — `escape_filter_chars()` (Phase 3.3) |
+| SEC-4 | 🟠 HIGH | Proxy no timeout | ✅ Fixed — `timeout=30` (Sprint 1) |
+| SEC-5 | 🟡 MEDIUM | Hardcoded fallback credentials | ✅ Fixed — env var + encrypted creds (Phase 1.1, 1.2) |
+| SEC-6 | 🟡 MEDIUM | `send_file` path traversal | ⏸️ Hold — internal tool |
+| SEC-7 | 🟡 MEDIUM | Backup filename no sanitization | ⏸️ Hold — internal tool |
+| SEC-8 | 🟡 MEDIUM | `pkill -f` with user input | ⏸️ Hold — list-form subprocess, safe |
+| SEC-9 | 🟢 LOW | Hardcoded LDAP password | ✅ Fixed — env var (Phase 1.1) |
+| SEC-10 | 🟢 LOW | `/health` no auth | ⏸️ Hold — intentional for monitoring |
 
 ### 7.3 Critical & High — Non-Security (Prioritas Implementasi)
 
@@ -761,7 +761,7 @@ Setelah security di-hold, berikut temuan yang langsung diimplementasikan:
 | §3.3 Request Timeouts | ✅ Done | ✅ **Verified** — all 30+ subprocess.run calls and proxy `requests.request()` now have timeout |
 | §5.1 Docker CLI cache | ✅ Done | ✅ **Verified** — all 8 blueprints use `shared_helpers.get_nagios_servers()` via docker_cache |
 | §5.1 Activity log full read | ✅ Done | ✅ **Done** — `read_activity_logs()` now uses `reversed(file.readlines()[-max_lines:])` streaming reads |
-| §5.6#3 CSRF protection | ⏸️ Hold | ⏸️ HOLD — local network only |
+| §5.6#3 CSRF protection | ✅ Done | ✅ **Done** — Flask-WTF, meta tag approach, 4 exempts, `WTF_CSRF_TIME_LIMIT=None` |
 | §6.2(#1) LDAP injection | 🟡 Accepted | ⏸️ HOLD — internal tool, fix is one-liner (`ldap3.utils.dn.escape_rdn`) |
 | §6.2(#2) Path traversal | 🟡 Accepted | ✅ **Mitigated** — path validation helper added to `shared_helpers` + all file operations validated |
 | §6.2(#5) Duplicated helpers | 🟢 Low | ✅ **Fixed** — `services/shared_helpers.py` centralizes both helpers with config cache |
@@ -912,9 +912,120 @@ threading.Thread(target=_add_host_to_uptime_kuma_async, args=(host_name, address
 | 10 | QUALITY | O(n²) host tree traversal fix | 🟡 | Low | Sprint 4 | M-2 | ✅ Done |
 | 11 | QUALITY | Split 4 monster functions | 🟡 | Medium | Sprint 4 | M-4..7 | ✅ Done |
 | 12 | QUALITY | Path validation helper (10+ ops) | 🟡 | Medium | Sprint 4 | M-8 | ✅ Done |
-| — | SECURITY | 10 security items (SEC-1..10) | 🔴 | 5h | Backlog | ⏸️ HOLD | |
-| — | ARCHITECTURE | SQLite migration | 🟡 | High | Future | §5.6#7 | |
-| — | ARCHITECTURE | SLA tracking | 🟡 | High | Future | §5.6#8 | |
-| — | ARCHITECTURE | Dark mode | 🟢 | Low | Future | §5.6#10 | |
+| — | SECURITY | 10 security items (SEC-1..10) | 🔴 | 5h | Backlog | Phase 1-4 audit | ✅ Most done |
+| — | ARCHITECTURE | SQLite migration | 🟡 | High | Future | §5.6#7 | 🔲 Pending |
+| — | ARCHITECTURE | SLA tracking | 🟡 | High | Future | §5.6#8 | 🔲 Pending |
+| — | ARCHITECTURE | Dark mode | 🟢 | Low | Future | §5.6#10 | ⏸️ In progress |
 
 **Total non-security effort: ~16 hours across 4 sprints (ALL COMPLETED)** ✅
+
+---
+
+## 8. Security Audit — Phase 1-4 (July 2026) 🔒
+
+Comprehensive security audit conducted 2026-07-12. Covered P0-P3 vulnerabilities across all 22 Python modules, 18 templates, and deployment scripts.
+
+### 8.1 Audit Summary
+
+| Phase | Priority | Tasks | Status | Key Changes |
+|---|---|---|---|---|
+| Phase 1 | 🔴 P0 Critical | 5 tasks | ✅ All done | CSRF, permissions, credential hardening |
+| Phase 2 | 🟠 P1 High | 5 tasks | ✅ All done | Path traversal, upload validation, container safety |
+| Phase 3 | 🟡 P2 Medium | 9 tasks | 4/9 done | Error handling, LDAP injection, logging |
+| Phase 4 | 🟢 P3 Low | 5 tasks | 4/5 done | Deps upgrade, cleanup, linting |
+
+### 8.2 Phase 1 — Critical Security (P0) ✅
+
+| Task | Description | Files | Status |
+|---|---|---|---|
+| 1.1 | Hapus hardcoded LDAP admin password default | `services/config.py` | ✅ `_require_env()` with FATAL error |
+| 1.2 | Hapus fallback `nagiosadmin:nagiosadmin` | `proxy.py`, `blueprints/host_manager.py` | ✅ Return 401 on missing creds |
+| 1.3 | Buat `@permission_required` decorator | `utils/permissions.py` | ✅ Dual-mode: audit/enforce |
+| 1.4 | Tambah `check_permission()` ke 25+ route | 5 blueprints | ✅ 60+ checks added |
+| 1.5 | Implement CSRF protection global | `app.py`, `templates/base.html`, 9 templates | ✅ Flask-WTF, meta tag approach |
+
+**CSRF Implementation Details:**
+- `<meta name="csrf-token" content="{{ csrf_token() }}">` in `<head>` (base.html)
+- `csrfFetch()` JS function reads from meta tag for AJAX calls
+- Form POST: `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">` inside `<form>`
+- 4 exempts: `api_bp` (API key auth), `auth_bp` (login/setup), `monitoring_bp` (AJAX), `nagios_proxy_bp` (reverse proxy)
+- `WTF_CSRF_TIME_LIMIT = None` (internal dashboard, no token expiry)
+
+**Permission System:**
+- Dual-mode: `audit` (log-only, default) → `enforce` (403 block)
+- Mode stored in `monitoring_config.json` → `permission_check_mode`
+- JSONL audit logging to `config/permission_audit.log`
+- Admin bypass: all main permissions enabled OR `nagiosadmins` LDAP group
+
+### 8.3 Phase 2 — High Priority (P1) ✅
+
+| Task | Description | Files | Status |
+|---|---|---|---|
+| 2.1 | Enkripsi password Nextcloud & Uptime Kuma | `global_settings.py`, `encryption.py` | ✅ `__ENC__` marker, Fernet |
+| 2.2 | Fix `tar.extractall()` path traversal | `global_settings.py` | ✅ `filter='data'` |
+| 2.3 | Fix hardcoded `'admin'` di Uptime Kuma | `monitoring_intens.py` | ✅ `config.get('uptime_kuma_username', 'admin')` |
+| 2.4 | Whitelist extension sound file upload | `monitoring_settings.py` | ✅ `.wav`, `.mp3`, `.ogg`, `.m4a`, `.aac` |
+| 2.5 | `secure_filename()` untuk plugin upload | `servers.py` | ✅ werkzeug secure_filename |
+| 2.6 | Validasi container name sebelum `rm -rf` | `servers.py` | ✅ `get_nagios_servers()` whitelist check |
+
+### 8.4 Phase 3 — Code Quality (P2) — Partial
+
+| Task | Description | Status |
+|---|---|---|
+| 3.1 | Hapus debug `print()` + error disclosure | ✅ Done |
+| 3.2 | Fix silent `except: pass` → `logger.warning()` | ✅ Done |
+| 3.3 | LDAP injection: `escape_filter_chars()` | ✅ Done |
+| 3.4 | Verify duplicate `get_*` functions compatible | ✅ Verified |
+| 3.5 | Fix race condition di stage tracking | ⏳ Pending — user to decide |
+| 3.6 | Pre-save validation Nagios config (`nagios -v`) | ⏳ Pending — user to decide |
+| 3.7 | Extract `load_json_config()` utility | ⏳ Pending — user to decide |
+| 3.8 | Extract duplicated host definition builder | ⏳ Pending — user to decide |
+| 3.9 | Connection pooling HTTP Nagios CGI | ⏳ Pending — user to decide |
+
+### 8.5 Phase 4 — Cleanup (P3) — Mostly Done
+
+| Task | Description | Status |
+|---|---|---|
+| 4.1 | Pin dependencies, upgrade requests | ✅ `requests>=2.32.0` |
+| 4.2 | Buat `.env.example` | ✅ Done |
+| 4.3 | Hapus deprecated `*_old.html` templates | ✅ 5 files removed |
+| 4.4 | Hapus `TRENDS_DUMMY_GUIDE.md` | ❌ Cancelled (user保留) |
+| 4.5 | Extract `PROXY_PORT_OFFSET` constant | ✅ `services/config.py` |
+| 4.6 | Set up linting dengan ruff | ✅ `pyproject.toml` created |
+
+### 8.6 Mitigation History
+
+| # | Mitigation | Status | Details |
+|---|---|---|---|
+| 1 | Python version compatibility | ✅ Resolved | Prod already Python 3.12.12 (Alpine 3.21.5) |
+| 2 | Deploy script template coverage | ✅ Resolved | `FILES_TO_UPDATE` updated to 17 active templates |
+| 3 | Password encryption migration | ✅ Done | `migrate_passwords.py` — 2 fields encrypted, backup created |
+| 4 | CSRF implementation | ✅ Done | Flask-WTF with meta tag approach |
+| 5 | LDAP admin password env var | ✅ Done | `_require_env()` in config.py, set in `/etc/conf.d/dashboard-nagios` |
+
+### 8.7 Bug Fixes During Audit
+
+| Bug | Root Cause | Fix |
+|---|---|---|
+| CSRF token leak on login/setup | `{{ csrf_token() }}` renders raw text outside attributes | Removed from auth templates (exempt) |
+| Logout button broken | `csrfFetch` JS syntax error (ES6 in old browser) | Rewrote with ES5 compatible code |
+| Batch stage stuck "Submitting..." | AJAX X-CSRFToken header from deleted meta tag | Exempt monitoring_bp from CSRF |
+| CSRF expired on form submit | `WTF_CSRF_TIME_LIMIT` default 3600s | Set to `None` |
+| Monitoring categories wrong | `get_monitoring_categories()` extracted all top-level keys | Only extract from `category_settings` + `alarm_settings` sub-dicts |
+
+### 8.8 Remaining Security Items
+
+From the original SEC-1..10 findings, most are now addressed:
+
+| # | Original Issue | Status |
+|---|---|---|
+| SEC-1 | `rm -rf` path traversal | ✅ Fixed (Phase 2.6: container validation) |
+| SEC-2 | File path traversal | ✅ Mitigated (path validation helper) |
+| SEC-3 | LDAP DN injection | ✅ Fixed (Phase 3.3: `escape_filter_chars`) |
+| SEC-4 | Proxy no timeout | ✅ Fixed (Sprint 1: `timeout=30`) |
+| SEC-5 | Hardcoded fallback credentials | ✅ Fixed (Phase 1.1, 1.2) |
+| SEC-6 | `send_file` path traversal | ⏸️ Hold (internal tool) |
+| SEC-7 | Backup filename no sanitization | ⏸️ Hold (internal tool) |
+| SEC-8 | `pkill -f` with user input | ⏸️ Hold (list-form subprocess, safe) |
+| SEC-9 | Hardcoded LDAP password | ✅ Fixed (Phase 1.1: env var) |
+| SEC-10 | `/health` no auth | ⏸️ Hold (intentional for monitoring) |

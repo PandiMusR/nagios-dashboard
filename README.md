@@ -512,7 +512,10 @@ User LDAP passwords are encrypted in the Flask session using Fernet (AES-128-CBC
 All credential files (`user_passwords.json`, `nagios_creds_*.json`) are encrypted with Fernet. Encrypted values are prefixed with `__ENC__` to distinguish from legacy plaintext. The migration script `migrate_encrypt_creds.py` handles encryption of existing plaintext files (idempotent, auto-backup before encrypting).
 
 ### LDAP Admin Password
-The LDAP admin password is read from the `LDAP_ADMIN_PASSWORD` environment variable. Falls back to `'admin'` if not set (backward compatible).
+The LDAP admin password is read from the `LDAP_ADMIN_PASSWORD` environment variable. The app exits with a clear error message if not set (see `services/config.py` → `_require_env()`).
+
+### CSRF Protection
+All form submissions and AJAX POST requests are protected with Flask-WTF CSRF tokens. Four blueprints are exempt: `api` (API key auth), `auth` (login/setup — no session), `monitoring` (AJAX stage management), `nagios_proxy` (reverse proxy). The CSRF token is injected via a `<meta>` tag in the page head for JavaScript access, and via hidden `<input>` fields inside forms. Token time limit is disabled (`WTF_CSRF_TIME_LIMIT = None`) for this internal dashboard.
 
 ### API Key Authentication
 External API access requires an API key passed via `X-API-Key` header or `?api_key=YOUR_KEY` query param. Keys are generated from **Global Settings → API Key** and stored in `global_config.json`.
