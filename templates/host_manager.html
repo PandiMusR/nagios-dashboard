@@ -447,6 +447,7 @@
     <div class="modal-content">
         <h3><i class="fas fa-plus-circle"></i> Add New Host</h3>
         <form id="addForm" method="POST" action="/host-manager/add" onsubmit="return validateAddForm()">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label>Server</label>
                 <select name="server" id="addServer" required onchange="onAddServerChange()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -518,7 +519,7 @@
     <div class="modal-content" style="max-width: 1000px;">
         <h3><i class="fas fa-list-ul"></i> Batch Add Hosts</h3>
         <form method="POST" action="/host-manager/batch-add">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h4 style="margin: 0; color: #1e293b; font-weight: 600;">Hosts</h4>
@@ -540,7 +541,7 @@
     <div class="modal-content">
         <h3><i class="fas fa-edit"></i> Edit Host</h3>
         <form method="POST" action="/host-manager/edit" onsubmit="return validateEditForm()">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="server" id="editServer">
             <input type="hidden" name="old_host_name" id="editOldHostName">
             <div class="form-group">
@@ -1127,6 +1128,15 @@ function confirmDelete(server, hostName) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = '/host-manager/delete';
+        
+        var csrfEl = document.querySelector('meta[name="csrf-token"]');
+        if (csrfEl) {
+            var csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfEl.content;
+            form.appendChild(csrfInput);
+        }
         
         const serverInput = document.createElement('input');
         serverInput.type = 'hidden';

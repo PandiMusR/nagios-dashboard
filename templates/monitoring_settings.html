@@ -320,7 +320,7 @@
 <div class="section-card">
     <h3><i class="fas fa-clock"></i> Refresh Interval</h3>
     <form method="POST" action="/monitoring-settings/update-config">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group" style="max-width: 300px;">
             <label>Refresh Interval (seconds)</label>
             <input type="number" name="refresh_interval" value="{{ monitoring_config.get('refresh_interval', 30) }}" min="5" max="300" required>
@@ -335,7 +335,7 @@
     <div class="alarm-card">
         <h4><i class="fas fa-bell"></i> {{ category|title }}</h4>
         <form method="POST" action="/monitoring-settings/update-config" enctype="multipart/form-data" style="margin-bottom: 1.5rem;">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="category" value="{{ category }}">
             <input type="hidden" name="refresh_interval" value="{{ monitoring_config.get('refresh_interval', 30) }}">
             
@@ -377,7 +377,7 @@
         <h4 style="margin-bottom: 1rem; color: #1e293b; font-weight: 600;"><i class="fas fa-clock"></i> CR Auto-Reset</h4>
         <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">Otomatis reset host CR Verification ke New pada jam dan interval yang ditentukan.</p>
         <form method="POST" action="/monitoring-settings/update-cr-reset" onsubmit="return validateCrReset(this)">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="category" value="{{ category }}">
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
                 <div class="form-group" style="margin-bottom: 0;">
@@ -408,7 +408,7 @@
         <div class="alarm-card" style="margin-bottom: 0;">
             <h4><i class="fas fa-folder-plus"></i> Add New Category</h4>
             <form method="POST" action="/monitoring-settings/add">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label>Category Name</label>
                     <input type="text" name="category" required placeholder="e.g. Network Backbone">
@@ -453,7 +453,7 @@
                             <i class="fas fa-pen"></i> Edit
                         </button>
                         <form method="POST" action="/monitoring-settings/delete/{{ category }}" style="display: inline;">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn-danger" onclick="return confirm('Delete category {{ category }}?')">
                                 <i class="fas fa-trash"></i> Delete
                             </button>
@@ -475,7 +475,7 @@
 <div class="section-card">
     <h3><i class="fas fa-link"></i> Map Server to Category</h3>
     <form method="POST" action="/monitoring-settings/map-server">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-grid">
             <div class="form-group" style="margin-bottom: 0;">
                 <label>Server</label>
@@ -516,7 +516,7 @@
                 <div class="mapping-badge">
                     <span><i class="fas fa-server"></i> {{ server }}</span>
                     <form method="POST" action="/monitoring-settings/unmap-server" style="display: inline;">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="server" value="{{ server }}">
                         <input type="hidden" name="category" value="{{ category }}">
                         <button type="submit" title="Remove mapping"><i class="fas fa-times"></i></button>
@@ -621,7 +621,7 @@ document.getElementById('addCategoryModal').addEventListener('click', function(e
     <div class="modal-card">
         <h3 style="margin-top: 0;"><i class="fas fa-folder-plus"></i> Add Monitoring Category</h3>
         <form method="POST" action="/monitoring-settings/add">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label>Category Name</label>
                 <input type="text" name="category" required placeholder="e.g. Network Backbone">
@@ -646,7 +646,7 @@ document.getElementById('addCategoryModal').addEventListener('click', function(e
     <div class="modal-card">
         <h3 style="margin-top: 0;"><i class="fas fa-pen"></i> Edit Category Settings</h3>
         <form method="POST" action="/monitoring-settings/edit-category">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="category" id="editCategoryName">
             <div class="form-group">
                 <label>Category</label>

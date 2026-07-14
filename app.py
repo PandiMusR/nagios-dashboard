@@ -16,6 +16,7 @@ app.secret_key = load_or_create_secret_key()
 
 # CSRF Protection
 csrf = CSRFProtect(app)
+app.config['WTF_CSRF_TIME_LIMIT'] = None
 
 # Initialize Fernet encryption (derived from secret key)
 init_encryption(app.secret_key)

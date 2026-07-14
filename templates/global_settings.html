@@ -214,7 +214,7 @@
 <div class="section-card">
     <h3><i class="fas fa-globe"></i> Domain Configuration</h3>
     <form method="POST" action="/global-settings/update-domain">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label>Domain Name</label>
             <input type="text" name="domain" value="{{ global_config.get('domain', '') }}" placeholder="e.g. nagios.example.com">
@@ -227,7 +227,7 @@
 <div class="section-card">
     <h3><i class="fas fa-cloud"></i> Nextcloud Backup Configuration</h3>
     <form method="POST" action="/global-settings/update-nextcloud">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-grid">
             <div class="form-group" style="grid-column: 1 / -1;">
                 <label>Share Link</label>
@@ -260,7 +260,7 @@
         <div>
             <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-weight: 600;"><i class="fas fa-save"></i> Create Backup</h4>
             <form method="POST" action="/global-settings/backup">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label>Backup Name</label>
                     <input type="text" name="backup_name" placeholder="e.g. before_update">
@@ -272,7 +272,7 @@
         <div>
             <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-weight: 600;"><i class="fas fa-upload"></i> Upload Backup</h4>
             <form method="POST" action="/global-settings/upload-backup" enctype="multipart/form-data">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label>Backup File</label>
                     <input type="file" name="backup_file" accept=".tar.gz" required>
@@ -296,7 +296,7 @@
 <div class="section-card">
     <h3><i class="fas fa-heartbeat"></i> Uptime Kuma Configuration</h3>
     <form method="POST" action="/global-settings/update-uptime-kuma">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="info-box">
             <strong><i class="fas fa-info-circle"></i> Uptime Kuma Integration</strong>
             <p style="margin: 0.5rem 0; color: #475569; font-size: 0.9rem;">
@@ -366,7 +366,7 @@
 <script>
 function generateApiKey() {
     if (!confirm('Generate a new API Key? The old key will stop working immediately.')) return;
-    fetch('/global-settings/generate-api-key', { method: 'POST', headers: {'X-CSRFToken': document.getElementById('csrf_token').value} })
+    csrfFetch('/global-settings/generate-api-key', { method: 'POST' })
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -463,7 +463,7 @@ function refreshLogs() {
 function clearLogs() {
     if (!confirm('Clear all activity logs?')) return;
     
-    fetch('/global-settings/clear-logs', {method: 'POST', headers: {'X-CSRFToken': document.getElementById('csrf_token').value}})
+    csrfFetch('/global-settings/clear-logs', {method: 'POST'})
     .then(r => r.json())
     .then(data => {
         if (data.success) {
