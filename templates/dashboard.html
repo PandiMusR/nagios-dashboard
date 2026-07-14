@@ -222,8 +222,11 @@ function updateDashboard(servers) {
         return;
     }
     
-    container.innerHTML = servers.map(server => `
-        <div class="server-card">
+    container.innerHTML = servers.map(server => {
+        const hasDown = server.hosts.down > 0;
+        const borderColor = hasDown ? '#ef4444' : '#10b981';
+        return `
+        <div class="server-card" style="border-left: 4px solid ${borderColor};">
             <div class="server-header">
                 <div class="server-name"><i class="fas fa-server" style="margin-right: 0.5rem; color: #4f46e5;"></i>${server.name}</div>
                 <a href="/nagios/${server.name}" target="_blank" class="btn-open"><i class="fas fa-external-link-alt"></i> Open Nagios</a>
@@ -283,7 +286,7 @@ function updateDashboard(servers) {
                 </div>
             </div>
         </div>
-    `).join('');
+    `}).join('');
 }
 
 function startAutoRefresh() {
