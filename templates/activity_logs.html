@@ -173,13 +173,13 @@ function clearLogs() {
         .then(data => {
             if (data.success) {
                 document.getElementById('activityLogs').textContent = '';
-                alert('Activity logs berhasil dihapus');
+                showToast('Activity logs cleared', 'success');
                 location.reload();
             } else {
-                alert('Error: ' + (data.error || 'Unknown error'));
+                showToast(data.error || 'Failed to clear logs', 'error');
             }
         })
-        .catch(err => alert('Request failed: ' + err));
+        .catch(err => showToast('Network error clearing logs', 'error'));
 }
 </script>
 {% endblock %}

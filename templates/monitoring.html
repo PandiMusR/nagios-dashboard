@@ -877,7 +877,7 @@ let batchStageSelection = null;
 function batchStage() {
     const checkboxes = document.querySelectorAll('.host-checkbox:checked');
     if (checkboxes.length === 0) {
-        alert('Please select at least one host');
+        showToast('Select at least one host', 'warning');
         return;
     }
     
@@ -911,7 +911,7 @@ function selectBatchStage(stage, labelEl) {
 
 function submitBatchStage() {
     if (!batchStageSelection) {
-        alert('Please select a stage');
+        showToast('Select a stage', 'warning');
         return;
     }
     
@@ -947,10 +947,10 @@ function submitBatchStage() {
             showToast('Batch', data.stage === 'resolved' ? 'RESOLVED' : 'STAGE_UPDATED', msg);
             loadMonitoringData();
         } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
+            showToast(data.error || 'Batch stage failed', 'error');
         }
     })
-    .catch(err => alert('Request failed: ' + err))
+    .catch(err => showToast('Batch stage failed: network error', 'error'))
     .finally(() => {
         btn.disabled = false;
         btn.textContent = batchStageSelection === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
@@ -1012,7 +1012,7 @@ function closeStageModal() {
 
 function submitStage() {
     if (!currentStageSelection) {
-        alert('Please select a stage');
+        showToast('Select a stage', 'warning');
         return;
     }
     const comment = document.getElementById('stage_comment').value.trim();
@@ -1050,10 +1050,10 @@ function submitStage() {
             // Refresh table immediately
             loadMonitoringData();
         } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
+            showToast(data.error || 'Batch stage failed', 'error');
         }
     })
-    .catch(err => alert('Request failed: ' + err))
+    .catch(err => showToast('Batch stage failed: network error', 'error'))
     .finally(() => {
         btn.disabled = false;
         btn.textContent = currentStageSelection === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
@@ -1132,7 +1132,7 @@ document.addEventListener('change', function(e) {
 function exportCSV() {
     const hosts = currentFilteredHosts.length > 0 ? currentFilteredHosts : allHosts;
     if (hosts.length === 0) {
-        alert('No data to export');
+        showToast('No data to export', 'warning');
         return;
     }
 

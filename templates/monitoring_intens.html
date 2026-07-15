@@ -421,10 +421,10 @@ async function removeMonitor(monitorId) {
         if (data.success) {
             loadMonitors();
         } else {
-            alert(`Error: ${data.error || 'Failed to remove monitor'}`);
+            showToast(data.error || 'Failed to remove monitor', 'error');
         }
     } catch (error) {
-        alert(`Error: ${error.message}`);
+        showToast('Network error removing monitor', 'error');
     }
 }
 

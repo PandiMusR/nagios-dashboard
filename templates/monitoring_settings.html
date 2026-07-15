@@ -539,7 +539,7 @@ function validateCrReset(form) {
 
     // Validate hours: only numbers and commas
     if (hours && !/^[0-9, ]*$/.test(hours)) {
-        alert('Reset Hours hanya boleh angka dan koma. Contoh: 03,15');
+        showToast('Reset Hours: hanya angka dan koma (contoh: 03,15)', 'warning');
         return false;
     }
 
@@ -548,7 +548,7 @@ function validateCrReset(form) {
         const parts = hours.split(',').map(h => parseInt(h.trim())).filter(h => !isNaN(h));
         for (const h of parts) {
             if (h < 0 || h > 23) {
-                alert('Jam harus antara 0-23. Contoh: 03,15');
+                showToast('Jam harus 0-23', 'warning');
                 return false;
             }
         }
@@ -556,13 +556,13 @@ function validateCrReset(form) {
 
     // Validate interval
     if (interval < 0 || interval > 365) {
-        alert('Interval harus antara 0-365 hari');
+        showToast('Interval harus 0-365 hari', 'warning');
         return false;
     }
 
     // Validate grace period
     if (grace < 0 || grace > 720) {
-        alert('Grace Period harus antara 0-720 jam');
+        showToast('Grace Period harus 0-720 jam', 'warning');
         return false;
     }
 
@@ -572,7 +572,7 @@ function validateCrReset(form) {
 function testSound(elementId) {
     const element = document.getElementById(elementId);
     if (!element.files || !element.files[0]) {
-        alert('Please select a sound file first');
+        showToast('Select a sound file first', 'warning');
         return;
     }
     

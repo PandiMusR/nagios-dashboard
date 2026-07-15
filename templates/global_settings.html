@@ -371,22 +371,22 @@ function generateApiKey() {
         .then(data => {
             if (data.success) {
                 document.getElementById('apiKeyDisplay').value = data.api_key;
-                alert('New API Key generated! Update all integrations.');
+                showToast('New API Key generated', 'success');
             } else {
-                alert('Error: ' + (data.error || 'Unknown error'));
+                showToast(data.error || 'Operation failed', 'error');
             }
         })
-        .catch(err => alert('Request failed: ' + err));
+        .catch(err => showToast('Request failed: network error', 'error'));
 }
 
 function copyApiKey() {
     const input = document.getElementById('apiKeyDisplay');
     navigator.clipboard.writeText(input.value).then(() => {
-        alert('API Key copied to clipboard');
+        showToast('API Key copied', 'success');
     }).catch(() => {
         input.select();
         document.execCommand('copy');
-        alert('API Key copied');
+        showToast('API Key copied', 'success');
     });
 }
 
@@ -429,13 +429,13 @@ function restoreBackup(name) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            alert('Restored successfully!');
+            showToast('Restored successfully', 'success');
             location.reload();
         } else {
-            alert('Restore failed: ' + (data.error || 'Unknown error'));
+            showToast(data.error || 'Restore failed', 'error');
         }
     })
-    .catch(err => alert('Error: ' + err.message));
+    .catch(err => showToast('Restore error: ' + err.message, 'error'));
 }
 
 function deleteBackup(name) {
@@ -447,7 +447,7 @@ function deleteBackup(name) {
         if (data.success) {
             loadBackups();
         } else {
-            alert('Delete failed');
+            showToast('Delete failed', 'error');
         }
     });
 }
@@ -468,7 +468,7 @@ function clearLogs() {
     .then(data => {
         if (data.success) {
             document.getElementById('activityLogs').textContent = '';
-            alert('Logs cleared');
+            showToast('Activity logs cleared', 'success');
         }
     });
 }

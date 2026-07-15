@@ -630,7 +630,7 @@ function getSelectedServers() {
 
 function showBatchModal(action, servers) {
     if (servers.length === 0) {
-        alert('Please select at least one server');
+        showToast('Select at least one server', 'warning');
         return;
     }
     
@@ -684,16 +684,16 @@ function executeBatchAction() {
     .then(data => {
         closeBatchModal();
         if (data.success) {
-            alert(`Servers ${batchAction}ed successfully!`);
+            showToast('Servers ' + batchAction + 'ed', 'success');
             location.reload();
         } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
+            showToast(data.error || 'Operation failed', 'error');
             confirmBtn.disabled = false;
         }
     })
     .catch(err => {
         closeBatchModal();
-        alert('Error: ' + err);
+        showToast('Network error', 'error');
         confirmBtn.disabled = false;
     });
 }
@@ -716,12 +716,12 @@ document.getElementById('addServerForm').addEventListener('submit', function(e) 
     
     // Validate inputs
     if (!serverName || !serverPort) {
-        alert('Please fill in all required fields');
+        showToast('Fill in all required fields', 'warning');
         return;
     }
     
     if (serverPort < 1000 || serverPort > 65535) {
-        alert('Port must be between 1000 and 65535');
+        showToast('Port must be 1000-65535', 'warning');
         return;
     }
     
@@ -739,18 +739,18 @@ document.getElementById('addServerForm').addEventListener('submit', function(e) 
     })
     .then(data => {
         if (data.success) {
-            alert('Server creation started. This may take a few minutes...');
+            showToast('Server creation started', 'success');
             checkServerStatus(serverName);
         } else {
             document.getElementById('loadingOverlay').classList.remove('show');
-            alert('Error: ' + (data.error || 'Unknown error'));
+            showToast(data.error || 'Operation failed', 'error');
             console.error('Server creation error:', data);
         }
     })
     .catch(err => {
         document.getElementById('loadingOverlay').classList.remove('show');
         console.error('Fetch error:', err);
-        alert('Error: ' + err.message);
+        showToast('Error: ' + err.message, 'error');
     });
 });
 
@@ -761,7 +761,7 @@ function checkServerStatus(serverName) {
     function check() {
         if (attempts >= maxAttempts) {
             document.getElementById('loadingOverlay').classList.remove('show');
-            alert('Server creation is taking longer than expected. Please check the status manually in a moment.');
+            showToast('Server creation taking longer than expected', 'warning');
             return;
         }
         
@@ -784,7 +784,7 @@ function checkServerStatus(serverName) {
                     setTimeout(check, 2000);
                 } else {
                     document.getElementById('loadingOverlay').classList.remove('show');
-                    alert('Server creation timed out. Please check the status manually.');
+                    showToast('Server creation timed out', 'error');
                 }
             });
     }
@@ -834,7 +834,7 @@ function deletePlugin(serverName, pluginName) {
         .then(r => r.json())
         .then(data => {
             if (data.success) loadPluginList(serverName);
-            else alert('Failed to delete plugin');
+            else showToast('Failed to delete plugin', 'error');
         });
 }
 
@@ -852,9 +852,9 @@ document.getElementById('uploadPluginForm').addEventListener('submit', function(
         if (data.success) {
             this.reset();
             loadPluginList(serverName);
-            alert('Plugin uploaded!');
+            showToast('Plugin uploaded', 'success');
         } else {
-            alert('Failed: ' + (data.error || 'Unknown error'));
+            showToast(data.error || 'Plugin upload failed', 'error');
         }
     });
 });

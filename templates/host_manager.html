@@ -621,7 +621,7 @@ let batchRowCounter = 0;
 
 function createBackup() {
     const server = document.getElementById('backupServer').value;
-    if (!server) { alert('Select a server'); return; }
+    if (!server) { showToast('Select a server first', 'warning'); return; }
     
     const btn = event.target;
     btn.disabled = true;
@@ -637,10 +637,10 @@ function createBackup() {
         btn.disabled = false;
         btn.textContent = '📦 Backup';
         if (data.success) {
-            alert('Backup created!' + (data.cloud ? ' ✓ Uploaded to cloud' : ' ⚠️ Cloud upload failed'));
+            showToast('Backup created' + (data.cloud ? ' + cloud upload' : ' (cloud upload failed)'), data.cloud ? 'success' : 'warning');
             loadBackups();
         } else {
-            alert('Failed: ' + data.error);
+            showToast(data.error || 'Backup failed', 'error');
         }
     });
 }
@@ -682,7 +682,7 @@ function restoreBackup(server, name) {
         })
         .then(r => r.json())
         .then(data => {
-            alert(data.success ? 'Restored!' : 'Failed');
+            showToast(data.success ? 'Restored' : 'Restore failed', data.success ? 'success' : 'error');
             if (data.success) location.reload();
         });
     }
@@ -693,7 +693,7 @@ function deleteBackup(server, name) {
         fetch(`/host-manager/delete-backup/${server}/${name}`, {method: 'DELETE'})
         .then(r => r.json())
         .then(data => {
-            alert(data.success ? 'Deleted' : 'Failed');
+            showToast(data.success ? 'Deleted' : 'Delete failed', data.success ? 'success' : 'error');
             if (data.success) loadBackups();
         });
     }
@@ -1169,7 +1169,7 @@ function validateAddForm() {
     if (parents) {
         const validParents = allHostsData.filter(h => h.server === server).map(h => h.host_name);
         if (!validParents.includes(parents)) {
-            alert('Invalid parent! Parent must be an existing host on the same server.');
+            showToast('Invalid parent host', 'warning');
             return false;
         }
     }
@@ -1183,7 +1183,7 @@ function validateEditForm() {
     if (parents) {
         const validParents = allHostsData.filter(h => h.server === server).map(h => h.host_name);
         if (!validParents.includes(parents)) {
-            alert('Invalid parent! Parent must be an existing host on the same server.');
+            showToast('Invalid parent host', 'warning');
             return false;
         }
     }

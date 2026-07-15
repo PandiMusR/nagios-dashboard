@@ -319,7 +319,7 @@ function editPermissions(username) {
         })
         .catch(err => {
             console.error('Error:', err);
-            alert('Failed to load permissions');
+            showToast('Failed to load permissions', 'error');
         });
 }
 
