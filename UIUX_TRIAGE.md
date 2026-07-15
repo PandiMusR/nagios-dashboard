@@ -1,30 +1,29 @@
 # UI/UX Triage & Fix Plan — Nagios Dashboard
 
 **Based on:** `UIUX_AUDIT.md` (2026-07-14)
+**Last updated:** 2026-07-15 (Phase 1 + Quick Wins + alert→toast done)
 **Stack:** Flask + Jinja2, Bootstrap 5.3, Vanilla JS, Font Awesome 6.4
 **Audience:** NOC engineers (8+ hours/day, incident-driven)
 
----
-
 ## Triage Summary
 
-| # | Priority | Category | Finding | Effort | Impact | Bucket |
-|---|----------|----------|---------|--------|--------|--------|
-| 1 | P0 | Consistency | All 14 child templates hardcode hex colors — dark mode broken | XL | Unblocks dark mode for all pages | 🔴 FIX NOW |
-| 2 | P0 | Accessibility | 0 aria-* attributes, no lang on html | M | Screen reader users can't use dashboard | 🔴 FIX NOW |
-| 3 | P0 | Responsiveness | Missing `<meta name="viewport">` in base.html | S | Mobile rendering broken | 🔴 FIX NOW |
-| 4 | P1 | Architecture | Shared components (.btn-primary, .form-group, .modal) redefined per page | L | Consistency, maintainability | 🟡 FIX SOON |
-| 5 | P1 | Consistency | 50 alert() calls for error/success feedback | M | Professional UX, no browser dialog popups | 🟡 FIX SOON |
-| 6 | P1 | Data Density | Monitoring page console.error on fetch failure — no user feedback | S | NOC sees nothing when API fails | 🟡 FIX SOON |
-| 7 | P1 | Data Density | No global "total hosts down" summary on dashboard | S | NOC can't instantly see total problems | 🟡 FIX SOON |
-| 8 | P1 | Data Density | Dashboard cards don't highlight critical servers | S | Critical servers look same as healthy | 🟡 FIX SOON |
-| 9 | P1 | Dark Mode | Dark mode uses "nuclear wildcard" !important overrides | M | Dark mode breaks colored badges | 🟡 FIX SOON |
-| 10 | P2 | Accessibility | Form inputs lack `<label for>` association | M | Form accessibility | 🟢 FIX LATER |
-| 11 | P2 | Architecture | 18 inline `<style>` blocks, 12 `<script>` blocks | M | Page weight, caching | 🟢 FIX LATER |
-| 12 | P2 | Consistency | Mixed Indonesian/English language | S | Professional polish | 🟢 FIX LATER |
-| 13 | P2 | Dark Mode | Dark mode toggle commented out | S | Enable after #1 and #9 done | 🟢 FIX LATER |
-| 14 | P3 | Data Density | No keyboard shortcuts for common NOC actions | S | Power user productivity | 🟢 FIX LATER |
-| 15 | P3 | Consistency | Page gradient header redefined per template | S | Code deduplication | 🟢 FIX LATER |
+| # | Priority | Category | Finding | Effort | Impact | Bucket | Status |
+|---|----------|----------|---------|--------|--------|--------|--------|
+| 1 | P0 | Consistency | All 14 child templates hardcode hex colors — dark mode broken | XL | Unblocks dark mode for all pages | 🔴 FIX NOW | ✅ DONE (Phase 1) |
+| 2 | P0 | Accessibility | 0 aria-* attributes, no lang on html | M | Screen reader users can't use dashboard | 🔴 FIX NOW | ⚠️ PARTIAL (lang+viewport done, aria pending) |
+| 3 | P0 | Responsiveness | Missing `<meta name="viewport">` in base.html | S | Mobile rendering broken | 🔴 FIX NOW | ✅ DONE |
+| 4 | P1 | Architecture | Shared components (.btn-primary, .form-group, .modal) redefined per page | L | Consistency, maintainability | 🟡 FIX SOON | ❌ PENDING |
+| 5 | P1 | Consistency | 50 alert() calls for error/success feedback | M | Professional UX, no browser dialog popups | 🟡 FIX SOON | ✅ DONE (toast system) |
+| 6 | P1 | Data Density | Monitoring page console.error on fetch failure — no user feedback | S | NOC sees nothing when API fails | 🟡 FIX SOON | ✅ DONE (retry + error UI) |
+| 7 | P1 | Data Density | No global "total hosts down" summary on dashboard | S | NOC can't instantly see total problems | 🟡 FIX SOON | ❌ PENDING |
+| 8 | P1 | Data Density | Dashboard cards don't highlight critical servers | S | Critical servers look same as healthy | 🟡 FIX SOON | ✅ DONE (border-left highlight) |
+| 9 | P1 | Dark Mode | Dark mode uses "nuclear wildcard" !important overrides | M | Dark mode breaks colored badges | 🟡 FIX SOON | ✅ DONE (removed wildcards, now var()) |
+| 10 | P2 | Accessibility | Form inputs lack `<label for>` association | M | Form accessibility | 🟢 FIX LATER | ❌ PENDING |
+| 11 | P2 | Architecture | 18 inline `<style>` blocks, 12 `<script>` blocks | M | Page weight, caching | 🟢 FIX LATER | ❌ PENDING |
+| 12 | P2 | Consistency | Mixed Indonesian/English language | S | Professional polish | 🟢 FIX LATER | ❌ PENDING |
+| 13 | P2 | Dark Mode | Dark mode toggle commented out | S | Enable after #1 and #9 done | 🟢 FIX LATER | ✅ DONE |
+| 14 | P3 | Data Density | No keyboard shortcuts for common NOC actions | S | Power user productivity | 🟢 FIX LATER | ❌ PENDING |
+| 15 | P3 | Consistency | Page gradient header redefined per template | S | Code deduplication | 🟢 FIX LATER | ❌ PENDING |
 
 ---
 

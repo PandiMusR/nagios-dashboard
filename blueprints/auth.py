@@ -205,51 +205,27 @@ def change_password() -> Response | tuple[Response, int]:
         if not auth_result['authenticated']:
             return jsonify({'success': False, 'message': 'Password lama tidak sesuai'}), 400
         
-        # Change password in LDAP
+        # Change password in LDAP via admin connection
         try:
-            server = Server(LDAP_SERVER, get_info=ALL)
             user_dn = f'uid={username},ou=users,{LDAP_BASE_DN}'
-            
-            # Connect as the user first to change their own password
-            conn = Connection(server, user_dn, old_password, auto_bind=True)
-            
-            # Use modify operation to change password
             from ldap3 import MODIFY_REPLACE
-            conn.modify(user_dn, {'userPassword': [(MODIFY_REPLACE, [new_password])]})
-            
-            if conn.result['result'] == 0:  # Success
-                conn.unbind()
-                # Update session password
+
+            admin_conn = get_ldap_admin_connection()
+            admin_conn.modify(user_dn, {'userPassword': [(MODIFY_REPLACE, [new_password])]})
+
+            if admin_conn.result['result'] == 0:
+                admin_conn.unbind()
                 session['password'] = encrypt_session_value(new_password)
                 log_activity('Change Password', f'User {username} changed their password successfully')
                 return jsonify({'success': True, 'message': 'Password berhasil diubah'})
             else:
-                conn.unbind()
-                error_msg = conn.result.get('description', 'Gagal mengubah password')
+                error_msg = admin_conn.result.get('description', 'Gagal mengubah password')
+                admin_conn.unbind()
                 return jsonify({'success': False, 'message': error_msg}), 400
-                
+
         except Exception as e:
-            print(f"LDAP Password Change Error: {e}")
-            # If LDAP modify fails, try alternative method using bind
-            try:
-                # Some LDAP servers require binding with admin account
-                admin_server = Server(LDAP_SERVER, get_info=ALL)
-                admin_conn = get_ldap_admin_connection()
-                
-                from ldap3 import MODIFY_REPLACE
-                admin_conn.modify(user_dn, {'userPassword': [(MODIFY_REPLACE, [new_password])]})
-                
-                if admin_conn.result['result'] == 0:
-                    admin_conn.unbind()
-                    session['password'] = encrypt_session_value(new_password)
-                    log_activity('Change Password', f'User {username} changed their password successfully')
-                    return jsonify({'success': True, 'message': 'Password berhasil diubah'})
-                else:
-                    admin_conn.unbind()
-                    return jsonify({'success': False, 'message': 'Gagal mengubah password di server'}), 400
-            except Exception as admin_error:
-                print(f"Admin LDAP Password Change Error: {admin_error}")
-                return jsonify({'success': False, 'message': 'Terjadi kesalahan pada server'}), 500
+            print(f"Password Change Error: {e}")
+            return jsonify({'success': False, 'message': 'Terjadi kesalahan pada server'}), 500
     
     except Exception as e:
         print(f"Change Password API Error: {e}")
