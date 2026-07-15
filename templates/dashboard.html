@@ -3,7 +3,7 @@
 {% block content %}
 <style>
     .dashboard-header {
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         padding: 2rem;
         border-radius: 16px;
         color: white;
@@ -34,7 +34,7 @@
         background: white;
         border-radius: 16px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border: 1px solid #f1f5f9;
+        border: 1px solid var(--bg-tertiary);
         padding: 1.5rem;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         animation: slideUp 0.4s ease;
@@ -59,15 +59,15 @@
         align-items: center;
         margin-bottom: 1.5rem;
         padding-bottom: 1rem;
-        border-bottom: 2px solid #f1f5f9;
+        border-bottom: 2px solid var(--bg-tertiary);
     }
     .server-name {
         font-size: 1.25rem;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--text-primary);
     }
     .btn-open {
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         color: white;
         border: none;
         padding: 0.5rem 1.25rem;
@@ -90,15 +90,15 @@
         margin-bottom: 1.5rem;
     }
     .resource-item {
-        background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+        background: linear-gradient(135deg, var(--bg-primary) 0%, #eef2ff 100%);
         padding: 1rem;
         border-radius: 12px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border-color);
     }
     .resource-label {
         font-size: 0.75rem;
         font-weight: 600;
-        color: #64748b;
+        color: var(--text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-bottom: 0.5rem;
@@ -106,7 +106,7 @@
     .resource-value {
         font-size: 1.5rem;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--text-primary);
     }
     .status-section {
         margin-bottom: 1.5rem;
@@ -114,7 +114,7 @@
     .status-title {
         font-size: 0.9rem;
         font-weight: 700;
-        color: #475569;
+        color: var(--text-secondary);
         margin-bottom: 0.75rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -143,16 +143,16 @@
         font-size: 0.75rem;
         opacity: 0.8;
     }
-    .status-up { background: #d1fae5; color: #065f46; }
-    .status-down { background: #fee2e2; color: #991b1b; }
-    .status-warning { background: #fef3c7; color: #92400e; }
-    .status-unknown { background: #f3f4f6; color: #374151; }
+    .status-up { background: var(--alert-success-bg); color: var(--alert-success-color); }
+    .status-down { background: var(--alert-error-bg); color: var(--alert-error-color); }
+    .status-warning { background: var(--alert-warning-bg); color: var(--alert-warning-color); }
+    .status-unknown { background: var(--bg-tertiary); color: var(--text-secondary); }
     .loading-spinner {
         display: inline-block;
         width: 16px;
         height: 16px;
-        border: 2px solid #f3f4f6;
-        border-top-color: #4f46e5;
+        border: 2px solid var(--bg-tertiary);
+        border-top-color: var(--color-primary);
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
     }
@@ -190,7 +190,7 @@
 </div>
 
 <div class="servers-grid" id="servers_container">
-    <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #94a3b8;">
+    <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
         <div style="font-size: 1rem; margin-bottom: 0.5rem;"><span class="loading-spinner"></span> Loading servers...</div>
     </div>
 </div>
@@ -210,7 +210,7 @@ function loadDashboardStats() {
         })
         .catch(error => {
             console.error('Error:', error);
-            document.getElementById('servers_container').innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #dc2626;"><i class="fas fa-exclamation-circle"></i> Error loading servers</div>';
+            document.getElementById('servers_container').innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--color-danger-alt);"><i class="fas fa-exclamation-circle"></i> Error loading servers</div>';
         });
 }
 
@@ -218,17 +218,17 @@ function updateDashboard(servers) {
     const container = document.getElementById('servers_container');
     
     if (servers.length === 0) {
-        container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #94a3b8;"><i class="fas fa-inbox"></i> No servers found</div>';
+        container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);"><i class="fas fa-inbox"></i> No servers found</div>';
         return;
     }
     
     container.innerHTML = servers.map(server => {
         const hasDown = server.hosts.down > 0;
-        const borderColor = hasDown ? '#ef4444' : '#10b981';
+        const borderColor = hasDown ? 'var(--color-danger)' : 'var(--color-success)';
         return `
         <div class="server-card" style="border-left: 4px solid ${borderColor};">
             <div class="server-header">
-                <div class="server-name"><i class="fas fa-server" style="margin-right: 0.5rem; color: #4f46e5;"></i>${server.name}</div>
+                <div class="server-name"><i class="fas fa-server" style="margin-right: 0.5rem; color: var(--color-primary);"></i>${server.name}</div>
                 <a href="/nagios/${server.name}" target="_blank" class="btn-open"><i class="fas fa-external-link-alt"></i> Open Nagios</a>
             </div>
             

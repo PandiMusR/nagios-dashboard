@@ -3,7 +3,7 @@
 {% block content %}
 <style>
     .page-header {
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         padding: 2rem;
         border-radius: 16px;
         color: white;
@@ -24,12 +24,12 @@
         background: white;
         border-radius: 16px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border: 1px solid #f1f5f9;
+        border: 1px solid var(--bg-tertiary);
         padding: 2rem;
         margin-bottom: 2rem;
     }
     .form-section h2 {
-        color: #1e293b;
+        color: var(--text-primary);
         margin: 0 0 1.5rem 0;
         font-size: 1.25rem;
         font-weight: 700;
@@ -46,23 +46,23 @@
     .form-group label {
         font-size: 0.9rem;
         font-weight: 600;
-        color: #334155;
+        color: var(--bg-tertiary);
         margin-bottom: 0.5rem;
     }
     .form-group input {
         padding: 0.75rem 1rem;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         font-size: 0.95rem;
         transition: all 0.2s;
     }
     .form-group input:focus {
         outline: none;
-        border-color: #4f46e5;
+        border-color: var(--color-primary);
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
     .btn-primary {
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         color: white;
         border: none;
         padding: 0.75rem 1.5rem;
@@ -85,19 +85,19 @@
         background: white;
         border-radius: 16px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border: 1px solid #f1f5f9;
+        border: 1px solid var(--bg-tertiary);
         overflow: hidden;
     }
     .table-header {
         padding: 2rem;
-        border-bottom: 2px solid #f1f5f9;
+        border-bottom: 2px solid var(--bg-tertiary);
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
     .table-header h2 {
         margin: 0;
-        color: #1e293b;
+        color: var(--text-primary);
         font-size: 1.25rem;
         font-weight: 700;
     }
@@ -114,10 +114,10 @@
         font-weight: 600;
         transition: all 0.2s;
     }
-    .btn-success { background: #10b981; color: white; }
-    .btn-warning { background: #f59e0b; color: white; }
-    .btn-danger { background: #ef4444; color: white; }
-    .btn-info { background: #3b82f6; color: white; }
+    .btn-success { background: var(--color-success); color: white; }
+    .btn-warning { background: var(--color-warning); color: white; }
+    .btn-danger { background: var(--color-danger); color: white; }
+    .btn-info { background: var(--color-info); color: white; }
     .btn-sm:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.15);
@@ -127,24 +127,24 @@
         border-collapse: collapse;
     }
     .servers-table thead tr {
-        background: #f8fafc;
-        border-bottom: 2px solid #e2e8f0;
+        background: var(--bg-primary);
+        border-bottom: 2px solid var(--border-color);
     }
     .servers-table th {
         padding: 1rem;
         text-align: left;
         font-size: 0.85rem;
         font-weight: 700;
-        color: #475569;
+        color: var(--text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
     .servers-table tbody tr {
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid var(--bg-tertiary);
         transition: all 0.2s;
     }
     .servers-table tbody tr:hover {
-        background: #f8fafc;
+        background: var(--bg-primary);
     }
     .servers-table td {
         padding: 1.25rem 1rem;
@@ -157,11 +157,11 @@
         font-size: 0.8rem;
         font-weight: 600;
     }
-    .status-running { background: #d1fae5; color: #065f46; }
-    .status-stopped { background: #fee2e2; color: #991b1b; }
+    .status-running { background: var(--alert-success-bg); color: var(--alert-success-color); }
+    .status-stopped { background: var(--alert-error-bg); color: var(--alert-error-color); }
     .server-name {
         font-weight: 600;
-        color: #1e293b;
+        color: var(--text-primary);
     }
     .action-cell {
         display: flex;
@@ -175,7 +175,7 @@
     }
     .action-label {
         font-size: 0.75rem;
-        color: #64748b;
+        color: var(--text-secondary);
         font-weight: 600;
         text-transform: uppercase;
     }
@@ -220,33 +220,33 @@
     }
     .modal-header {
         padding: 2rem;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid var(--bg-tertiary);
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
     .modal-header h3 {
         margin: 0;
-        color: #1e293b;
+        color: var(--text-primary);
         font-size: 1.25rem;
     }
     .btn-close {
         background: none;
         border: none;
         font-size: 1.5rem;
-        color: #64748b;
+        color: var(--text-secondary);
         cursor: pointer;
         transition: color 0.2s;
     }
     .btn-close:hover {
-        color: #1e293b;
+        color: var(--text-primary);
     }
     .modal-body {
         padding: 2rem;
     }
     .modal-footer {
         padding: 1.5rem 2rem;
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid var(--bg-tertiary);
         display: flex;
         justify-content: flex-end;
         gap: 1rem;
@@ -276,8 +276,8 @@
     .spinner {
         width: 50px;
         height: 50px;
-        border: 4px solid #f1f5f9;
-        border-top-color: #4f46e5;
+        border: 4px solid var(--bg-tertiary);
+        border-top-color: var(--color-primary);
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
         margin: 0 auto 1rem;
@@ -287,13 +287,13 @@
     }
     .spinner-text {
         font-size: 1rem;
-        color: #1e293b;
+        color: var(--text-primary);
         font-weight: 600;
         margin: 0;
     }
     .spinner-subtext {
         font-size: 0.85rem;
-        color: #64748b;
+        color: var(--text-secondary);
         margin: 0.5rem 0 0 0;
     }
     @media (max-width: 768px) {
@@ -326,7 +326,7 @@
             <div class="form-group">
                 <label for="serverName"><i class="fas fa-tag"></i> Server Name</label>
                 <input type="text" id="serverName" name="name" required placeholder="e.g., nagios-prod-01">
-                <small style="color: #64748b; margin-top: 0.25rem; display: block;">
+                <small style="color: var(--text-secondary); margin-top: 0.25rem; display: block;">
                     Only alphanumeric, hyphens, and underscores allowed
                 </small>
             </div>
@@ -463,7 +463,7 @@
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 3rem; color: #94a3b8;">
+                    <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">
                         <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
                         No servers found
                     </td>
@@ -482,20 +482,20 @@
         </div>
         <div class="modal-body">
             <div style="margin-bottom: 2rem;">
-                <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Upload Plugin</h4>
+                <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">Upload Plugin</h4>
                 <form id="uploadPluginForm" enctype="multipart/form-data" style="display: flex; gap: 1rem;">
                     <input type="hidden" id="uploadServerName" name="server">
-                    <input type="file" name="plugin_file" required style="flex: 1; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                    <input type="file" name="plugin_file" required style="flex: 1; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px;">
                     <button type="submit" class="btn-sm btn-success"><i class="fas fa-upload"></i> Upload</button>
                 </form>
             </div>
             <div>
-                <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Plugin List</h4>
-                <div id="pluginList" style="background: #f8fafc; padding: 1rem; border-radius: 8px; max-height: 300px; overflow-y: auto;">Loading...</div>
+                <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">Plugin List</h4>
+                <div id="pluginList" style="background: var(--bg-primary); padding: 1rem; border-radius: 8px; max-height: 300px; overflow-y: auto;">Loading...</div>
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn-sm" style="background: #94a3b8; color: white;" onclick="closePluginModal()">Close</button>
+            <button class="btn-sm" style="background: var(--text-muted); color: white;" onclick="closePluginModal()">Close</button>
         </div>
     </div>
 </div>
@@ -508,11 +508,11 @@
             <button class="btn-close" onclick="closeBatchModal()">&times;</button>
         </div>
         <div class="modal-body">
-            <p id="batchModalMessage" style="margin: 0 0 1.5rem 0; color: #475569;"></p>
-            <div id="batchModalServerList" style="background: #f8fafc; padding: 1rem; border-radius: 8px; max-height: 250px; overflow-y: auto; margin-bottom: 1.5rem;"></div>
+            <p id="batchModalMessage" style="margin: 0 0 1.5rem 0; color: var(--text-secondary);"></p>
+            <div id="batchModalServerList" style="background: var(--bg-primary); padding: 1rem; border-radius: 8px; max-height: 250px; overflow-y: auto; margin-bottom: 1.5rem;"></div>
         </div>
         <div class="modal-footer">
-            <button class="btn-sm" style="background: #94a3b8; color: white;" onclick="closeBatchModal()">Cancel</button>
+            <button class="btn-sm" style="background: var(--text-muted); color: white;" onclick="closeBatchModal()">Cancel</button>
             <button id="batchModalConfirm" class="btn-sm btn-success">Confirm</button>
         </div>
     </div>
@@ -526,10 +526,10 @@
             <button class="btn-close" onclick="closeConfigModal()">&times;</button>
         </div>
         <div class="modal-body">
-            <pre id="configOutput" style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; font-size: 0.85rem; white-space: pre-wrap; font-family: 'Courier New', monospace; margin: 0; max-height: 400px; overflow-y: auto;">Checking...</pre>
+            <pre id="configOutput" style="background: var(--bg-primary); padding: 1.5rem; border-radius: 8px; font-size: 0.85rem; white-space: pre-wrap; font-family: 'Courier New', monospace; margin: 0; max-height: 400px; overflow-y: auto;">Checking...</pre>
         </div>
         <div class="modal-footer">
-            <button class="btn-sm" style="background: #94a3b8; color: white;" onclick="closeConfigModal()">Close</button>
+            <button class="btn-sm" style="background: var(--text-muted); color: white;" onclick="closeConfigModal()">Close</button>
         </div>
     </div>
 </div>
@@ -559,15 +559,15 @@ function checkPortStatus() {
         .then(data => {
             if (data.available) {
                 statusDiv.style.display = 'block';
-                statusDiv.style.background = '#d1fae5';
-                statusDiv.style.color = '#065f46';
-                statusDiv.style.border = '1px solid #6ee7b7';
+                statusDiv.style.background = 'var(--alert-success-bg)';
+                statusDiv.style.color = 'var(--alert-success-color)';
+                statusDiv.style.border = '1px solid var(--alert-success-color)';
                 statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> Port is available';
             } else {
                 statusDiv.style.display = 'block';
-                statusDiv.style.background = '#fee2e2';
-                statusDiv.style.color = '#991b1b';
-                statusDiv.style.border = '1px solid #fca5a5';
+                statusDiv.style.background = 'var(--alert-error-bg)';
+                statusDiv.style.color = 'var(--alert-error-color)';
+                statusDiv.style.border = '1px solid var(--alert-error-color)';
                 statusDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + data.reason;
             }
         })
@@ -577,9 +577,9 @@ function checkPortStatus() {
 function suggestPort() {
     const statusDiv = document.getElementById('portStatus');
     statusDiv.style.display = 'block';
-    statusDiv.style.background = '#dbeafe';
-    statusDiv.style.color = '#1e40af';
-    statusDiv.style.border = '1px solid #93c5fd';
+    statusDiv.style.background = 'var(--alert-info-bg)';
+    statusDiv.style.color = 'var(--alert-info-color)';
+    statusDiv.style.border = '1px solid var(--alert-info-color)';
     statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finding available port...';
     
     fetch('/api/servers/get-available-port')
@@ -587,15 +587,15 @@ function suggestPort() {
         .then(data => {
             if (data.available) {
                 document.getElementById('serverPort').value = data.port;
-                statusDiv.style.background = '#d1fae5';
-                statusDiv.style.color = '#065f46';
-                statusDiv.style.border = '1px solid #6ee7b7';
+                statusDiv.style.background = 'var(--alert-success-bg)';
+                statusDiv.style.color = 'var(--alert-success-color)';
+                statusDiv.style.border = '1px solid var(--alert-success-color)';
                 statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> Suggested port: ${data.port} (Proxy: ${data.proxy_port})`;
                 checkPortStatus();
             } else {
-                statusDiv.style.background = '#fee2e2';
-                statusDiv.style.color = '#991b1b';
-                statusDiv.style.border = '1px solid #fca5a5';
+                statusDiv.style.background = 'var(--alert-error-bg)';
+                statusDiv.style.color = 'var(--alert-error-color)';
+                statusDiv.style.border = '1px solid var(--alert-error-color)';
                 statusDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + data.reason;
             }
         })
@@ -644,9 +644,9 @@ function showBatchModal(action, servers) {
     const confirmBtn = document.getElementById('batchModalConfirm');
     
     const actions = {
-        'start': { title: 'Start Servers', message: `Start ${servers.length} server(s)?`, color: '#10b981' },
-        'restart': { title: 'Restart Servers', message: `Restart ${servers.length} server(s)?`, color: '#f59e0b' },
-        'delete': { title: 'Delete Servers', message: `Delete ${servers.length} server(s)? This cannot be undone!`, color: '#ef4444' }
+        'start': { title: 'Start Servers', message: `Start ${servers.length} server(s)?`, color: 'var(--color-success)' },
+        'restart': { title: 'Restart Servers', message: `Restart ${servers.length} server(s)?`, color: 'var(--color-warning)' },
+        'delete': { title: 'Delete Servers', message: `Delete ${servers.length} server(s)? This cannot be undone!`, color: 'var(--color-danger)' }
     };
     
     const actionConfig = actions[action];
@@ -656,7 +656,7 @@ function showBatchModal(action, servers) {
     confirmBtn.textContent = action.charAt(0).toUpperCase() + action.slice(1);
     
     serverList.innerHTML = servers.map(s => 
-        `<div style="padding: 0.5rem; border-bottom: 1px solid #e2e8f0; color: #475569;">• ${s}</div>`
+        `<div style="padding: 0.5rem; border-bottom: 1px solid var(--border-color); color: var(--text-secondary);">• ${s}</div>`
     ).join('');
     
     modal.classList.add('show');
@@ -813,8 +813,8 @@ function loadPluginList(serverName) {
                 list.innerHTML = data.plugins.map(p => `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: white; border-radius: 6px; margin-bottom: 0.5rem;">
                         <div>
-                            <strong style="color: #1e293b;">${p.name}</strong>
-                            <span style="color: #64748b; font-size: 0.8rem; margin-left: 0.5rem;">${p.size}</span>
+                            <strong style="color: var(--text-primary);">${p.name}</strong>
+                            <span style="color: var(--text-secondary); font-size: 0.8rem; margin-left: 0.5rem;">${p.size}</span>
                         </div>
                         <button onclick="deletePlugin('${serverName}', '${p.name}')" class="btn-sm btn-danger">
                             <i class="fas fa-trash"></i> Delete
@@ -822,7 +822,7 @@ function loadPluginList(serverName) {
                     </div>
                 `).join('');
             } else {
-                list.innerHTML = '<p style="text-align: center; color: #94a3b8; margin: 0;">No plugins found</p>';
+                list.innerHTML = '<p style="text-align: center; color: var(--text-muted); margin: 0;">No plugins found</p>';
             }
         });
 }
@@ -870,16 +870,16 @@ function checkConfig(serverName) {
         .then(data => {
             const output = document.getElementById('configOutput');
             if (data.success) {
-                output.style.color = '#10b981';
+                output.style.color = 'var(--color-success)';
                 output.textContent = data.output;
             } else {
-                output.style.color = '#ef4444';
+                output.style.color = 'var(--color-danger)';
                 output.textContent = (data.error || data.output || 'Unknown error');
             }
         })
         .catch(err => {
             const output = document.getElementById('configOutput');
-            output.style.color = '#ef4444';
+            output.style.color = 'var(--color-danger)';
             output.textContent = 'Error: ' + err;
         });
 }

@@ -3,7 +3,7 @@
 {% block content %}
 <style>
     .settings-header {
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         padding: 2rem;
         border-radius: 16px;
         color: white;
@@ -25,13 +25,13 @@
         padding: 2rem;
         margin-bottom: 2rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border: 1px solid #f1f5f9;
+        border: 1px solid var(--bg-tertiary);
     }
     .section-card h3 {
         margin: 0 0 1.5rem 0;
         font-size: 1.2rem;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--text-primary);
         display: flex;
         align-items: center;
         gap: 0.75rem;
@@ -53,7 +53,7 @@
     .form-group label {
         display: block;
         margin-bottom: 0.5rem;
-        color: #1e293b;
+        color: var(--text-primary);
         font-weight: 600;
         font-size: 0.9rem;
     }
@@ -62,7 +62,7 @@
     .form-group textarea {
         width: 100%;
         padding: 0.75rem 1rem;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         font-size: 0.9rem;
         transition: all 0.2s;
@@ -71,7 +71,7 @@
     .form-group input:focus,
     .form-group select:focus {
         outline: none;
-        border-color: #4f46e5;
+        border-color: var(--color-primary);
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
     .form-grid {
@@ -82,7 +82,7 @@
     }
     .btn-primary {
         padding: 0.75rem 1.5rem;
-        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
         color: white;
         border: none;
         border-radius: 8px;
@@ -100,7 +100,7 @@
     }
     .btn-small {
         padding: 0.5rem 1rem;
-        background: #6b7280;
+        background: var(--color-gray);
         color: white;
         border: none;
         border-radius: 6px;
@@ -113,14 +113,14 @@
     }
     .alarm-card {
         padding: 1.5rem;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
         border-radius: 12px;
         margin-bottom: 1.5rem;
     }
     .alarm-card h4 {
         margin: 0 0 1rem 0;
-        color: #1e293b;
+        color: var(--text-primary);
         font-weight: 600;
     }
     .checkbox-group {
@@ -139,7 +139,7 @@
         width: 18px;
         height: 18px;
         cursor: pointer;
-        accent-color: #4f46e5;
+        accent-color: var(--color-primary);
     }
     .sound-group {
         display: grid;
@@ -157,20 +157,20 @@
         align-items: center;
         gap: 0.5rem;
         padding: 0.5rem 1rem;
-        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--border-color) 100%);
         border-radius: 8px;
-        border: 1px solid #cbd5e1;
+        border: 1px solid var(--border-color-alt);
     }
     .mapping-badge button {
         background: none;
         border: none;
-        color: #dc2626;
+        color: var(--color-danger-alt);
         cursor: pointer;
         font-size: 1.1rem;
         padding: 0;
     }
     .mapping-badge button:hover {
-        color: #991b1b;
+        color: var(--alert-error-color);
     }
     .category-grid {
         display: grid;
@@ -183,8 +183,8 @@
         gap: 1rem;
     }
     .category-item {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
         border-radius: 12px;
         padding: 1rem 1.25rem;
     }
@@ -197,7 +197,7 @@
     }
     .category-item h4 {
         margin: 0;
-        color: #1e293b;
+        color: var(--text-primary);
         font-size: 1rem;
         font-weight: 700;
     }
@@ -215,12 +215,12 @@
         border-radius: 999px;
         font-size: 0.8rem;
         font-weight: 600;
-        background: #e2e8f0;
-        color: #475569;
+        background: var(--border-color);
+        color: var(--text-secondary);
     }
     .meta-badge.service {
-        background: #dbeafe;
-        color: #1d4ed8;
+        background: var(--alert-info-bg);
+        color: var(--color-info-dark);
     }
     .category-actions {
         display: flex;
@@ -241,26 +241,26 @@
         gap: 0.45rem;
     }
     .btn-secondary {
-        background: #e0f2fe;
-        color: #0369a1;
+        background: var(--alert-info-bg);
+        color: var(--color-info-dark);
     }
     .btn-danger {
-        background: #fee2e2;
-        color: #b91c1c;
+        background: var(--alert-error-bg);
+        color: var(--color-danger-dark);
     }
     .helper-text {
         margin-top: 0.5rem;
-        color: #64748b;
+        color: var(--text-secondary);
         font-size: 0.85rem;
         line-height: 1.5;
     }
     .empty-state {
         padding: 2rem;
         text-align: center;
-        color: #94a3b8;
-        border: 1px dashed #cbd5e1;
+        color: var(--text-muted);
+        border: 1px dashed var(--border-color-alt);
         border-radius: 12px;
-        background: #f8fafc;
+        background: var(--bg-primary);
     }
     .modal-overlay {
         display: none;
@@ -354,7 +354,7 @@
                 <div class="form-group" style="margin-bottom: 0;">
                     <label><i class="fas fa-arrow-down"></i> DOWN Sound</label>
                     {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_down') %}
-                    <p style="font-size: 0.85rem; color: #64748b; margin: 0.5rem 0;">Current: {{ monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_down').split('/')[-1] }}</p>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.5rem 0;">Current: {{ monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_down').split('/')[-1] }}</p>
                     {% endif %}
                     <input type="file" name="sound_down" accept="audio/*" id="sound_down_{{ category }}">
                     <button type="button" onclick="testSound('sound_down_{{ category }}')" class="btn-small" style="margin-top: 0.5rem;"><i class="fas fa-play"></i> Test</button>
@@ -362,7 +362,7 @@
                 <div class="form-group" style="margin-bottom: 0;">
                     <label><i class="fas fa-arrow-up"></i> UP Sound</label>
                     {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_up') %}
-                    <p style="font-size: 0.85rem; color: #64748b; margin: 0.5rem 0;">Current: {{ monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_up').split('/')[-1] }}</p>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.5rem 0;">Current: {{ monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_up').split('/')[-1] }}</p>
                     {% endif %}
                     <input type="file" name="sound_up" accept="audio/*" id="sound_up_{{ category }}">
                     <button type="button" onclick="testSound('sound_up_{{ category }}')" class="btn-small" style="margin-top: 0.5rem;"><i class="fas fa-play"></i> Test</button>
@@ -372,10 +372,10 @@
             <button type="submit" class="btn-primary" style="margin-top: 1rem;"><i class="fas fa-save"></i> Save Alarm Settings</button>
         </form>
 
-        <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid #e2e8f0;">
+        <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);">
 
-        <h4 style="margin-bottom: 1rem; color: #1e293b; font-weight: 600;"><i class="fas fa-clock"></i> CR Auto-Reset</h4>
-        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">Otomatis reset host CR Verification ke New pada jam dan interval yang ditentukan.</p>
+        <h4 style="margin-bottom: 1rem; color: var(--text-primary); font-weight: 600;"><i class="fas fa-clock"></i> CR Auto-Reset</h4>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">Otomatis reset host CR Verification ke New pada jam dan interval yang ditentukan.</p>
         <form method="POST" action="/monitoring-settings/update-cr-reset" onsubmit="return validateCrReset(this)">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="category" value="{{ category }}">
@@ -383,17 +383,17 @@
                 <div class="form-group" style="margin-bottom: 0;">
                     <label>Reset Hours (24h)</label>
                     <input type="text" name="cr_reset_hours" value="{{ monitoring_config.get('category_settings', {}).get(category, {}).get('cr_reset_hours', '') }}" placeholder="15" pattern="[0-9, ]*" title="Angka dan koma saja, contoh: 03,15">
-                    <small style="color: #64748b; font-size: 0.8rem;">Contoh: <code>15</code> = jam 3 sore, <code>03,15</code> = jam 3 pagi & 3 sore</small>
+                    <small style="color: var(--text-secondary); font-size: 0.8rem;">Contoh: <code>15</code> = jam 3 sore, <code>03,15</code> = jam 3 pagi & 3 sore</small>
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label>Interval (hari)</label>
                     <input type="number" name="cr_reset_interval_days" value="{{ monitoring_config.get('category_settings', {}).get(category, {}).get('cr_reset_interval_days', 0) }}" min="0" max="365">
-                    <small style="color: #64748b; font-size: 0.8rem;"><code>1</code> = setiap hari, <code>4</code> = setiap 4 hari, <code>0</code> = nonaktif</small>
+                    <small style="color: var(--text-secondary); font-size: 0.8rem;"><code>1</code> = setiap hari, <code>4</code> = setiap 4 hari, <code>0</code> = nonaktif</small>
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label>Grace Period (jam)</label>
                     <input type="number" name="cr_reset_grace_hours" value="{{ monitoring_config.get('category_settings', {}).get(category, {}).get('cr_reset_grace_hours', 0) }}" min="0" max="720">
-                    <small style="color: #64748b; font-size: 0.8rem;"><code>0</code> = semua reset, <code>6</code> = skip host yang baru di-set 6 jam terakhir</small>
+                    <small style="color: var(--text-secondary); font-size: 0.8rem;"><code>0</code> = semua reset, <code>6</code> = skip host yang baru di-set 6 jam terakhir</small>
                 </div>
             </div>
             <button type="submit" class="btn-primary" style="margin-top: 1rem;"><i class="fas fa-save"></i> Save Auto-Reset</button>
@@ -509,7 +509,7 @@
     </div>
     {% for category in categories %}
     <div style="margin-bottom: 2rem;">
-        <h4 style="color: #1e293b; margin-bottom: 1rem; font-weight: 600;"><i class="fas fa-chevron-right"></i> {{ category|title }}</h4>
+        <h4 style="color: var(--text-primary); margin-bottom: 1rem; font-weight: 600;"><i class="fas fa-chevron-right"></i> {{ category|title }}</h4>
         {% if server_mappings.get(category) %}
             <div class="mappings-grid">
                 {% for server in server_mappings[category] %}
@@ -525,7 +525,7 @@
                 {% endfor %}
             </div>
         {% else %}
-            <p style="color: #94a3b8; font-size: 0.9rem;"><i class="fas fa-info-circle"></i> No servers mapped</p>
+            <p style="color: var(--text-muted); font-size: 0.9rem;"><i class="fas fa-info-circle"></i> No servers mapped</p>
         {% endif %}
     </div>
     {% endfor %}

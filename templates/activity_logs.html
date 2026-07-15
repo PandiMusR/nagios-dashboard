@@ -3,7 +3,7 @@
 {% block content %}
 <style>
     .settings-header {
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         padding: 2rem;
         border-radius: 16px;
         color: white;
@@ -17,19 +17,19 @@
         padding: 2rem;
         margin-bottom: 2rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border: 1px solid #f1f5f9;
+        border: 1px solid var(--bg-tertiary);
     }
     .section-card h3 {
         margin: 0 0 1.5rem 0;
         font-size: 1.2rem;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--text-primary);
         display: flex;
         align-items: center;
         gap: 0.75rem;
     }
     .btn-primary {
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         color: white;
         border: none;
         padding: 0.75rem 1.5rem;
@@ -44,7 +44,7 @@
     }
     .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3); }
     .btn-danger {
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        background: linear-gradient(135deg, var(--color-danger) 0%, var(--color-danger-alt) 100%);
         color: white;
         border: none;
         padding: 0.75rem 1.5rem;
@@ -61,18 +61,18 @@
     .activity-log-container {
         max-height: 600px;
         overflow-y: auto;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         padding: 1rem;
         font-size: 0.85rem;
         font-family: 'Monaco', 'Menlo', monospace;
         white-space: pre-wrap;
-        color: #475569;
+        color: var(--text-secondary);
         line-height: 1.6;
     }
     .activity-log-container::-webkit-scrollbar { width: 6px; }
-    .activity-log-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .activity-log-container::-webkit-scrollbar-thumb { background: var(--border-color-alt); border-radius: 10px; }
     .log-toolbar {
         display: flex;
         gap: 0.75rem;
@@ -88,12 +88,12 @@
     .log-toolbar label {
         font-weight: 600;
         font-size: 0.85rem;
-        color: #64748b;
+        color: var(--text-secondary);
         white-space: nowrap;
     }
     .log-toolbar select {
         padding: 0.5rem 0.75rem;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         font-size: 0.85rem;
         font-family: inherit;
@@ -102,21 +102,21 @@
     }
     .log-toolbar select:focus {
         outline: none;
-        border-color: #4f46e5;
+        border-color: var(--color-primary);
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
-    .empty-state { text-align: center; padding: 3rem; color: #94a3b8; }
+    .empty-state { text-align: center; padding: 3rem; color: var(--text-muted); }
     .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
     .log-stats {
         display: flex;
         gap: 1.5rem;
         margin-bottom: 1rem;
         font-size: 0.85rem;
-        color: #64748b;
+        color: var(--text-secondary);
     }
     .log-stats span { display: flex; align-items: center; gap: 0.4rem; }
     .log-stats i { font-size: 0.8rem; }
-    [data-theme="dark"] .activity-log-container { background: #0f172a !important; color: #e2e8f0 !important; border-color: #334155 !important; }
+    [data-theme="dark"] .activity-log-container { background: #0f172a !important; color: var(--border-color) !important; border-color: var(--bg-tertiary) !important; }
 </style>
 
 <div class="settings-header">

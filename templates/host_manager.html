@@ -3,7 +3,7 @@
 {% block content %}
 <style>
     .host-header {
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         padding: 2rem;
         border-radius: 16px;
         color: white;
@@ -26,14 +26,14 @@
         padding: 2rem;
         margin-bottom: 2rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border: 1px solid #f1f5f9;
+        border: 1px solid var(--bg-tertiary);
         transition: all 0.3s;
     }
     .section-card h3 {
         margin: 0 0 1.5rem 0;
         font-size: 1.1rem;
         font-weight: 600;
-        color: #1e293b;
+        color: var(--text-primary);
         display: flex;
         align-items: center;
         gap: 0.75rem;
@@ -46,7 +46,7 @@
     }
     .btn-primary {
         padding: 0.45rem 0.85rem;
-        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
         color: white;
         border: none;
         border-radius: 8px;
@@ -65,19 +65,19 @@
         box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
     }
     .btn-success {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-dark) 100%);
     }
     .btn-success:hover {
         box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
     }
     .btn-info {
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        background: linear-gradient(135deg, var(--color-info) 0%, var(--color-info) 100%);
     }
     .btn-info:hover {
         box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
     }
     .btn-danger {
-        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        background: linear-gradient(135deg, var(--color-danger-alt) 0%, var(--color-danger-dark) 100%);
     }
     .btn-danger:hover {
         box-shadow: 0 6px 20px rgba(220, 38, 38, 0.3);
@@ -106,7 +106,7 @@
     .form-group label {
         display: block;
         margin-bottom: 0.5rem;
-        color: #1e293b;
+        color: var(--text-primary);
         font-weight: 600;
         font-size: 0.9rem;
     }
@@ -115,7 +115,7 @@
     .form-group textarea {
         width: 100%;
         padding: 0.75rem 1rem;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         font-size: 0.9rem;
         transition: all 0.2s;
@@ -125,7 +125,7 @@
     .form-group select:focus,
     .form-group textarea:focus {
         outline: none;
-        border-color: #4f46e5;
+        border-color: var(--color-primary);
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
     .filter-bar {
@@ -134,9 +134,9 @@
         gap: 0.75rem;
         margin-bottom: 2rem;
         padding: 1.5rem;
-        background: #f8fafc;
+        background: var(--bg-primary);
         border-radius: 12px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border-color);
     }
     .filter-bar-button-group {
         grid-column: 1 / -1;
@@ -187,7 +187,7 @@
         margin: 0 0 1.5rem 0;
         font-size: 1.3rem;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--text-primary);
     }
     .modal-footer {
         display: flex;
@@ -195,7 +195,7 @@
         justify-content: flex-end;
         margin-top: 2rem;
         padding-top: 1.5rem;
-        border-top: 1px solid #e2e8f0;
+        border-top: 1px solid var(--border-color);
     }
     .hosts-table {
         width: 100%;
@@ -204,7 +204,7 @@
         table-layout: fixed;
     }
     .hosts-table thead {
-        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--border-color) 100%);
         position: sticky;
         top: 0;
     }
@@ -212,8 +212,8 @@
         padding: 0.75rem;
         text-align: left;
         font-weight: 600;
-        color: #1e293b;
-        border-bottom: 2px solid #cbd5e1;
+        color: var(--text-primary);
+        border-bottom: 2px solid var(--border-color-alt);
         font-size: 0.9rem;
         word-break: break-word;
         word-wrap: break-word;
@@ -221,7 +221,7 @@
     }
     .hosts-table td {
         padding: 0.75rem;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid var(--border-color);
         word-break: break-word;
         word-wrap: break-word;
         overflow-wrap: break-word;
@@ -235,24 +235,24 @@
     .hosts-table td:nth-child(6) { width: 10%; min-width: 85px; }
     .hosts-table td:nth-child(7) { width: 26%; min-width: 180px; }
     .hosts-table tbody tr:hover {
-        background: #f8fafc;
+        background: var(--bg-primary);
     }
     .backup-item {
         padding: 1rem;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid var(--border-color);
         display: flex;
         justify-content: space-between;
         align-items: center;
         transition: all 0.2s;
     }
     .backup-item:hover {
-        background: #f8fafc;
+        background: var(--bg-primary);
     }
     .backup-item strong {
-        color: #1e293b;
+        color: var(--text-primary);
     }
     .backup-item small {
-        color: #64748b;
+        color: var(--text-secondary);
         font-size: 0.8rem;
     }
     .btn-sm {
@@ -377,7 +377,7 @@
 <div class="section-card">
     <h3><i class="fas fa-database"></i> Backup & Rollback</h3>
     <div class="button-group" style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-        <select id="backupServer" style="flex: 1; min-width: 150px; max-width: 250px; padding: 0.6rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem;">
+        <select id="backupServer" style="flex: 1; min-width: 150px; max-width: 250px; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem;">
             <option value="">Select Server</option>
             {% for server in servers %}
             <option value="{{ server }}">{{ server }}</option>
@@ -386,8 +386,8 @@
         <button onclick="createBackup()" class="btn-primary btn-success" title="Create backup"><i class="fas fa-save"></i> Backup</button>
         <button onclick="loadBackups()" class="btn-primary btn-info" title="Refresh backups"><i class="fas fa-sync-alt"></i> Refresh</button>
     </div>
-    <div id="backupHistory" style="max-height: 300px; overflow-y: auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
-        <p style="text-align: center; color: #94a3b8; margin: 2rem 0; padding: 1rem;">Select a server to view backups</p>
+    <div id="backupHistory" style="max-height: 300px; overflow-y: auto; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px;">
+        <p style="text-align: center; color: var(--text-muted); margin: 2rem 0; padding: 1rem;">Select a server to view backups</p>
     </div>
 </div>
 
@@ -396,7 +396,7 @@
     <div class="filter-bar">
         <div class="form-group">
             <label>Filter Server</label>
-            <select id="serverFilter" onchange="filterByServer()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <select id="serverFilter" onchange="filterByServer()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                 <option value="all">All Servers</option>
                 {% for server in servers %}
                 <option value="{{ server }}">{{ server }}</option>
@@ -405,7 +405,7 @@
         </div>
         <div class="form-group">
             <label>Rows per Page</label>
-            <select id="entriesPerPage" onchange="changeEntriesPerPage()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <select id="entriesPerPage" onchange="changeEntriesPerPage()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                 <option value="10">10</option>
                 <option value="20">20</option>
                 <option value="50">50</option>
@@ -415,7 +415,7 @@
         </div>
         <div class="form-group">
             <label>Search</label>
-            <input type="text" id="searchInput" onkeyup="searchHosts()" placeholder="Host name, IP, parent..." style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem;">
+            <input type="text" id="searchInput" onkeyup="searchHosts()" placeholder="Host name, IP, parent..." style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem;">
         </div>
         <div class="filter-bar-button-group">
             <button onclick="refreshAllHostStatus()" class="btn-primary btn-info" title="Refresh host status"><i class="fas fa-sync-alt"></i> <span class="btn-text">Refresh</span></button>
@@ -423,7 +423,7 @@
             <button onclick="openAddModal()" class="btn-primary" title="Add a host"><i class="fas fa-plus"></i> <span class="btn-text">Add Host</span></button>
         </div>
     </div>
-    <div style="overflow-x: auto; border-radius: 12px; border: 1px solid #e2e8f0;">
+    <div style="overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-color);">
         <table id="hostsTable" class="hosts-table">
             <thead>
                 <tr>
@@ -437,7 +437,7 @@
                 </tr>
             </thead>
             <tbody id="hostsTableBody">
-                <tr><td colspan="7" style="padding: 2rem; text-align: center; color: #94a3b8;"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Loading hosts...</td></tr>
+                <tr><td colspan="7" style="padding: 2rem; text-align: center; color: var(--text-muted);"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Loading hosts...</td></tr>
             </tbody>
         </table>
     </div>
@@ -451,7 +451,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label>Server</label>
-                <select name="server" id="addServer" required onchange="onAddServerChange()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <select name="server" id="addServer" required onchange="onAddServerChange()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                     {% for server in servers %}
                     <option value="{{ server }}">{{ server }}</option>
                     {% endfor %}
@@ -460,24 +460,24 @@
             <div class="form-group">
                 <label>Host Name</label>
                 <div style="display: flex; gap: 0.5rem;">
-                    <input type="text" name="host_name" id="addHostName" required placeholder="e.g. 81411-130112252037001-Ria Sirait" style="flex: 1; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <input type="text" name="host_name" id="addHostName" required placeholder="e.g. 81411-130112252037001-Ria Sirait" style="flex: 1; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                     <button type="button" onclick="generateHostname()" class="btn-primary btn-info"><i class="fas fa-magic"></i></button>
                 </div>
-                <small style="color: #64748b; font-size: 0.8rem;">Format: NID-CID-NamaClient</small>
+                <small style="color: var(--text-secondary); font-size: 0.8rem;">Format: NID-CID-NamaClient</small>
             </div>
             <div class="form-group">
                 <label>Alias (optional)</label>
-                <input type="text" name="alias" id="addAlias" placeholder="e.g. Web Server 1" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <small style="color: #64748b; font-size: 0.8rem;">A friendly name/description for the host</small>
+                <input type="text" name="alias" id="addAlias" placeholder="e.g. Web Server 1" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                <small style="color: var(--text-secondary); font-size: 0.8rem;">A friendly name/description for the host</small>
             </div>
             <div class="form-group">
                 <label>IP Address</label>
-                <input type="text" name="address" required placeholder="e.g. 192.168.1.100" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <input type="text" name="address" required placeholder="e.g. 192.168.1.100" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
             </div>
             <div class="form-group">
                 <label>Parent (optional)</label>
-                <input type="text" id="addParentsSearch" placeholder="Search parent..." style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 0.5rem;" oninput="filterAddParents()">
-                <select name="parents" id="addParents" size="4" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <input type="text" id="addParentsSearch" placeholder="Search parent..." style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 0.5rem;" oninput="filterAddParents()">
+                <select name="parents" id="addParents" size="4" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                     <option value="">-- No Parent --</option>
                 </select>
             </div>
@@ -486,7 +486,7 @@
                     <input type="checkbox" name="uptime_kuma_enabled" id="uptimeKumaEnabled" style="margin-right: 0.5rem; width: 18px; height: 18px;">
                     <span>Monitor in Uptime Kuma</span>
                 </label>
-                <small style="color: #64748b; font-size: 0.8rem;"><i class="fas fa-info-circle"></i> Automatically add this host as a monitor in Uptime Kuma</small>
+                <small style="color: var(--text-secondary); font-size: 0.8rem;"><i class="fas fa-info-circle"></i> Automatically add this host as a monitor in Uptime Kuma</small>
             </div>
             <div class="form-group">
                 <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 0.5rem;">
@@ -496,19 +496,19 @@
                 <div id="serviceFields" style="display: none; padding-left: 1.5rem; margin-top: 0.75rem;">
                     <div class="form-group">
                         <label>Plugin</label>
-                        <select name="service_plugin" id="servicePlugin" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <select name="service_plugin" id="servicePlugin" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                             <option value="">-- Select Plugin --</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Arguments (optional)</label>
-                        <input type="text" name="service_args" id="serviceArgs" placeholder="e.g. 41805" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
-                        <small style="color: #64748b; font-size: 0.8rem;">Arguments to pass to the plugin</small>
+                        <input type="text" name="service_args" id="serviceArgs" placeholder="e.g. 41805" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                        <small style="color: var(--text-secondary); font-size: 0.8rem;">Arguments to pass to the plugin</small>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" onclick="closeAddModal()" class="btn-primary" style="background: #6b7280;"><i class="fas fa-times"></i> Cancel</button>
+                <button type="button" onclick="closeAddModal()" class="btn-primary" style="background: var(--color-gray);"><i class="fas fa-times"></i> Cancel</button>
                 <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Add Host</button>
             </div>
         </form>
@@ -521,16 +521,16 @@
         <h3><i class="fas fa-list-ul"></i> Batch Add Hosts</h3>
         <form method="POST" action="/host-manager/batch-add">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
+            <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: var(--bg-primary); border-radius: 10px; border: 1px solid var(--border-color);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h4 style="margin: 0; color: #1e293b; font-weight: 600;">Hosts</h4>
+                    <h4 style="margin: 0; color: var(--text-primary); font-weight: 600;">Hosts</h4>
                     <button type="button" onclick="addBatchRow()" class="btn-primary btn-success"><i class="fas fa-plus"></i> Add Row</button>
                 </div>
                 <div id="batchHostsContainer" style="max-height: 500px; overflow-y: auto; display: grid; gap: 0.75rem;">
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" onclick="closeBatchModal()" class="btn-primary" style="background: #6b7280;"><i class="fas fa-times"></i> Cancel</button>
+                <button type="button" onclick="closeBatchModal()" class="btn-primary" style="background: var(--color-gray);"><i class="fas fa-times"></i> Cancel</button>
                 <button type="submit" class="btn-primary btn-success"><i class="fas fa-save"></i> Add All Hosts</button>
             </div>
         </form>
@@ -547,21 +547,21 @@
             <input type="hidden" name="old_host_name" id="editOldHostName">
             <div class="form-group">
                 <label>Host Name</label>
-                <input type="text" name="host_name" id="editHostName" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <input type="text" name="host_name" id="editHostName" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
             </div>
             <div class="form-group">
                 <label>Alias (optional)</label>
-                <input type="text" name="alias" id="editAlias" placeholder="e.g. Web Server 1" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <small style="color: #64748b; font-size: 0.8rem;">A friendly name/description for the host</small>
+                <input type="text" name="alias" id="editAlias" placeholder="e.g. Web Server 1" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                <small style="color: var(--text-secondary); font-size: 0.8rem;">A friendly name/description for the host</small>
             </div>
             <div class="form-group">
                 <label>IP Address</label>
-                <input type="text" name="address" id="editAddress" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <input type="text" name="address" id="editAddress" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
             </div>
             <div class="form-group">
                 <label>Parent (optional)</label>
-                <input type="text" id="editParentsSearch" placeholder="Search parent..." style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 0.5rem;" oninput="filterEditParents()">
-                <select name="parents" id="editParents" size="4" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <input type="text" id="editParentsSearch" placeholder="Search parent..." style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 0.5rem;" oninput="filterEditParents()">
+                <select name="parents" id="editParents" size="4" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                     <option value="">-- No Parent --</option>
                 </select>
             </div>
@@ -570,7 +570,7 @@
                     <input type="checkbox" name="uptime_kuma_enabled" id="editUptimeKumaEnabled" style="margin-right: 0.5rem; width: 18px; height: 18px;">
                     <span>Monitor in Uptime Kuma</span>
                 </label>
-                <small style="color: #64748b; font-size: 0.8rem;"><i class="fas fa-info-circle"></i> Automatically add/update this host in Uptime Kuma</small>
+                <small style="color: var(--text-secondary); font-size: 0.8rem;"><i class="fas fa-info-circle"></i> Automatically add/update this host in Uptime Kuma</small>
             </div>
             <div class="form-group">
                 <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 0.5rem;">
@@ -580,19 +580,19 @@
                 <div id="editServiceFields" style="display: none; padding-left: 1.5rem; margin-top: 0.75rem;">
                     <div class="form-group">
                         <label>Plugin</label>
-                        <select name="service_plugin" id="editServicePlugin" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <select name="service_plugin" id="editServicePlugin" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                             <option value="">-- Select Plugin --</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Arguments (optional)</label>
-                        <input type="text" name="service_args" id="editServiceArgs" placeholder="e.g. 41805" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
-                        <small style="color: #64748b; font-size: 0.8rem;">Arguments to pass to the plugin</small>
+                        <input type="text" name="service_args" id="editServiceArgs" placeholder="e.g. 41805" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                        <small style="color: var(--text-secondary); font-size: 0.8rem;">Arguments to pass to the plugin</small>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" onclick="closeEditModal()" class="btn-primary" style="background: #6b7280;"><i class="fas fa-times"></i> Cancel</button>
+                <button type="button" onclick="closeEditModal()" class="btn-primary" style="background: var(--color-gray);"><i class="fas fa-times"></i> Cancel</button>
                 <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Changes</button>
             </div>
         </form>
@@ -602,11 +602,11 @@
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="modal">
     <div class="modal-content">
-        <h3 style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> Confirm Delete</h3>
-        <p style="color: #64748b;">The following <strong id="deleteTotalCount">0</strong> host(s) will be deleted:</p>
-        <div id="deleteHostList" style="max-height: 400px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;"></div>
+        <h3 style="color: var(--color-danger-alt);"><i class="fas fa-exclamation-triangle"></i> Confirm Delete</h3>
+        <p style="color: var(--text-secondary);">The following <strong id="deleteTotalCount">0</strong> host(s) will be deleted:</p>
+        <div id="deleteHostList" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;"></div>
         <div class="modal-footer">
-            <button type="button" onclick="closeDeleteModal()" class="btn-primary" style="background: #6b7280;"><i class="fas fa-times"></i> Cancel</button>
+            <button type="button" onclick="closeDeleteModal()" class="btn-primary" style="background: var(--color-gray);"><i class="fas fa-times"></i> Cancel</button>
             <button type="button" id="confirmDeleteBtn" class="btn-primary btn-danger"><i class="fas fa-trash"></i> Delete All</button>
         </div>
     </div>
@@ -654,19 +654,19 @@ function loadBackups() {
     .then(data => {
         const div = document.getElementById('backupHistory');
         if (data.backups.length === 0) {
-            div.innerHTML = '<p style="text-align: center; color: #94a3b8; margin: 0; padding: 2rem;">No backups</p>';
+            div.innerHTML = '<p style="text-align: center; color: var(--text-muted); margin: 0; padding: 2rem;">No backups</p>';
             return;
         }
         div.innerHTML = data.backups.map((b, i) => `
             <div class="backup-item">
                 <div>
                     <strong>${b.name}</strong>
-                    ${i < 3 ? `<span style="background: #10b981; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">Point ${i + 1}</span>` : ''}
+                    ${i < 3 ? `<span style="background: var(--color-success); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">Point ${i + 1}</span>` : ''}
                     <small>${b.date}</small>
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
-                    <button onclick="restoreBackup('${server}', '${b.name}')" class="btn-sm" style="background: #f59e0b;"><i class="fas fa-redo"></i></button>
-                    <button onclick="deleteBackup('${server}', '${b.name}')" class="btn-sm" style="background: #dc2626;"><i class="fas fa-trash"></i></button>
+                    <button onclick="restoreBackup('${server}', '${b.name}')" class="btn-sm" style="background: var(--color-warning);"><i class="fas fa-redo"></i></button>
+                    <button onclick="deleteBackup('${server}', '${b.name}')" class="btn-sm" style="background: var(--color-danger-alt);"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         `).join('');
@@ -707,26 +707,26 @@ function addBatchRow() {
     
     const row = document.createElement('div');
     row.id = rowId;
-    row.style.cssText = 'padding: 1rem; background: white; border: 1px solid #e2e8f0; border-radius: 8px;';
+    row.style.cssText = 'padding: 1rem; background: white; border: 1px solid var(--border-color); border-radius: 8px;';
     
     const serverOptions = {{ servers|tojson }}.map(s => `<option value="${s}">${s}</option>`).join('');
     
     row.innerHTML = `
         <div style="display: grid; grid-template-columns: 1fr 2fr 1.5fr 0.8fr auto; gap: 0.75rem; align-items: center;">
-            <select name="batch_servers[]" onchange="updateBatchRowData('${rowId}')" style="padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+            <select name="batch_servers[]" onchange="updateBatchRowData('${rowId}')" style="padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem;">
                 ${serverOptions}
             </select>
-            <input type="text" name="batch_hostnames[]" placeholder="NID-CID-Name" required style="padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
-            <input type="text" name="batch_addresses[]" placeholder="IP Address" required style="padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
-            <select name="batch_parents[]" style="padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem; width: 100%;">
+            <input type="text" name="batch_hostnames[]" placeholder="NID-CID-Name" required style="padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem;">
+            <input type="text" name="batch_addresses[]" placeholder="IP Address" required style="padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem;">
+            <select name="batch_parents[]" style="padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; width: 100%;">
                 <option value="">-</option>
             </select>
-            <button type="button" onclick="toggleBatchRowDetails('${rowId}')" class="btn-sm" style="background: #3b82f6; padding: 0.5rem; margin-right: 0;"><i class="fas fa-chevron-down"></i></button>
+            <button type="button" onclick="toggleBatchRowDetails('${rowId}')" class="btn-sm" style="background: var(--color-info); padding: 0.5rem; margin-right: 0;"><i class="fas fa-chevron-down"></i></button>
         </div>
-        <div id="${rowId}-details" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+        <div id="${rowId}-details" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
             <div style="margin-bottom: 1rem;">
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">Alias (optional)</label>
-                <input type="text" name="batch_alias[]" placeholder="Friendly name" style="width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+                <input type="text" name="batch_alias[]" placeholder="Friendly name" style="width: 100%; padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem;">
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <label style="display: flex; align-items: center; cursor: pointer;">
@@ -738,17 +738,17 @@ function addBatchRow() {
                     <span style="font-size: 0.95rem;"><i class="fas fa-cog"></i> Add Service/Plugin</span>
                 </label>
             </div>
-            <div id="${rowId}-service" style="display: none; margin-top: 1rem; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
+            <div id="${rowId}-service" style="display: none; margin-top: 1rem; padding: 0.75rem; background: var(--bg-primary); border-radius: 6px;">
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">Plugin</label>
-                <select name="batch_service_plugin[]" style="width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem; margin-bottom: 0.75rem;">
+                <select name="batch_service_plugin[]" style="width: 100%; padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; margin-bottom: 0.75rem;">
                     <option value="">-- Select Plugin --</option>
                 </select>
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">Arguments (optional)</label>
-                <input type="text" name="batch_service_args[]" placeholder="e.g. 41805" style="width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+                <input type="text" name="batch_service_args[]" placeholder="e.g. 41805" style="width: 100%; padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem;">
             </div>
         </div>
         <div style="text-align: right; margin-top: 0.75rem;">
-            <button type="button" onclick="removeBatchRow('${rowId}')" class="btn-sm" style="background: #dc2626; padding: 0.5rem;"><i class="fas fa-trash"></i> Delete</button>
+            <button type="button" onclick="removeBatchRow('${rowId}')" class="btn-sm" style="background: var(--color-danger-alt); padding: 0.5rem;"><i class="fas fa-trash"></i> Delete</button>
         </div>
     `;
     
@@ -931,7 +931,7 @@ function renderTable() {
     });
     
     if (filteredHosts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="padding: 2rem; text-align: center; color: #94a3b8;">No hosts found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="padding: 2rem; text-align: center; color: var(--text-muted);">No hosts found</td></tr>';
         return;
     }
     
@@ -940,13 +940,13 @@ function renderTable() {
     const displayHosts = filteredHosts.slice(start, end);
     
     tbody.innerHTML = displayHosts.map(host => {
-        let statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: #94a3b8; color: white; white-space: nowrap;">Unknown</span>';
+        let statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: var(--text-muted); color: white; white-space: nowrap;">Unknown</span>';
         if (host.status === 'up') {
-            statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: #10b981; color: white; white-space: nowrap;">UP</span>';
+            statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: var(--color-success); color: white; white-space: nowrap;">UP</span>';
         } else if (host.status === 'down') {
-            statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: #dc2626; color: white; white-space: nowrap;">DOWN</span>';
+            statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: var(--color-danger-alt); color: white; white-space: nowrap;">DOWN</span>';
         } else if (host.status === 'unreachable') {
-            statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: #f59e0b; color: white; white-space: nowrap;">UNREACHABLE</span>';
+            statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: var(--color-warning); color: white; white-space: nowrap;">UNREACHABLE</span>';
         }
         
         return `
@@ -958,8 +958,8 @@ function renderTable() {
             <td title="${host.address}" style="overflow: hidden; text-overflow: ellipsis;">${host.address}</td>
             <td style="text-align: center;">${statusBadge}</td>
             <td style="padding: 0.5rem; text-align: center;">
-                <button onclick="editHost('${host.server}', '${host.host_name}', '${host.address}', '${host.parents || ''}', '${host.alias || ''}')" class="btn-sm" style="background: #3b82f6; padding: 0.35rem 0.6rem; font-size: 0.75rem; margin-right: 0.3rem; white-space: nowrap;" title="Edit host"><i class="fas fa-edit"></i> Edit</button>
-                <button onclick="confirmDelete('${host.server}', '${host.host_name}')" class="btn-sm" style="background: #dc2626; padding: 0.35rem 0.6rem; font-size: 0.75rem; margin-right: 0; white-space: nowrap;" title="Delete host"><i class="fas fa-trash"></i> Delete</button>
+                <button onclick="editHost('${host.server}', '${host.host_name}', '${host.address}', '${host.parents || ''}', '${host.alias || ''}')" class="btn-sm" style="background: var(--color-info); padding: 0.35rem 0.6rem; font-size: 0.75rem; margin-right: 0.3rem; white-space: nowrap;" title="Edit host"><i class="fas fa-edit"></i> Edit</button>
+                <button onclick="confirmDelete('${host.server}', '${host.host_name}')" class="btn-sm" style="background: var(--color-danger-alt); padding: 0.35rem 0.6rem; font-size: 0.75rem; margin-right: 0; white-space: nowrap;" title="Delete host"><i class="fas fa-trash"></i> Delete</button>
             </td>
         </tr>
     `}).join('');
@@ -1116,10 +1116,10 @@ function confirmDelete(server, hostName) {
     const totalCount = document.getElementById('deleteTotalCount');
     const confirmBtn = document.getElementById('confirmDeleteBtn');
     
-    let listHTML = '<div style="padding: 0.75rem; background: #fee2e2; border-left: 4px solid #dc2626; border-radius: 6px; margin-bottom: 0.75rem;"><strong style="color: #991b1b;">' + hostName + '</strong> <small style="color: #991b1b;">(Parent)</small></div>';
+    let listHTML = '<div style="padding: 0.75rem; background: var(--alert-error-bg); border-left: 4px solid var(--color-danger-alt); border-radius: 6px; margin-bottom: 0.75rem;"><strong style="color: var(--alert-error-color);">' + hostName + '</strong> <small style="color: var(--alert-error-color);">(Parent)</small></div>';
     
     if (descendants.length > 0) {
-        listHTML += descendants.map(d => '<div style="padding: 0.75rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px; margin-bottom: 0.5rem;"><small style="color: #92400e;">' + d + '</small></div>').join('');
+        listHTML += descendants.map(d => '<div style="padding: 0.75rem; background: var(--alert-warning-bg); border-left: 4px solid var(--color-warning); border-radius: 6px; margin-bottom: 0.5rem;"><small style="color: var(--alert-warning-color);">' + d + '</small></div>').join('');
     }
     
     hostList.innerHTML = listHTML;

@@ -3,7 +3,7 @@
 {% block content %}
 <style>
     .monitoring-header {
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         padding: 2rem;
         border-radius: 16px;
         color: white;
@@ -37,7 +37,7 @@
         background: white;
         border-radius: 16px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border: 1px solid #f1f5f9;
+        border: 1px solid var(--bg-tertiary);
         padding: 2rem;
         margin-bottom: 2rem;
     }
@@ -52,32 +52,32 @@
     }
     .filter-group label {
         font-weight: 600;
-        color: #334155;
+        color: var(--bg-tertiary);
         margin-bottom: 0.5rem;
         font-size: 0.9rem;
     }
     .filter-group select {
         padding: 0.75rem;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         font-size: 0.9rem;
         transition: all 0.2s;
     }
     .filter-group select:focus {
         outline: none;
-        border-color: #4f46e5;
+        border-color: var(--color-primary);
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
     .table-section {
         background: white;
         border-radius: 16px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border: 1px solid #f1f5f9;
+        border: 1px solid var(--bg-tertiary);
         overflow: hidden;
     }
     .table-header {
         padding: 2rem;
-        border-bottom: 2px solid #f1f5f9;
+        border-bottom: 2px solid var(--bg-tertiary);
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -86,11 +86,11 @@
     }
     .table-header h2 {
         margin: 0;
-        color: #1e293b;
+        color: var(--text-primary);
         font-size: 1.25rem;
     }
     .btn-batch-ack {
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         color: white;
         border: none;
         padding: 0.75rem 1.5rem;
@@ -109,15 +109,15 @@
         overflow-x: auto;
     }
     .hosts-table thead tr {
-        background: #f8fafc;
-        border-bottom: 2px solid #e2e8f0;
+        background: var(--bg-primary);
+        border-bottom: 2px solid var(--border-color);
     }
     .hosts-table th {
         padding: 1rem;
         text-align: left;
         font-size: 0.85rem;
         font-weight: 700;
-        color: #475569;
+        color: var(--text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.5px;
         cursor: pointer;
@@ -125,14 +125,14 @@
         white-space: nowrap;
     }
     .hosts-table th:hover {
-        background: #f1f5f9;
+        background: var(--bg-tertiary);
     }
     .hosts-table tbody tr {
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid var(--bg-tertiary);
         transition: all 0.2s;
     }
     .hosts-table tbody tr:hover {
-        background: #f8fafc;
+        background: var(--bg-primary);
     }
     .hosts-table td {
         padding: 1.25rem 1rem;
@@ -146,8 +146,8 @@
         font-weight: 600;
         white-space: nowrap;
     }
-    .status-down { background: #fee2e2; color: #991b1b; }
-    .status-unreachable { background: #fef3c7; color: #92400e; }
+    .status-down { background: var(--alert-error-bg); color: var(--alert-error-color); }
+    .status-unreachable { background: var(--alert-warning-bg); color: var(--alert-warning-color); }
 
     /* Stage badge styles */
     .stage-badge {
@@ -162,14 +162,14 @@
         letter-spacing: 0.2px;
         cursor: default;
     }
-    .stage-new        { background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; }
-    .stage-cs         { background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd; }
-    .stage-escalated  { background: #fff7ed; color: #c2410c; border: 1.5px solid #fdba74; }
-    .stage-watchlist  { background: #fdf4ff; color: #7e22ce; border: 1.5px solid #d8b4fe; }
-    .stage-resolved   { background: #f0fdf4; color: #15803d; border: 1.5px solid #86efac; }
+    .stage-new        { background: var(--bg-tertiary); color: var(--text-secondary); border: 1.5px solid var(--border-color-alt); }
+    .stage-cs         { background: var(--alert-info-bg); color: var(--color-info-dark); border: 1.5px solid var(--alert-info-color); }
+    .stage-escalated  { background: var(--alert-warning-bg); color: var(--color-orange-dark); border: 1.5px solid var(--alert-warning-color); }
+    .stage-watchlist  { background: var(--alert-purple-bg); color: var(--color-purple); border: 1.5px solid var(--color-purple-light); }
+    .stage-resolved   { background: var(--alert-success-bg); color: var(--color-success-dark); border: 1.5px solid var(--color-success-light); }
 
     .btn-stage {
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         color: white;
         border: none;
         padding: 0.45rem 0.9rem;
@@ -197,19 +197,19 @@
         align-items: center;
         gap: 0.75rem;
         padding: 0.55rem 0.85rem;
-        border: 2px solid #e2e8f0;
+        border: 2px solid var(--border-color);
         border-radius: 10px;
         cursor: pointer;
         transition: all 0.15s;
         user-select: none;
     }
-    .stage-option:hover { border-color: #a5b4fc; background: #f5f3ff; }
-    .stage-option.selected { border-color: #4f46e5; background: #eef2ff; }
-    .stage-option.selected-resolved { border-color: #16a34a; background: #f0fdf4; }
-    .stage-option input[type="radio"] { accent-color: #4f46e5; width: 16px; height: 16px; }
+    .stage-option:hover { border-color: var(--color-primary-lighter); background: var(--alert-purple-bg); }
+    .stage-option.selected { border-color: var(--color-primary); background: var(--color-primary-lighter); }
+    .stage-option.selected-resolved { border-color: var(--color-success); background: var(--alert-success-bg); }
+    .stage-option input[type="radio"] { accent-color: var(--color-primary); width: 16px; height: 16px; }
     .stage-option-label { flex: 1; }
-    .stage-option-title { font-weight: 600; font-size: 0.9rem; color: #1e293b; }
-    .stage-option-desc  { font-size: 0.78rem; color: #64748b; margin-top: 1px; }
+    .stage-option-title { font-weight: 600; font-size: 0.9rem; color: var(--text-primary); }
+    .stage-option-desc  { font-size: 0.78rem; color: var(--text-secondary); margin-top: 1px; }
     .modal {
         display: none;
         position: fixed;
@@ -238,33 +238,33 @@
     }
     .modal-header {
         padding: 2rem;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid var(--bg-tertiary);
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
     .modal-header h3 {
         margin: 0;
-        color: #1e293b;
+        color: var(--text-primary);
         font-size: 1.25rem;
     }
     .btn-close {
         background: none;
         border: none;
         font-size: 1.5rem;
-        color: #64748b;
+        color: var(--text-secondary);
         cursor: pointer;
         transition: color 0.2s;
     }
     .btn-close:hover {
-        color: #1e293b;
+        color: var(--text-primary);
     }
     .modal-body {
         padding: 2rem;
     }
     .modal-footer {
         padding: 1.5rem 2rem;
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid var(--bg-tertiary);
         display: flex;
         justify-content: flex-end;
         gap: 1rem;
@@ -275,14 +275,14 @@
     .form-group label {
         display: block;
         font-weight: 600;
-        color: #334155;
+        color: var(--bg-tertiary);
         margin-bottom: 0.5rem;
     }
     .form-group input,
     .form-group textarea {
         width: 100%;
         padding: 0.75rem;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         font-size: 0.9rem;
         font-family: inherit;
@@ -291,7 +291,7 @@
     .form-group input:focus,
     .form-group textarea:focus {
         outline: none;
-        border-color: #4f46e5;
+        border-color: var(--color-primary);
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
     .btn-sm {
@@ -303,9 +303,9 @@
         font-weight: 600;
         transition: all 0.2s;
     }
-    .btn-primary { background: #4f46e5; color: white; }
-    .btn-secondary { background: #94a3b8; color: white; }
-    .btn-primary:hover { background: #4338ca; transform: translateY(-2px); }
+    .btn-primary { background: var(--color-primary); color: white; }
+    .btn-secondary { background: var(--text-muted); color: white; }
+    .btn-primary:hover { background: var(--color-primary-dark); transform: translateY(-2px); }
     .btn-secondary:hover { background: #78716c; transform: translateY(-2px); }
     .notification-toast {
         position: fixed;
@@ -323,8 +323,8 @@
         border-left: 4px solid;
         animation: slideIn 0.3s ease-out;
     }
-    .notification-down { border-left-color: #ef4444; background: #fef2f2; }
-    .notification-up { border-left-color: #10b981; background: #f0fdf4; }
+    .notification-down { border-left-color: var(--color-danger); background: var(--alert-error-bg); }
+    .notification-up { border-left-color: var(--color-success); background: var(--alert-success-bg); }
     @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
@@ -424,7 +424,7 @@
 
 <!-- Filters -->
 <div id="filters-section" class="filters-section">
-    <h3 style="margin: 0 0 1.5rem 0; color: #1e293b;">Filters</h3>
+    <h3 style="margin: 0 0 1.5rem 0; color: var(--text-primary);">Filters</h3>
     <div class="filters-grid">
         <div class="filter-group">
             <label for="filter_server"><i class="fas fa-server"></i> Server</label>
@@ -455,7 +455,7 @@
         </div>
         <div class="filter-group">
             <label for="filter_search"><i class="fas fa-search"></i> Detail</label>
-            <input type="text" id="filter_search" placeholder="Search host, IP, detail..." oninput="applyFilters()" style="padding: 0.5rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.85rem; width: 100%; box-sizing: border-box;">
+            <input type="text" id="filter_search" placeholder="Search host, IP, detail..." oninput="applyFilters()" style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; width: 100%; box-sizing: border-box;">
         </div>
     </div>
 </div>
@@ -484,7 +484,7 @@
             </thead>
             <tbody id="hosts_table">
                 <tr>
-                    <td colspan="10" style="padding: 3rem; text-align: center; color: #94a3b8;">
+                    <td colspan="10" style="padding: 3rem; text-align: center; color: var(--text-muted);">
                         <i class="fas fa-spinner fa-spin"></i> Loading...
                     </td>
                 </tr>
@@ -503,10 +503,10 @@
         <div class="modal-body" style="padding: 1.25rem 2rem;">
             <div class="form-group" style="margin-bottom: 0.75rem;">
                 <label>Host:</label>
-                <input type="text" id="stage_host_display" readonly style="background: #f1f5f9; width: 100%; padding: 0.6rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <input type="text" id="stage_host_display" readonly style="background: var(--bg-tertiary); width: 100%; padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 8px;">
             </div>
 
-            <label style="font-weight: 600; color: #334155; display: block; margin-bottom: 0.5rem;">Stage:</label>
+            <label style="font-weight: 600; color: var(--bg-tertiary); display: block; margin-bottom: 0.5rem;">Stage:</label>
             <div class="stage-options" id="stage-options-list">
                 <label class="stage-option" onclick="selectStage('new', this)">
                     <input type="radio" name="stage_choice" value="new">
@@ -547,8 +547,8 @@
 
             <div id="stage-note-section" style="margin-top: 1rem; margin-bottom: 0;">
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label for="stage_comment">Catatan <span style="font-weight: 400; color: #64748b; font-size: 0.8rem;">(opsional, wajib untuk Resolved)</span>:</label>
-                    <textarea id="stage_comment" placeholder="Tuliskan catatan atau keterangan..." style="min-height: 80px; resize: vertical; width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; font-family: inherit;"></textarea>
+                    <label for="stage_comment">Catatan <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.8rem;">(opsional, wajib untuk Resolved)</span>:</label>
+                    <textarea id="stage_comment" placeholder="Tuliskan catatan atau keterangan..." style="min-height: 80px; resize: vertical; width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; font-family: inherit;"></textarea>
                 </div>
             </div>
         </div>
@@ -570,7 +570,7 @@
             <input type="hidden" id="batch_hosts">
             <div class="form-group">
                 <label>Selected Hosts:</label>
-                <input type="text" id="batch_host_count" readonly style="background: #f1f5f9;">
+                <input type="text" id="batch_host_count" readonly style="background: var(--bg-tertiary);">
             </div>
             <div class="form-group" style="margin-bottom: 0.5rem;">
                 <label>Pilih Stage:</label>
@@ -613,8 +613,8 @@
                 </div>
             </div>
             <div class="form-group" style="margin-bottom: 0;">
-                <label for="batch_note">Catatan <span style="font-weight: 400; color: #64748b; font-size: 0.8rem;">(opsional, wajib untuk Resolved)</span>:</label>
-                <textarea id="batch_note" placeholder="Catatan untuk semua host yang dipilih..." style="min-height: 80px; resize: vertical; width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; font-family: inherit;"></textarea>
+                <label for="batch_note">Catatan <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.8rem;">(opsional, wajib untuk Resolved)</span>:</label>
+                <textarea id="batch_note" placeholder="Catatan untuk semua host yang dipilih..." style="min-height: 80px; resize: vertical; width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; font-family: inherit;"></textarea>
             </div>
         </div>
         <div class="modal-footer">
@@ -661,7 +661,7 @@ function loadMonitoringData() {
             console.error('Error loading data:', error);
             const tbody = document.getElementById('hosts_table');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="10" style="padding: 2rem; text-align: center;"><i class="fas fa-exclamation-triangle" style="color: #ef4444; margin-right: 8px;"></i>Failed to load monitoring data<button onclick="loadData()" style="margin-left: 12px; padding: 4px 12px; border: 1px solid #ef4444; background: white; color: #ef4444; border-radius: 6px; cursor: pointer;">Retry</button></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" style="padding: 2rem; text-align: center;"><i class="fas fa-exclamation-triangle" style="color: var(--color-danger); margin-right: 8px;"></i>Failed to load monitoring data<button onclick="loadData()" style="margin-left: 12px; padding: 4px 12px; border: 1px solid var(--color-danger); background: white; color: var(--color-danger); border-radius: 6px; cursor: pointer;">Retry</button></td></tr>';
             }
         });
 }
@@ -766,7 +766,7 @@ function showNotification(hostName, status) {
 function updateTable(hosts) {
     const tbody = document.getElementById('hosts_table');
     if (hosts.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" style="padding: 3rem; text-align: center; color: #94a3b8;"><i class="fas fa-inbox"></i> No hosts with issues found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="padding: 3rem; text-align: center; color: var(--text-muted);"><i class="fas fa-inbox"></i> No hosts with issues found</td></tr>';
         return;
     }
     
@@ -817,11 +817,11 @@ function updateTable(hosts) {
             <td><span class="status-badge status-${host.status === 'DOWN' ? 'down' : 'unreachable'}"><i class="fas fa-circle"></i> ${host.status}</span></td>
             <td>
                 <span class="stage-badge ${stageClass}" title="${stageTooltip}${stageNote}">${stageIcon} ${host.stage_label}</span>
-                ${host.stage_note ? `<div style="font-size: 0.75rem; color: #64748b; margin-top: 2px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${host.stage_note.replace(/"/g, '&quot;')}">📝 ${host.stage_note}</div>` : ''}
+                ${host.stage_note ? `<div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${host.stage_note.replace(/"/g, '&quot;')}">📝 ${host.stage_note}</div>` : ''}
             </td>
             <td>${host.duration_str}</td>
             <td>${host.last_check}</td>
-            <td style="font-size: 0.85rem; color: #64748b;">${host.status_information}</td>
+            <td style="font-size: 0.85rem; color: var(--text-secondary);">${host.status_information}</td>
             <td><button onclick="event.stopPropagation(); showStageModal('${host.host_name}', '${host.container}', '${host.port}', '${host.stage}', '${escapedNote}')" class="btn-stage"><i class="fas fa-layer-group"></i> Stage</button></td>
         </tr>
     `}).join('');
@@ -918,7 +918,7 @@ function submitBatchStage() {
     const note = document.getElementById('batch_note').value.trim();
     if (batchStageSelection === 'resolved' && !note) {
         document.getElementById('batch_note').focus();
-        document.getElementById('batch_note').style.borderColor = '#ef4444';
+        document.getElementById('batch_note').style.borderColor = 'var(--color-danger)';
         setTimeout(() => document.getElementById('batch_note').style.borderColor = '', 2000);
         return;
     }
@@ -1018,7 +1018,7 @@ function submitStage() {
     const comment = document.getElementById('stage_comment').value.trim();
     if (currentStageSelection === 'resolved' && !comment) {
         document.getElementById('stage_comment').focus();
-        document.getElementById('stage_comment').style.borderColor = '#ef4444';
+        document.getElementById('stage_comment').style.borderColor = 'var(--color-danger)';
         setTimeout(() => document.getElementById('stage_comment').style.borderColor = '', 2000);
         return;
     }
@@ -1065,10 +1065,10 @@ function showToast(hostName, type, stageLabel) {
     const item = document.createElement('div');
     item.className = 'notification-item';
     if (type === 'RESOLVED') {
-        item.style.cssText = 'border-left: 4px solid #16a34a; background: #f0fdf4;';
+        item.style.cssText = 'border-left: 4px solid var(--color-success); background: var(--alert-success-bg);';
         item.innerHTML = `<strong>${hostName}</strong> marked as <strong>Resolved</strong> & ACK sent to Nagios`;
     } else {
-        item.style.cssText = 'border-left: 4px solid #4f46e5; background: #eef2ff;';
+        item.style.cssText = 'border-left: 4px solid var(--color-primary); background: var(--color-primary-lighter);';
         item.innerHTML = `<strong>${hostName}</strong> stage updated to <strong>${stageLabel}</strong>`;
     }
     toast.appendChild(item);
@@ -1209,7 +1209,7 @@ function toggleViewOnly() {
     body.style.margin = '0';
     body.style.padding = '0';
     body.style.overflow = 'auto';
-    body.style.background = isDark ? '#0f172a' : 'white';
+    body.style.background = isDark ? 'var(--bg-primary)' : 'white';
     html.style.margin = '0';
     html.style.padding = '0';
     
@@ -1229,17 +1229,17 @@ function toggleViewOnly() {
                 <col style="width: 22%;">
             </colgroup>
             <thead>
-                <tr style="background: ${isDark ? '#334155' : '#1e293b'}; color: white;">
-                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? '#475569' : '#334155'};">HOST</th>
-                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? '#475569' : '#334155'};">IP ADDRESS</th>
-                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? '#475569' : '#334155'};">STATUS</th>
-                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? '#475569' : '#334155'};">STAGE</th>
-                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? '#475569' : '#334155'};">DURATION</th>
-                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? '#475569' : '#334155'};">DETAIL</th>
+                <tr style="background: ${isDark ? 'var(--bg-tertiary)' : 'var(--text-primary)'}; color: white;">
+                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? 'var(--text-secondary)' : 'var(--bg-tertiary)'};">HOST</th>
+                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? 'var(--text-secondary)' : 'var(--bg-tertiary)'};">IP ADDRESS</th>
+                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? 'var(--text-secondary)' : 'var(--bg-tertiary)'};">STATUS</th>
+                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? 'var(--text-secondary)' : 'var(--bg-tertiary)'};">STAGE</th>
+                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? 'var(--text-secondary)' : 'var(--bg-tertiary)'};">DURATION</th>
+                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? 'var(--text-secondary)' : 'var(--bg-tertiary)'};">DETAIL</th>
                 </tr>
             </thead>
             <tbody id="view-only-tbody">
-                <tr><td colspan="6" style="padding: 30px; text-align: center; color: ${isDark ? '#94a3b8' : '#64748b'}; font-size: 18px; font-weight: 600;">Loading...</td></tr>
+                <tr><td colspan="6" style="padding: 30px; text-align: center; color: ${isDark ? 'var(--text-muted)' : 'var(--text-secondary)'}; font-size: 18px; font-weight: 600;">Loading...</td></tr>
             </tbody>
         </table>
     `;
@@ -1286,33 +1286,33 @@ function updateViewOnlyTable() {
     const newHosts = allHosts.filter(h => !h.stage || h.stage === 'new');
     
     if (newHosts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="padding: 30px; text-align: center; color: #64748b; font-size: 18px; font-weight: 600;">No unassigned hosts</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="padding: 30px; text-align: center; color: var(--text-secondary); font-size: 18px; font-weight: 600;">No unassigned hosts</td></tr>';
         return;
     }
     
     tbody.innerHTML = newHosts.map(host => {
-        const statusColor = host.status === 'DOWN' ? '#dc2626' : '#d97706';
-        const statusBg   = host.status === 'DOWN' ? (isDark ? '#4c1d1d' : '#fee2e2') : (isDark ? '#451a03' : '#fef3c7');
+        const statusColor = host.status === 'DOWN' ? 'var(--color-danger-alt)' : 'var(--color-warning-dark)';
+        const statusBg   = host.status === 'DOWN' ? (isDark ? 'var(--alert-error-bg)' : 'var(--alert-error-bg)') : (isDark ? 'var(--alert-warning-bg)' : 'var(--alert-warning-bg)');
         const stageMeta = {
-            'new':       isDark ? { bg: '#1e293b', color: '#94a3b8', border: '#475569', icon: '🔴' } : { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', icon: '🔴' },
-            'cs':        isDark ? { bg: '#1e3a5f', color: '#93c5fd', border: '#1d4ed8', icon: '🔵' } : { bg: '#eff6ff', color: '#1d4ed8', border: '#93c5fd', icon: '🔵' },
-            'escalated': isDark ? { bg: '#431407', color: '#fdba74', border: '#c2410c', icon: '🟠' } : { bg: '#fff7ed', color: '#c2410c', border: '#fdba74', icon: '🟠' },
-            'watchlist': isDark ? { bg: '#3b0764', color: '#d8b4fe', border: '#7e22ce', icon: '🟣' } : { bg: '#fdf4ff', color: '#7e22ce', border: '#d8b4fe', icon: '🟣' },
-            'resolved':  isDark ? { bg: '#052e16', color: '#86efac', border: '#15803d', icon: '✅' } : { bg: '#f0fdf4', color: '#15803d', border: '#86efac', icon: '✅' },
-        }[host.stage] || (isDark ? { bg: '#1e293b', color: '#94a3b8', border: '#475569', icon: '🔴' } : { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', icon: '🔴' });
+            'new':       isDark ? { bg: 'var(--text-primary)', color: 'var(--text-muted)', border: 'var(--text-secondary)', icon: '🔴' } : { bg: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: 'var(--border-color-alt)', icon: '🔴' },
+            'cs':        isDark ? { bg: 'var(--alert-info-bg)', color: 'var(--alert-info-color)', border: 'var(--color-info-dark)', icon: '🔵' } : { bg: 'var(--alert-info-bg)', color: 'var(--color-info-dark)', border: 'var(--alert-info-color)', icon: '🔵' },
+            'escalated': isDark ? { bg: 'var(--alert-warning-bg)', color: 'var(--alert-warning-color)', border: 'var(--color-orange-dark)', icon: '🟠' } : { bg: 'var(--alert-warning-bg)', color: 'var(--color-orange-dark)', border: 'var(--alert-warning-color)', icon: '🟠' },
+            'watchlist': isDark ? { bg: 'var(--alert-purple-bg)', color: 'var(--color-purple-light)', border: 'var(--color-purple)', icon: '🟣' } : { bg: 'var(--alert-purple-bg)', color: 'var(--color-purple)', border: 'var(--color-purple-light)', icon: '🟣' },
+            'resolved':  isDark ? { bg: 'var(--alert-success-bg)', color: 'var(--color-success-light)', border: 'var(--color-success-dark)', icon: '✅' } : { bg: 'var(--alert-success-bg)', color: 'var(--color-success-dark)', border: 'var(--color-success-light)', icon: '✅' },
+        }[host.stage] || (isDark ? { bg: 'var(--text-primary)', color: 'var(--text-muted)', border: 'var(--text-secondary)', icon: '🔴' } : { bg: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: 'var(--border-color-alt)', icon: '🔴' });
         return `
-        <tr style="border-bottom: 2px solid ${isDark ? '#334155' : '#e2e8f0'}; background: ${isDark ? '#1e293b' : (host.status === 'DOWN' ? '#fef2f2' : '#fffbeb')};">
-            <td style="padding: 14px; font-weight: 800; font-size: 15px; color: ${isDark ? '#e2e8f0' : '#1e293b'}; word-break: break-word; line-height: 1.3;" title="${host.host_name}">${host.host_name}</td>
-            <td style="padding: 14px; font-weight: 700; font-size: 15px; color: ${isDark ? '#94a3b8' : '#374151'};">${host.ip_address}</td>
-            <td style="padding: 14px;"><span style="background: ${statusBg}; color: ${isDark ? (host.status === 'DOWN' ? '#fca5a5' : '#fdba74') : statusColor}; font-weight: 900; font-size: 14px; padding: 6px 10px; border-radius: 6px; border: 2px solid ${statusColor}; white-space: nowrap;">${host.status}</span></td>
+        <tr style="border-bottom: 2px solid ${isDark ? 'var(--bg-tertiary)' : 'var(--border-color)'}; background: ${isDark ? 'var(--text-primary)' : (host.status === 'DOWN' ? 'var(--alert-error-bg)' : 'var(--alert-warning-bg)')};">
+            <td style="padding: 14px; font-weight: 800; font-size: 15px; color: ${isDark ? 'var(--border-color)' : 'var(--text-primary)'}; word-break: break-word; line-height: 1.3;" title="${host.host_name}">${host.host_name}</td>
+            <td style="padding: 14px; font-weight: 700; font-size: 15px; color: ${isDark ? 'var(--text-muted)' : 'var(--text-secondary)'};">${host.ip_address}</td>
+            <td style="padding: 14px;"><span style="background: ${statusBg}; color: ${isDark ? (host.status === 'DOWN' ? 'var(--alert-error-color)' : 'var(--alert-warning-color)') : statusColor}; font-weight: 900; font-size: 14px; padding: 6px 10px; border-radius: 6px; border: 2px solid ${statusColor}; white-space: nowrap;">${host.status}</span></td>
             <td style="padding: 14px;">
                 <div>
                     <span style="display: inline-flex; align-items: center; gap: 4px; background: ${stageMeta.bg}; color: ${stageMeta.color}; border: 2px solid ${stageMeta.border}; font-weight: 700; font-size: 13px; padding: 5px 10px; border-radius: 20px; white-space: nowrap;">${stageMeta.icon} ${host.stage_label}</span>
-                    ${host.stage_note ? `<div style="font-size: 0.7rem; color: ${isDark ? '#94a3b8' : '#64748b'}; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${host.stage_note.replace(/"/g, '&quot;')}">📝 ${host.stage_note}</div>` : ''}
+                    ${host.stage_note ? `<div style="font-size: 0.7rem; color: ${isDark ? 'var(--text-muted)' : 'var(--text-secondary)'}; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${host.stage_note.replace(/"/g, '&quot;')}">📝 ${host.stage_note}</div>` : ''}
                 </div>
             </td>
-            <td style="padding: 14px; font-weight: 700; font-size: 14px; color: ${isDark ? '#94a3b8' : '#374151'}; white-space: nowrap;">${host.duration_str}</td>
-            <td style="padding: 14px; font-weight: 600; font-size: 13px; color: ${isDark ? '#94a3b8' : '#4b5563'}; overflow: hidden; text-overflow: ellipsis;" title="${host.status_information}">${host.status_information}</td>
+            <td style="padding: 14px; font-weight: 700; font-size: 14px; color: ${isDark ? 'var(--text-muted)' : 'var(--text-secondary)'}; white-space: nowrap;">${host.duration_str}</td>
+            <td style="padding: 14px; font-weight: 600; font-size: 13px; color: ${isDark ? 'var(--text-muted)' : 'var(--text-secondary)'}; overflow: hidden; text-overflow: ellipsis;" title="${host.status_information}">${host.status_information}</td>
         </tr>
         `;
     }).join('');

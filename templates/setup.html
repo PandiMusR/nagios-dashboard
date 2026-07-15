@@ -28,12 +28,12 @@
             max-width: 450px;
         }
         h1 {
-            color: #1e3a8a;
+            color: var(--color-info-dark);
             margin-bottom: 10px;
             text-align: center;
         }
         .subtitle {
-            color: #6b7280;
+            color: var(--color-gray);
             text-align: center;
             margin-bottom: 30px;
             font-size: 14px;
@@ -44,24 +44,24 @@
         label {
             display: block;
             margin-bottom: 5px;
-            color: #374151;
+            color: var(--text-secondary);
             font-weight: bold;
         }
         input {
             width: 100%;
             padding: 12px;
-            border: 1px solid #d1d5db;
+            border: 1px solid var(--border-color);
             border-radius: 5px;
             font-size: 14px;
         }
         input:focus {
             outline: none;
-            border-color: #3b82f6;
+            border-color: var(--color-info);
         }
         button {
             width: 100%;
             padding: 12px;
-            background: #3b82f6;
+            background: var(--color-info);
             color: white;
             border: none;
             border-radius: 5px;
@@ -74,16 +74,16 @@
             background: #2563eb;
         }
         .error {
-            background: #fee2e2;
-            color: #dc2626;
+            background: var(--alert-error-bg);
+            color: var(--color-danger-alt);
             padding: 10px;
             border-radius: 5px;
             margin-bottom: 20px;
             font-size: 14px;
         }
         .info {
-            background: #dbeafe;
-            color: #1e40af;
+            background: var(--alert-info-bg);
+            color: var(--alert-info-color);
             padding: 15px;
             border-radius: 5px;
             margin-bottom: 20px;
@@ -92,8 +92,8 @@
         }
         .admin-badge {
             display: inline-block;
-            background: #dbeafe;
-            color: #1e40af;
+            background: var(--alert-info-bg);
+            color: var(--alert-info-color);
             padding: 4px 12px;
             border-radius: 12px;
             font-size: 12px;

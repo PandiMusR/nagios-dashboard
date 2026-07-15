@@ -3,7 +3,7 @@
 {% block content %}
 <style>
     .settings-header {
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         padding: 2rem;
         border-radius: 16px;
         color: white;
@@ -17,13 +17,13 @@
         padding: 2rem;
         margin-bottom: 2rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border: 1px solid #f1f5f9;
+        border: 1px solid var(--bg-tertiary);
     }
     .section-card h3 {
         margin: 0 0 1.5rem 0;
         font-size: 1.2rem;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--text-primary);
         display: flex;
         align-items: center;
         gap: 0.75rem;
@@ -32,7 +32,7 @@
     .form-group label {
         display: block;
         margin-bottom: 0.5rem;
-        color: #1e293b;
+        color: var(--text-primary);
         font-weight: 600;
         font-size: 0.9rem;
     }
@@ -40,7 +40,7 @@
     .form-group select {
         width: 100%;
         padding: 0.75rem 1rem;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         font-size: 0.9rem;
         transition: all 0.2s;
@@ -50,7 +50,7 @@
     .form-group input:focus,
     .form-group select:focus {
         outline: none;
-        border-color: #4f46e5;
+        border-color: var(--color-primary);
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
     .form-grid {
@@ -59,7 +59,7 @@
         gap: 1.5rem;
     }
     .btn-primary {
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         color: white;
         border: none;
         padding: 0.75rem 1.5rem;
@@ -74,7 +74,7 @@
     }
     .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3); }
     .btn-secondary {
-        background: #94a3b8;
+        background: var(--text-muted);
         color: white;
         border: none;
         padding: 0.75rem 1.5rem;
@@ -94,24 +94,24 @@
         border-collapse: collapse;
     }
     .history-table th {
-        background: #f8fafc;
+        background: var(--bg-primary);
         padding: 0.75rem 1rem;
         text-align: left;
         font-size: 0.8rem;
         text-transform: uppercase;
-        color: #64748b;
+        color: var(--text-secondary);
         font-weight: 600;
-        border-bottom: 2px solid #e2e8f0;
+        border-bottom: 2px solid var(--border-color);
     }
     .history-table td {
         padding: 0.75rem 1rem;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid var(--bg-tertiary);
         font-size: 0.9rem;
-        color: #1e293b;
+        color: var(--text-primary);
     }
-    .history-table tr:hover td { background: #f8fafc; }
-    .stage-arrow { color: #94a3b8; font-size: 0.85rem; margin: 0 0.3rem; }
-    .empty-state { text-align: center; padding: 3rem; color: #94a3b8; }
+    .history-table tr:hover td { background: var(--bg-primary); }
+    .stage-arrow { color: var(--text-muted); font-size: 0.85rem; margin: 0 0.3rem; }
+    .empty-state { text-align: center; padding: 3rem; color: var(--text-muted); }
     .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
     @media (max-width: 768px) {
         .form-grid { grid-template-columns: 1fr; }
@@ -170,7 +170,7 @@
             <tbody>
                 {% for entry in entries %}
                 <tr>
-                    <td style="white-space: nowrap; color: #64748b; font-size: 0.85rem;">{{ entry.ts[:19].replace('T', ' ') }}</td>
+                    <td style="white-space: nowrap; color: var(--text-secondary); font-size: 0.85rem;">{{ entry.ts[:19].replace('T', ' ') }}</td>
                     <td><strong>{{ entry.host }}</strong></td>
                     <td>{{ entry.container }}</td>
                     <td>
