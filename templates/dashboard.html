@@ -185,13 +185,13 @@
             <span class="loading-spinner"></span>
             Auto-refresh: <span id="refresh_countdown" style="font-weight: 700;">30</span>s
         </span>
-        <span class="stat-badge">Last update: <span id="last_update" style="font-weight: 700;">-</span></span>
+        <span class="stat-badge">Update terakhir: <span id="last_update" style="font-weight: 700;">-</span></span>
     </div>
 </div>
 
 <div class="servers-grid" id="servers_container">
     <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
-        <div style="font-size: 1rem; margin-bottom: 0.5rem;"><span class="loading-spinner"></span> Loading servers...</div>
+        <div style="font-size: 1rem; margin-bottom: 0.5rem;"><span class="loading-spinner"></span> Memuat server...</div>
     </div>
 </div>
 
@@ -210,7 +210,7 @@ function loadDashboardStats() {
         })
         .catch(error => {
             console.error('Error:', error);
-            document.getElementById('servers_container').innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--color-danger-alt);"><i class="fas fa-exclamation-circle"></i> Error loading servers</div>';
+            document.getElementById('servers_container').innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--color-danger-alt);"><i class="fas fa-exclamation-circle"></i> Gagal memuat server</div>';
         });
 }
 

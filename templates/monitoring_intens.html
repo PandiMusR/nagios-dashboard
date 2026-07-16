@@ -210,7 +210,7 @@
 <div id="monitorList">
     <div class="empty-state">
         <i class="fas fa-spinner fa-spin"></i>
-        <p>Loading monitors...</p>
+        <p>Memuat monitor...</p>
     </div>
 </div>
 
@@ -250,7 +250,7 @@ async function loadMonitors() {
             document.getElementById('monitorList').innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-exclamation-circle"></i>
-                    <p>${data.error || 'Failed to load monitors'}</p>
+                    <p>${data.error || 'Gagal memuat monitor'}</p>
                 </div>
             `;
             return;
@@ -260,7 +260,7 @@ async function loadMonitors() {
             document.getElementById('monitorList').innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-inbox"></i>
-                    <p>No monitors found. Add hosts with "Monitor in Uptime Kuma" enabled in Host Manager.</p>
+                    <p>Tidak ada monitor ditemukan. Add hosts with "Monitor in Uptime Kuma" enabled in Host Manager.</p>
                     <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 1rem;">Note: Uptime Kuma integration requires proper configuration in Global Settings.</p>
                 </div>
             `;

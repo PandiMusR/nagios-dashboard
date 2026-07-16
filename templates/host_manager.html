@@ -420,7 +420,7 @@
         <div class="filter-bar-button-group">
             <button onclick="refreshAllHostStatus()" class="btn-primary btn-info" title="Refresh host status"><i class="fas fa-sync-alt"></i> <span class="btn-text">Refresh</span></button>
             <button onclick="openBatchModal()" class="btn-primary btn-success" title="Add multiple hosts"><i class="fas fa-list"></i> <span class="btn-text">Batch Add</span></button>
-            <button onclick="openAddModal()" class="btn-primary" title="Add a host"><i class="fas fa-plus"></i> <span class="btn-text">Add Host</span></button>
+            <button onclick="openAddModal()" class="btn-primary" title="Add a host"><i class="fas fa-plus"></i> <span class="btn-text">Tambah Host</span></button>
         </div>
     </div>
     <div style="overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-color);">
@@ -509,7 +509,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" onclick="closeAddModal()" class="btn-primary" style="background: var(--color-gray);"><i class="fas fa-times"></i> Cancel</button>
-                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Add Host</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Tambah Host</button>
             </div>
         </form>
     </div>
@@ -518,13 +518,13 @@
 <!-- Batch Add Modal -->
 <div id="batchModal" class="modal">
     <div class="modal-content" style="max-width: 1000px;">
-        <h3><i class="fas fa-list-ul"></i> Batch Add Hosts</h3>
+        <h3><i class="fas fa-list-ul"></i> Batch Tambah Hosts</h3>
         <form method="POST" action="/host-manager/batch-add">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: var(--bg-primary); border-radius: 10px; border: 1px solid var(--border-color);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h4 style="margin: 0; color: var(--text-primary); font-weight: 600;">Hosts</h4>
-                    <button type="button" onclick="addBatchRow()" class="btn-primary btn-success"><i class="fas fa-plus"></i> Add Row</button>
+                    <button type="button" onclick="addBatchRow()" class="btn-primary btn-success"><i class="fas fa-plus"></i> Tambah Baris</button>
                 </div>
                 <div id="batchHostsContainer" style="max-height: 500px; overflow-y: auto; display: grid; gap: 0.75rem;">
                 </div>
@@ -602,7 +602,7 @@
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="modal">
     <div class="modal-content">
-        <h3 style="color: var(--color-danger-alt);"><i class="fas fa-exclamation-triangle"></i> Confirm Delete</h3>
+        <h3 style="color: var(--color-danger-alt);"><i class="fas fa-exclamation-triangle"></i> Konfirmasi Hapus</h3>
         <p style="color: var(--text-secondary);">The following <strong id="deleteTotalCount">0</strong> host(s) will be deleted:</p>
         <div id="deleteHostList" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;"></div>
         <div class="modal-footer">

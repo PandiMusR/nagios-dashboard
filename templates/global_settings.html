@@ -255,10 +255,10 @@
 </div>
 
 <div class="section-card">
-    <h3><i class="fas fa-database"></i> Backup & Restore</h3>
+    <h3><i class="fas fa-database"></i> Backup & Pulihkan</h3>
     <div class="two-column">
         <div>
-            <h4 style="margin: 0 0 1rem 0; color: var(--text-primary); font-weight: 600;"><i class="fas fa-save"></i> Create Backup</h4>
+            <h4 style="margin: 0 0 1rem 0; color: var(--text-primary); font-weight: 600;"><i class="fas fa-save"></i> Buat Backup</h4>
             <form method="POST" action="/global-settings/backup">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
@@ -266,7 +266,7 @@
                     <input type="text" name="backup_name" placeholder="e.g. before_update">
                     <small style="color: var(--text-secondary); font-size: 0.85rem;">Leave empty for auto-generated name</small>
                 </div>
-                <button type="submit" class="btn-primary btn-success" style="width: 100%;"><i class="fas fa-download"></i> Create Backup</button>
+                <button type="submit" class="btn-primary btn-success" style="width: 100%;"><i class="fas fa-download"></i> Buat Backup</button>
             </form>
         </div>
         <div>
@@ -289,7 +289,7 @@
         <button onclick="loadBackups()" class="btn-primary btn-success"><i class="fas fa-sync-alt"></i> Refresh</button>
     </div>
     <div id="backupList">
-        <p style="text-align: center; color: var(--text-muted); padding: 2rem;"><i class="fas fa-spinner"></i> Loading backups...</p>
+        <p style="text-align: center; color: var(--text-muted); padding: 2rem;"><i class="fas fa-spinner"></i> Memuat backup...</p>
     </div>
 </div>
 
@@ -358,7 +358,7 @@
     <h3><i class="fas fa-file-alt"></i> Activity Logs</h3>
     <div style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem;">
         <button onclick="refreshLogs()" class="btn-primary"><i class="fas fa-sync-alt"></i> Refresh</button>
-        <button onclick="clearLogs()" class="btn-primary btn-danger"><i class="fas fa-trash"></i> Clear Logs</button>
+        <button onclick="clearLogs()" class="btn-primary btn-danger"><i class="fas fa-trash"></i> Bersihkan Log</button>
     </div>
     <div class="activity-log" id="activityLogs">{{ activity_logs }}</div>
 </div>
@@ -407,19 +407,19 @@ function loadBackups() {
                         <small>${b.date} (${b.size})</small>
                     </div>
                     <div class="backup-actions">
-                        <button onclick="restoreBackup('${b.name}')" class="btn-small btn-restore"><i class="fas fa-redo"></i> Restore</button>
+                        <button onclick="restoreBackup('${b.name}')" class="btn-small btn-restore"><i class="fas fa-redo"></i> Pulihkan</button>
                         <button onclick="deleteBackup('${b.name}')" class="btn-small btn-delete"><i class="fas fa-trash"></i> Delete</button>
                     </div>
                 </div>
             `).join('');
         })
         .catch(err => {
-            document.getElementById('backupList').innerHTML = '<p style="color: var(--color-danger-alt);"><i class="fas fa-exclamation-circle"></i> Error loading backups</p>';
+            document.getElementById('backupList').innerHTML = '<p style="color: var(--color-danger-alt);"><i class="fas fa-exclamation-circle"></i> Gagal memuat backup</p>';
         });
 }
 
 function restoreBackup(name) {
-    if (!confirm(`Restore "${name}"? This will overwrite current config.`)) return;
+    if (!confirm(`Pulihkan "${name}"? This will overwrite current config.`)) return;
     
     fetch('/global-settings/restore', {
         method: 'POST',
@@ -429,13 +429,13 @@ function restoreBackup(name) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            showToast('Restored successfully', 'success');
+            showToast('Pulihkand successfully', 'success');
             location.reload();
         } else {
-            showToast(data.error || 'Restore failed', 'error');
+            showToast(data.error || 'Pulihkan failed', 'error');
         }
     })
-    .catch(err => showToast('Restore error: ' + err.message, 'error'));
+    .catch(err => showToast('Pulihkan error: ' + err.message, 'error'));
 }
 
 function deleteBackup(name) {
