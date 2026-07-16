@@ -75,13 +75,108 @@
             flex-shrink: 0;
         }
 
-        button:hover {
+        .logo-section {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .logo-section img {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo-section span {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .login-header p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.4rem;
+        }
+
+        .form-group label i {
+            width: 1.25rem;
+            color: var(--color-primary);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            color: var(--text-primary);
+            background: var(--input-bg);
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+
+        .form-actions {
+            margin-top: 1.5rem;
+        }
+
+        .form-actions button {
+            width: 100%;
+            padding: 0.85rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+        }
+
+        .form-actions button:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
         }
 
-        button:active {
+        .form-actions button:active {
             transform: translateY(0);
+        }
+
+        .form-actions button i {
+            margin-right: 0.5rem;
         }
 
         .error {
@@ -113,7 +208,7 @@
         }
 
         .footer i {
-            color: #667eea;
+            color: var(--color-primary);
             margin: 0 2px;
         }
 
