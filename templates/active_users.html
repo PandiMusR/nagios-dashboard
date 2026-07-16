@@ -4,29 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Active Users — Nagios Dashboard</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg-tertiary); color: var(--text-primary); padding: 2rem; }
-        h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-        .subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem; }
-        .stats { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
-        .stat-card { background: white; border-radius: 12px; padding: 1rem 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-        .stat-card .num { font-size: 2rem; font-weight: 700; color: var(--color-primary); }
-        .stat-card .label { font-size: 0.85rem; color: var(--text-secondary); }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-        th { background: var(--bg-primary); text-align: left; padding: 0.75rem 1rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; border-bottom: 1px solid var(--border-color); }
-        td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--bg-tertiary); font-size: 0.9rem; }
-        tr:last-child td { border-bottom: none; }
-        .role-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
-        .role-admin { background: var(--alert-warning-bg); color: var(--alert-warning-color); }
-        .role-user { background: var(--color-primary-light); color: var(--color-primary-dark); }
-        .idle-low { color: var(--color-success); }
-        .idle-mid { color: var(--color-warning-dark); }
-        .idle-high { color: var(--color-danger-alt); }
-        .back-link { display: inline-block; margin-bottom: 1rem; color: var(--color-primary); text-decoration: none; font-size: 0.9rem; }
-        .back-link:hover { text-decoration: underline; }
-        .empty { text-align: center; padding: 3rem; color: var(--text-muted); }
-    </style>
+    <link rel="stylesheet" href="/static/css/active_users.css">
 </head>
 <body>
     <a href="/dashboard" class="back-link">&larr; Back to Dashboard</a>
@@ -69,8 +47,6 @@
     <div class="empty">No active users</div>
     {% endif %}
 
-    <script>
-        setTimeout(() => location.reload(), 30000);
-    </script>
+    <script src="/static/js/active_users.js"></script>
 </body>
 </html>

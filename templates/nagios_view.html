@@ -1,44 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ container }}{% endblock %}
 {% block content %}
-<style>
-    .nagios-header {
-        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-        padding: 2rem;
-        border-radius: 16px;
-        color: white;
-        margin-bottom: 2rem;
-        box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
-    }
-    .nagios-header h1 {
-        margin: 0;
-        font-size: 1.75rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-    .nagios-container {
-        background: white;
-        border-radius: 16px;
-        padding: 2rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border: 1px solid var(--bg-tertiary);
-        overflow: hidden;
-    }
-    .nagios-frame {
-        width: 100%;
-        height: 80vh;
-        border: none;
-        border-radius: 12px;
-        background: white;
-    }
-    @media (max-width: 768px) {
-        .nagios-frame {
-            height: 70vh;
-        }
-    }
-</style>
+<link rel="stylesheet" href="/static/css/nagios_view.css">
 
 <div class="nagios-header">
     <h1><i class="fas fa-chart-line"></i> {{ container }}</h1>
