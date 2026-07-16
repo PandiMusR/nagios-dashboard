@@ -1,13 +1,4 @@
-.settings-header {
-        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-        padding: 2rem;
-        border-radius: 16px;
-        color: white;
-        margin-bottom: 2rem;
-    }
-    .settings-header h1 { margin: 0 0 0.5rem 0; font-size: 1.75rem; font-weight: 700; }
-    .settings-header p { margin: 0; opacity: 0.9; font-size: 0.95rem; }
-    .section-card {
+.section-card {
         background: white;
         border-radius: 16px;
         padding: 2rem;

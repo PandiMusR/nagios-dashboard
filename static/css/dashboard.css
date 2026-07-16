@@ -1,22 +1,4 @@
-.dashboard-header {
-        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-        padding: 2rem;
-        border-radius: 16px;
-        color: white;
-        margin-bottom: 2rem;
-        box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
-    }
-    .dashboard-header h1 {
-        margin: 0 0 0.5rem 0;
-        font-size: 2rem;
-        font-weight: 700;
-    }
-    .dashboard-header p {
-        margin: 0;
-        opacity: 0.9;
-        font-size: 0.95rem;
-    }
-    .stat-badge {
+.stat-badge {
         display: inline-block;
         background: rgba(255,255,255,0.2);
         padding: 0.5rem 1.25rem;
@@ -48,32 +30,6 @@
             opacity: 1;
             transform: translateY(0);
         }
-    }
-    .server-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        padding-bottom: 1rem;
-        border-bottom: 2px solid var(--bg-tertiary);
-    }
-    .server-name {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--text-primary);
-    }
-    .btn-open {
-        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-        color: white;
-        border: none;
-        padding: 0.5rem 1.25rem;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        text-decoration: none;
-        display: inline-block;
     }
     .btn-open:hover {
         transform: translateY(-2px);
@@ -164,10 +120,7 @@
         .servers-grid {
             grid-template-columns: 1fr;
         }
-        .dashboard-header {
+        .page-header {
             padding: 1.5rem;
         }
-        .dashboard-header h1 {
-            font-size: 1.5rem;
         }
-    }

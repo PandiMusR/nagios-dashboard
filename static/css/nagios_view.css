@@ -1,20 +1,4 @@
-.nagios-header {
-        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-        padding: 2rem;
-        border-radius: 16px;
-        color: white;
-        margin-bottom: 2rem;
-        box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
-    }
-    .nagios-header h1 {
-        margin: 0;
-        font-size: 1.75rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-    .nagios-container {
+.nagios-container {
         background: white;
         border-radius: 16px;
         padding: 2rem;

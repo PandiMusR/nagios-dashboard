@@ -168,3 +168,30 @@
                 closeChangePasswordModal();
             }
         });
+
+        // === Keyboard Shortcuts for NOC (not in input/textarea) ===
+        document.addEventListener('keydown', function(e) {
+            const tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+            
+            // R — refresh current page data
+            if (e.key === 'r' && !e.ctrlKey && !e.metaKey) {
+                const refreshBtn = document.querySelector('[id*="refresh"], [class*="refresh-btn"], button[onclick*="loadMonitoring"], button[onclick*="refreshMonitors"]');
+                if (refreshBtn) { refreshBtn.click(); return; }
+                const autoRefresh = document.getElementById('autoRefreshToggle');
+                if (autoRefresh) { location.reload(); }
+            }
+            
+            // / — focus search input
+            if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
+                const searchInput = document.querySelector('input[type="search"], input[placeholder*="earch"], input[placeholder*="Cari"], input[id*="search"]');
+                if (searchInput) { e.preventDefault(); searchInput.focus(); }
+            }
+            
+            // Ctrl+S — save/submit active form
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                const submitBtn = document.querySelector('button[type="submit"], button[onclick*="save"], button:not([onclick*="logout"]):not([onclick*="delete"]):not([id*="delete"])[class*="btn-primary"], [class*="save-btn"]');
+                if (submitBtn && submitBtn.offsetParent !== null) submitBtn.click();
+            }
+        });
