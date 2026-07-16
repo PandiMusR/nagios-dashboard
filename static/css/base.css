@@ -492,8 +492,8 @@
         [data-theme="dark"] .stage-new { background: var(--bg-tertiary) !important; color: var(--text-muted) !important; }
         [data-theme="dark"] .stage-cs { background: var(--alert-info-bg) !important; color: var(--alert-info-color) !important; }
         [data-theme="dark"] .stage-escalated { background: var(--alert-warning-bg) !important; color: var(--alert-warning-color) !important; }
-        [data-theme="dark"] .stage-watchlist { background: var(--alert-purple-bg) !important; color: var(--color-purple-light) !important; }
-        [data-theme="dark"] .stage-resolved { background: var(--alert-success-bg) !important; color: var(--color-success-light) !important; }
+        [data-theme="dark"] .stage-watchlist { background: var(--alert-purple-bg) !important; color: var(--color-purple) !important; }
+        [data-theme="dark"] .stage-resolved { background: var(--alert-success-bg) !important; color: var(--color-success) !important; }
 
         /* Alert boxes */
         [data-theme="dark"] .alert-success { background: var(--alert-success-bg) !important; color: var(--alert-success-color) !important; }
