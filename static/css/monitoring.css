@@ -58,6 +58,19 @@
         border: 1px solid var(--bg-tertiary);
         overflow: hidden;
     }
+    .table-header {
+        padding: 2rem;
+        border-bottom: 2px solid var(--bg-tertiary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+    }
+    .table-header h2 {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: 1.25rem;
+    }
     .btn-batch-ack {
         background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
         color: white;
