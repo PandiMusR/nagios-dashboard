@@ -335,7 +335,8 @@
         .menu-toggle i.arrow { margin-left: auto; transition: transform 0.3s; font-size: 0.9rem; }
         .menu-toggle.active i.arrow { transform: rotate(90deg); }
         
-        /* Page header — shared gradient for all content pages */\n.page-header {
+        /* Page header — shared gradient for all content pages */
+.page-header {
     background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
     padding: 2rem;
     border-radius: 16px;
