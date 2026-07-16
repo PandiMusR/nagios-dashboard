@@ -43,8 +43,11 @@
             const content = document.getElementById('content');
             sidebar.classList.toggle('collapsed');
             content.classList.toggle('expanded');
+            const burger = document.querySelector('.burger');
+            if (burger) burger.setAttribute('aria-expanded', !sidebar.classList.contains('collapsed'));
         }
-        
+
+
         function toggleSubmenu(event, menuId) {
             event.preventDefault();
             const submenu = document.getElementById(menuId);
@@ -52,6 +55,8 @@
             
             submenu.classList.toggle('show');
             toggle.classList.toggle('active');
+            const expanded = submenu.classList.contains('show');
+            toggle.setAttribute('aria-expanded', expanded);
         }
         
         // Auto-expand submenu if current page is in it
@@ -63,6 +68,7 @@
                 if (submenu && toggle) {
                     submenu.classList.add('show');
                     toggle.classList.add('active');
+                    toggle.setAttribute('aria-expanded', 'true');
                 }
             });
         });

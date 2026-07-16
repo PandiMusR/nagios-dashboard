@@ -106,7 +106,7 @@
                     <p class="helper-text">Nama akan disimpan sebagai slug, misalnya `Network Backbone` menjadi `network-backbone`.</p>
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label>Status Information Source</label>
+                    <label for="editUseServicePlugin">Status Information Source</label>
                     <select name="use_service_plugin">
                         <option value="false">Default (Host Plugin Output)</option>
                         <option value="true">Service Plugin Output</option>
@@ -177,7 +177,7 @@
                 </select>
             </div>
             <div class="form-group" style="margin-bottom: 0;">
-                <label>Category</label>
+                <label for="editCategoryNameDisplay">Category</label>
                 <select name="category" required>
                     {% for category in categories %}
                     <option value="{{ category }}">{{ category|title }}</option>

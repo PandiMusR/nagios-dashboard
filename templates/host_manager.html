@@ -29,7 +29,7 @@
     <h3><i class="fas fa-filter"></i> Hosts Management</h3>
     <div class="filter-bar">
         <div class="form-group">
-            <label>Filter Server</label>
+            <label for="serverFilter">Filter Server</label>
             <select id="serverFilter" onchange="filterByServer()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                 <option value="all">All Servers</option>
                 {% for server in servers %}
@@ -38,7 +38,7 @@
             </select>
         </div>
         <div class="form-group">
-            <label>Rows per Page</label>
+            <label for="entriesPerPage">Rows per Page</label>
             <select id="entriesPerPage" onchange="changeEntriesPerPage()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                 <option value="10">10</option>
                 <option value="20">20</option>
@@ -48,7 +48,7 @@
             </select>
         </div>
         <div class="form-group">
-            <label>Search</label>
+            <label for="searchInput">Search</label>
             <input type="text" id="searchInput" onkeyup="searchHosts()" placeholder="Host name, IP, parent..." style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem;">
         </div>
         <div class="filter-bar-button-group">
@@ -84,7 +84,7 @@
         <form id="addForm" method="POST" action="/host-manager/add" onsubmit="return validateAddForm()">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
-                <label>Server</label>
+                <label for="addServer">Server</label>
                 <select name="server" id="addServer" required onchange="onAddServerChange()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                     {% for server in servers %}
                     <option value="{{ server }}">{{ server }}</option>
@@ -92,7 +92,7 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Host Name</label>
+                <label for="editHostName">Host Name</label>
                 <div style="display: flex; gap: 0.5rem;">
                     <input type="text" name="host_name" id="addHostName" required placeholder="e.g. 81411-130112252037001-Ria Sirait" style="flex: 1; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                     <button type="button" onclick="generateHostname()" class="btn-primary btn-info"><i class="fas fa-magic"></i></button>
@@ -100,16 +100,16 @@
                 <small style="color: var(--text-secondary); font-size: 0.8rem;">Format: NID-CID-NamaClient</small>
             </div>
             <div class="form-group">
-                <label>Alias (optional)</label>
+                <label for="addAlias">Alias (optional)</label>
                 <input type="text" name="alias" id="addAlias" placeholder="e.g. Web Server 1" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                 <small style="color: var(--text-secondary); font-size: 0.8rem;">A friendly name/description for the host</small>
             </div>
             <div class="form-group">
-                <label>IP Address</label>
+                <label for="editAddress">IP Address</label>
                 <input type="text" name="address" required placeholder="e.g. 192.168.1.100" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
             </div>
             <div class="form-group">
-                <label>Parent (optional)</label>
+                <label for="addParentsSearch">Parent (optional)</label>
                 <input type="text" id="addParentsSearch" placeholder="Search parent..." style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 0.5rem;" oninput="filterAddParents()">
                 <select name="parents" id="addParents" size="4" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                     <option value="">-- No Parent --</option>
@@ -129,13 +129,13 @@
                 </label>
                 <div id="serviceFields" style="display: none; padding-left: 1.5rem; margin-top: 0.75rem;">
                     <div class="form-group">
-                        <label>Plugin</label>
+                        <label for="servicePlugin">Plugin</label>
                         <select name="service_plugin" id="servicePlugin" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                             <option value="">-- Select Plugin --</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Arguments (optional)</label>
+                        <label for="serviceArgs">Arguments (optional)</label>
                         <input type="text" name="service_args" id="serviceArgs" placeholder="e.g. 41805" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                         <small style="color: var(--text-secondary); font-size: 0.8rem;">Arguments to pass to the plugin</small>
                     </div>
@@ -184,7 +184,7 @@
                 <input type="text" name="host_name" id="editHostName" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
             </div>
             <div class="form-group">
-                <label>Alias (optional)</label>
+                <label for="editAlias">Alias (optional)</label>
                 <input type="text" name="alias" id="editAlias" placeholder="e.g. Web Server 1" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                 <small style="color: var(--text-secondary); font-size: 0.8rem;">A friendly name/description for the host</small>
             </div>
@@ -193,7 +193,7 @@
                 <input type="text" name="address" id="editAddress" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
             </div>
             <div class="form-group">
-                <label>Parent (optional)</label>
+                <label for="editParentsSearch">Parent (optional)</label>
                 <input type="text" id="editParentsSearch" placeholder="Search parent..." style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 0.5rem;" oninput="filterEditParents()">
                 <select name="parents" id="editParents" size="4" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                     <option value="">-- No Parent --</option>
@@ -213,13 +213,13 @@
                 </label>
                 <div id="editServiceFields" style="display: none; padding-left: 1.5rem; margin-top: 0.75rem;">
                     <div class="form-group">
-                        <label>Plugin</label>
+                        <label for="editServicePlugin">Plugin</label>
                         <select name="service_plugin" id="editServicePlugin" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                             <option value="">-- Select Plugin --</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Arguments (optional)</label>
+                        <label for="editServiceArgs">Arguments (optional)</label>
                         <input type="text" name="service_args" id="editServiceArgs" placeholder="e.g. 41805" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
                         <small style="color: var(--text-secondary); font-size: 0.8rem;">Arguments to pass to the plugin</small>
                     </div>
