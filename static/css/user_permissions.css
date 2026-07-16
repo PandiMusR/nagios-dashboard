@@ -1,5 +1,5 @@
 .section-card {
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 16px;
         padding: 2rem;
         margin-bottom: 2rem;
@@ -80,7 +80,7 @@
         display: flex;
     }
     .modal-content {
-        background: white;
+        background: var(--bg-secondary);
         padding: 2rem;
         border-radius: 16px;
         max-width: 800px;

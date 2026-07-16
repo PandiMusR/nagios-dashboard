@@ -17,7 +17,7 @@
         font-weight: 700;
     }
     .filters-section {
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 16px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         border: 1px solid var(--bg-tertiary);
@@ -52,7 +52,7 @@
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
     .table-section {
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 16px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         border: 1px solid var(--bg-tertiary);
@@ -209,7 +209,7 @@
         display: flex;
     }
     .modal-content {
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 16px;
         box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         width: 95%;
@@ -297,7 +297,7 @@
         max-width: 400px;
     }
     .notification-item {
-        background: white;
+        background: var(--bg-secondary);
         padding: 1.25rem;
         border-radius: 12px;
         margin-bottom: 0.75rem;

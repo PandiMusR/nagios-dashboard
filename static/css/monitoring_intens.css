@@ -1,5 +1,5 @@
 .monitor-card {
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 12px;
         padding: 1.5rem;
         margin-bottom: 1.5rem;
@@ -14,7 +14,7 @@
     .empty-state {
         text-align: center;
         padding: 3rem 2rem;
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 12px;
         color: var(--text-secondary);
     }

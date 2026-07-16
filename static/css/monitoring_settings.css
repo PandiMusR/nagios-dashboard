@@ -1,5 +1,5 @@
 .section-card {
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 16px;
         padding: 2rem;
         margin-bottom: 2rem;
@@ -207,7 +207,7 @@
     }
     .modal-card {
         width: min(100%, 520px);
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 16px;
         padding: 1.75rem;
         box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);

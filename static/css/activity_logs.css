@@ -1,5 +1,5 @@
 .section-card {
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 16px;
         padding: 2rem;
         margin-bottom: 2rem;
@@ -84,7 +84,7 @@
         border-radius: 8px;
         font-size: 0.85rem;
         font-family: inherit;
-        background: white;
+        background: var(--bg-secondary);
         cursor: pointer;
     }
     .log-toolbar select:focus {

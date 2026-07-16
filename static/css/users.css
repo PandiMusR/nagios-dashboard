@@ -1,5 +1,5 @@
 .section-card {
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 16px;
         padding: 2rem;
         margin-bottom: 2rem;

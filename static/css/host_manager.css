@@ -1,5 +1,5 @@
 .section-card {
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 16px;
         padding: 2rem;
         margin-bottom: 2rem;
@@ -151,7 +151,7 @@
         display: flex;
     }
     .modal-content {
-        background: white;
+        background: var(--bg-secondary);
         padding: 2rem;
         border-radius: 16px;
         max-width: 700px;
@@ -178,7 +178,7 @@
     .hosts-table {
         width: 100%;
         border-collapse: collapse;
-        background: white;
+        background: var(--bg-secondary);
         table-layout: fixed;
     }
     .hosts-table thead {

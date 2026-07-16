@@ -1,5 +1,5 @@
 .nagios-container {
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 16px;
         padding: 2rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -11,7 +11,7 @@
         height: 80vh;
         border: none;
         border-radius: 12px;
-        background: white;
+        background: var(--bg-secondary);
     }
     @media (max-width: 768px) {
         .nagios-frame {

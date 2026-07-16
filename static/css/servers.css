@@ -1,5 +1,5 @@
 .form-section {
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 16px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         border: 1px solid var(--bg-tertiary);
@@ -60,7 +60,7 @@
         transform: none;
     }
     .server-table-wrapper {
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 16px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         border: 1px solid var(--bg-tertiary);
@@ -174,7 +174,7 @@
         display: flex;
     }
     .modal-content {
-        background: white;
+        background: var(--bg-secondary);
         border-radius: 16px;
         box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         max-width: 90%;
@@ -245,7 +245,7 @@
         display: flex;
     }
     .loading-spinner {
-        background: white;
+        background: var(--bg-secondary);
         padding: 2rem;
         border-radius: 16px;
         text-align: center;

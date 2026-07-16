@@ -12,7 +12,7 @@
             justify-content: center;
         }
         .setup-container {
-            background: white;
+            background: var(--bg-secondary);
             padding: 40px;
             border-radius: 10px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);

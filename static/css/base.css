@@ -516,6 +516,22 @@
         /* Fix images */
         [data-theme="dark"] img { background: transparent !important; }
 
+        /* === CATCH-ALL — force dark bg on any white elements not yet using vars === */
+        [data-theme="dark"] .table-section,
+        [data-theme="dark"] .section-card,
+        [data-theme="dark"] .stat-card,
+        [data-theme="dark"] .settings-section,
+        [data-theme="dark"] .backup-section,
+        [data-theme="dark"] .tunnel-info { background: var(--bg-secondary) !important; color: var(--text-primary) !important; border-color: var(--border-color) !important; }
+        [data-theme="dark"] table { background: var(--bg-secondary) !important; color: var(--text-primary) !important; }
+        [data-theme="dark"] td { color: var(--text-primary) !important; border-color: var(--table-row-border) !important; }
+        [data-theme="dark"] .table { background: var(--bg-secondary) !important; }
+        [data-theme="dark"] .monitor-card,
+        [data-theme="dark"] .kuma-card { background: var(--bg-secondary) !important; border-color: var(--border-color) !important; }
+        [data-theme="dark"] .permissions-section,
+        [data-theme="dark"] .user-section { background: var(--bg-secondary) !important; }
+        [data-theme="dark"] .filter-group select { background: var(--bg-secondary) !important; color: var(--text-primary) !important; }
+
         /* === DASHBOARD SPECIFIC === */
         [data-theme="dark"] .dashboard-header {
             background: linear-gradient(135deg, #4e54c8 0%, #00f2fe 100%) !important;
