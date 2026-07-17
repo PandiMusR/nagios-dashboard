@@ -530,6 +530,37 @@
         [data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--input-border) !important; }
         [data-theme="dark"] ::-webkit-scrollbar-track { background: var(--bg-secondary) !important; }
 
+        /* Bootstrap dropdowns */
+        [data-theme="dark"] .dropdown-menu {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+        [data-theme="dark"] .dropdown-item {
+            color: var(--text-primary) !important;
+        }
+        [data-theme="dark"] .dropdown-item:hover,
+        [data-theme="dark"] .dropdown-item:focus {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+        [data-theme="dark"] .dropdown-item.active,
+        [data-theme="dark"] .dropdown-item:active {
+            background-color: var(--color-primary) !important;
+            color: white !important;
+        }
+        [data-theme="dark"] .dropdown-divider {
+            border-color: var(--border-color) !important;
+        }
+        [data-theme="dark"] .dropdown-header {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Bootstrap close button */
+        [data-theme="dark"] .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
         /* Fix code blocks */
         [data-theme="dark"] pre, [data-theme="dark"] code { background: var(--bg-primary) !important; color: var(--text-primary) !important; }
 
