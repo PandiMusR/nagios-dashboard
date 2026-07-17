@@ -35,7 +35,7 @@
     }
     .filter-group label {
         font-weight: 600;
-        color: var(--bg-tertiary);
+        color: var(--text-secondary);
         margin-bottom: 0.5rem;
         font-size: 0.9rem;
     }
@@ -257,7 +257,7 @@
     .form-group label {
         display: block;
         font-weight: 600;
-        color: var(--bg-tertiary);
+        color: var(--text-secondary);
         margin-bottom: 0.5rem;
     }
     .form-group input,

@@ -38,6 +38,18 @@
         }
         initDarkMode();
 
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'theme') {
+                if (e.newValue === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                    updateDarkModeIcon(true);
+                } else {
+                    document.documentElement.removeAttribute('data-theme');
+                    updateDarkModeIcon(false);
+                }
+            }
+        });
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const content = document.getElementById('content');
