@@ -3,7 +3,7 @@
         border-radius: 16px;
         padding: 2rem;
         margin-bottom: 2rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
         border: 1px solid var(--bg-tertiary);
     }
     .section-card h3 {
@@ -61,7 +61,7 @@
     }
     .btn-primary:hover {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        box-shadow: var(--shadow-info);
     }
     .modal {
         display: none;
@@ -87,7 +87,7 @@
         width: 95%;
         max-height: 90vh;
         overflow-y: auto;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        box-shadow: var(--shadow-lg);
         margin: 20px auto;
     }
     .modal-content h3 {

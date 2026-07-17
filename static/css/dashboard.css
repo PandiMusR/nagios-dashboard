@@ -11,14 +11,14 @@
     .server-card {
         background: var(--bg-secondary);
         border-radius: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
         border: 1px solid var(--bg-tertiary);
         padding: 1.5rem;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         animation: slideUp 0.4s ease;
     }
     .server-card:hover {
-        box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+        box-shadow: var(--shadow-lg);
         transform: translateY(-4px);
     }
     @keyframes slideUp {
@@ -46,7 +46,7 @@
     }
     .btn-open:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
+        box-shadow: var(--shadow-primary);
     }
     .resource-grid {
         display: grid;

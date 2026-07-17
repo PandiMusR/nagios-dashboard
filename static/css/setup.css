@@ -15,7 +15,7 @@
             background: var(--bg-secondary);
             padding: 40px;
             border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            box-shadow: var(--shadow-md);
             width: 100%;
             max-width: 450px;
         }

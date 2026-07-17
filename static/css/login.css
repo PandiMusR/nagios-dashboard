@@ -68,7 +68,7 @@
         .login-container {
             background: var(--bg-secondary);
             border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: var(--shadow-lg);
             padding: 50px 40px;
             width: 100%;
             max-width: 450px;
@@ -145,7 +145,7 @@
         .form-group input:focus {
             outline: none;
             border-color: var(--color-primary);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+            box-shadow: var(--shadow-focus);
         }
 
         .form-actions {
@@ -168,7 +168,7 @@
 
         .form-actions button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: var(--shadow-primary);
         }
 
         .form-actions button:active {

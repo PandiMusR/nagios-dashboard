@@ -3,7 +3,7 @@
         border-radius: 16px;
         padding: 2rem;
         margin-bottom: 2rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
         border: 1px solid var(--bg-tertiary);
         transition: all 0.3s;
     }
@@ -40,25 +40,25 @@
     }
     .btn-primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+        box-shadow: var(--shadow-primary);
     }
     .btn-success {
         background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-dark) 100%);
     }
     .btn-success:hover {
-        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+        box-shadow: var(--shadow-success);
     }
     .btn-info {
         background: linear-gradient(135deg, var(--color-info) 0%, var(--color-info) 100%);
     }
     .btn-info:hover {
-        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+        box-shadow: var(--shadow-info);
     }
     .btn-danger {
         background: linear-gradient(135deg, var(--color-danger-alt) 0%, var(--color-danger-dark) 100%);
     }
     .btn-danger:hover {
-        box-shadow: 0 6px 20px rgba(220, 38, 38, 0.3);
+        box-shadow: var(--shadow-danger);
     }
     .filter-bar-button-group {
         display: flex;
@@ -104,7 +104,7 @@
     .form-group textarea:focus {
         outline: none;
         border-color: var(--color-primary);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        box-shadow: var(--shadow-focus);
     }
     .filter-bar {
         display: grid;
@@ -158,7 +158,7 @@
         width: 95%;
         max-height: 90vh;
         overflow-y: auto;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        box-shadow: var(--shadow-lg);
         margin: 20px auto;
     }
     .modal-content h3 {
