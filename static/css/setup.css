@@ -5,7 +5,7 @@
         }
         body {
             font-family: Arial, sans-serif;
-            background: #f0f4f8;
+            background: var(--bg-primary);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -63,7 +63,7 @@
             margin-top: 10px;
         }
         button:hover {
-            background: #2563eb;
+            background: var(--color-info-dark);
         }
         .error {
             background: var(--alert-error-bg);
