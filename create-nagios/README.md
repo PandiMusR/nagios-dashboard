@@ -1,8 +1,8 @@
 # Nagios Docker dengan LDAP Authentication
 
-Docker setup untuk Nagios dengan Apache LDAP authentication.
+Docker setup untuk Nagios + Apache LDAP auth. Volume base: `/svr/<name>/` (sengaja hardcoded di ops ini).
 
-## Struktur File
+## Struktur
 
 ```
 create-nagios/
@@ -14,74 +14,43 @@ create-nagios/
 └── README.md
 ```
 
-## Cara Menggunakan
+## Cara pakai
 
-### Opsi 1: Menggunakan build.sh (Recommended)
+### Opsi 1: `build.sh` (recommended)
 
 ```bash
-cd /svr/create-nagios
+cd /svr/create-nagios   # atau path setara di environment
 ./build.sh <nama-container> <port>
+# contoh: ./build.sh Adiarsa 81
 ```
 
-Contoh:
-```bash
-./build.sh nagios1 81
-./build.sh nagios2 82
-./build.sh monitoring-prod 8080
-```
+Script: build image, buat `/svr/<nama>/etc/`, jalankan container.
 
-Script akan otomatis:
-- Build Docker image
-- Membuat folder `/svr/<nama-container>/etc/`
-- Menjalankan container dengan nama dan port yang ditentukan
-
-### Opsi 2: Menggunakan Docker Compose
+### Opsi 2: Docker Compose
 
 ```bash
 cd /svr/create-nagios
 docker-compose up -d
 ```
 
-### Opsi 3: Manual Build dan Run
+### Opsi 3: Manual
 
 ```bash
-cd /svr/create-nagios
-
-# Build image
 docker build -t nagios-ldap:latest .
-
-# Create volume directory
 mkdir -p /svr/nagios1/etc/
-
-# Run container
-docker run -d \
-  --name nagios1 \
+docker run -d --name nagios1 \
   -v /svr/nagios1/etc/:/opt/nagios/etc/ \
   -p 0.0.0.0:81:80 \
   nagios-ldap:latest
 ```
 
-## Akses Nagios
+## Akses & LDAP
 
-- URL: http://localhost:81/nagios
-- URL Alternatif: http://localhost:81/nagios_adiarsa
-
-## Konfigurasi LDAP
-
-- LDAP Server: ldap://172.17.0.1:1389
-- Base DN: ou=users,dc=bnet,dc=id
-- Bind DN: cn=admin,dc=bnet,dc=id
-- Required Group: cn=nagiosadmins,ou=groups,dc=bnet,dc=id
-
-## Menghentikan Container
+- URL: `http://<host>:<port>/nagios`
+- LDAP (default template): `ldap://172.17.0.1:1389`, base `ou=users,dc=bnet,dc=id`, group `cn=nagiosadmins,ou=groups,dc=bnet,dc=id`
+- Prod Docker biasanya butuh `sudo` (user `rif`)
 
 ```bash
-docker stop nagios1
-docker rm nagios1
-```
-
-## Melihat Logs
-
-```bash
-docker logs -f nagios1
+docker logs -f <nama>
+docker stop <nama> && docker rm <nama>
 ```

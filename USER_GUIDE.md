@@ -39,7 +39,7 @@ Panduan lengkap penggunaan Nagios Dashboard untuk tim operasional.
   - [Backup & Restore](#backup--restore-1)
   - [Uptime Kuma Integration](#uptime-kuma-integration)
   - [API Key](#api-key)
-  - [Activity Logs](#activity-logs)
+  - [Activity Logs (link ke Audit)](#activity-logs)
 - [Monitoring Intens (Uptime Kuma)](#monitoring-intens-uptime-kuma)
 - [Active Users](#active-users)
 - [Audit](#audit)

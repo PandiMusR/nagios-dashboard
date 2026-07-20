@@ -546,7 +546,8 @@ nagiosDashboard/
 ├── README.md
 ├── USER_GUIDE.md                # End-user guide (Bahasa Indonesia)
 ├── AGENTS.md                    # AI agent context (architecture, conventions, deployment)
-├── IMPROVEMENT_PLAN.md          # Development roadmap, QA review, technical debt
+├── IMPROVEMENT_PLAN.md          # Compact living backlog (open items only)
+├── TRENDS_DUMMY_GUIDE.md        # Demo-only Nagios trends injection
 │
 ├── services/                    # Service modules
 │   ├── config.py                # Centralized constants (APP_ROOT auto-detect, LDAP, paths, stages)

@@ -1,6 +1,9 @@
 # Nagios Trends Dummy Injection Guide
 
-Panduan untuk membuat data Trends palsu di Nagios untuk keperluan demo. Teknik ini meng-inject log entries ke archive logs Nagios sehingga `trends.cgi` menampilkan history seolah-olah host sudah monitored selama periode tertentu.
+**Status:** demo/ops reference only (not app runtime docs).  
+**Prod SSH:** `ssh -p 2325 rif@103.73.74.98` — Docker via sudo. Alpine containers: prefer **Python** over BusyBox `sed` for file edits. **Always backup** status/retention/archives before inject.
+
+Panduan membuat data Trends palsu di Nagios untuk demo: inject log ke archive logs agar `trends.cgi` menampilkan history seolah host sudah dimonitor.
 
 ---
 

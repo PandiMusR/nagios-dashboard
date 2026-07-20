@@ -108,27 +108,23 @@ nagiosDashboard/
 │   └── docker-compose.yml    # Alternative Docker Compose setup
 │
 ├── static/
-│   └── assets/
-│       └── img/              # Application icon (icon.png)
+│   ├── css/                  # base.css + per-page CSS (load page CSS via extra_css head block)
+│   ├── js/                   # app.js + per-page JS
+│   └── assets/img/           # Application icon (icon.png)
 │
-└── templates/                # Jinja2 HTML templates
-    ├── base.html             # Layout: navbar, sidebar (with Audit submenu), dark mode scaffolding
-    ├── login.html            # Login page
-    ├── setup.html            # First-time admin account creation
-    ├── dashboard.html        # Main dashboard with server cards
-    ├── servers.html          # Server management page
-    ├── host_manager.html     # Host CRUD page
-    ├── monitoring.html       # Live monitoring + stage system + notes + batch ops + export CSV
-    ├── monitoring_intens.html# Uptime Kuma monitors page
-    ├── monitoring_settings.html # Category/server mapping, alarms, CR auto-reset config
-    ├── users.html            # User management page
-    ├── user_permissions.html # Permission management with CR View Only toggle
-    ├── global_settings.html  # Global config, backup, API key, activity logs
-    ├── active_users.html     # Active users page (admin only, hidden)
-    ├── activity_logs.html    # Standalone activity logs page (under Audit menu)
-    ├── stage_history.html    # Stage change history with filters (under Audit menu)
-    ├── edit_config.html      # Raw Nagios config editor
-    └── nagios_view.html      # Embedded Nagios UI via proxy
+├── templates/                # Jinja2 HTML templates
+│   ├── base.html             # Layout: navbar, sidebar (Audit), dark mode, {% block extra_css %}
+│   ├── login.html / setup.html
+│   ├── dashboard.html / servers.html / host_manager.html / monitoring.html
+│   ├── monitoring_settings.html  # modern settings UI (ms-*)
+│   ├── global_settings.html      # modern settings UI (gs-*); Activity Logs linkout only
+│   ├── users.html / user_permissions.html / active_users.html
+│   ├── activity_logs.html / stage_history.html
+│   ├── monitoring_intens.html / edit_config.html / nagios_view.html
+│   └── …
+│
+├── AGENTS.md / README.md / USER_GUIDE.md / IMPROVEMENT_PLAN.md / TRENDS_DUMMY_GUIDE.md
+└── create-nagios/README.md
 ```
 
 ---
@@ -460,15 +456,15 @@ Tamelang-Cilamaya, Klari, Niaga, Bhome
 
 ## Known Issues and Technical Debt
 
-See `IMPROVEMENT_PLAN.md` for full details. Key items:
+See `IMPROVEMENT_PLAN.md` for the living backlog. Current highlights:
 
-1. **CSRF protection:** Implemented via Flask-WTF (Phase 1). `WTF_CSRF_TIME_LIMIT = None`.
-2. **Docker volume paths hardcoded:** `/svr/<server>/` — intentional, not planned to change
-3. **`monitoring_config.json`:** Contains hardcoded sound file paths — needs migration script if relocated
-4. **Dark mode:** Scaffolding in `base.html` but button is disabled (needs color refinement)
-5. **SQLite migration:** Not yet started — file-based JSON storage still in use
-6. **Race condition in stage tracking:** Not yet addressed (Phase 3.5 — user to decide)
-7. **Connection pooling for Nagios CGI:** Not yet implemented (Phase 3.9 — user to decide)
+1. **Docker volume paths hardcoded:** `/svr/<server>/` — intentional for this topology
+2. **`monitoring_config.json`:** may contain host-local sound file paths after upload
+3. **SQLite migration:** not started — flat JSON still in use
+4. **Stage race / CGI connection pooling:** optional reliability work (user-decide)
+5. **UI polish residual:** intens/edit_config tokens, shared form primitives, a11y depth
+
+Done recently (2026-07-21): theme Batch A/B, monitoring-settings + global-settings redesigns, Activity Logs under Audit only, UI-only prod deploys with config PRE==POST.
 
 ---
 
@@ -477,12 +473,14 @@ See `IMPROVEMENT_PLAN.md` for full details. Key items:
 - **Do NOT add comments** to code unless explicitly asked
 - **Do NOT commit** unless explicitly asked
 - **Production uses OpenRC**, not systemd (`rc-service`, not `systemctl`)
-- **Config directory is gitignored** — contains credentials and instance-specific data
-- **`IMPROVEMENT_PLAN.md`** is tracked in git — contains development roadmap and QA review results
+- **Config directory is gitignored** — credentials and instance-specific data
+- **`IMPROVEMENT_PLAN.md`** — compact backlog only (not a session log dump)
 - **Session passwords** are Fernet-encrypted — never log or expose them
-- **All `log_activity()` calls** have been audited — no credentials logged
-- **Dark mode** scaffolding exists in `base.html` but button is disabled (needs color refinement)
-- **Sound files** are uploaded per-deployment via Monitoring Settings UI
-- **Nagios Trends** are built from log archives (`/opt/nagios/var/archives/`), not config files. To fake historical data for demos, inject `CURRENT HOST STATE` entries into archive logs + update `last_state_change`/`last_hard_state_change` in `status.dat` and `retention.dat` via Python script inside container. Always backup before modifying. See `TRENDS_DUMMY_GUIDE.md` for full guide.
-- **Nagios container internals:** Archives at `/opt/nagios/var/archives/`, status at `/opt/nagios/var/status.dat`, retention at `/opt/nagios/var/retention.dat`. Alpine Linux containers use BusyBox sed — use Python for file modifications.
-- **Venv note:** If venv pip has broken shebang (points to non-existent path), recreate with `rm -rf venv && python3 -m venv venv` then `pip install -r requirements.txt`
+- **Activity Logs UI** is **Audit → Activity Logs** only (not Global Settings)
+- **Page CSS** load via `{% block extra_css %}` in `base.html` head + `?v=` after redesigns
+- **UI-only prod deploy** never copies `config/`; always MD5 PRE/POST config + local==prod UI
+- **Sound files** uploaded per-deployment via Monitoring Settings UI
+- **Nagios Trends** come from log archives + status/retention timestamps. Demo injection: see `TRENDS_DUMMY_GUIDE.md` (always backup first). Alpine BusyBox sed is fragile — use Python inside containers.
+- **Container paths:** archives `/opt/nagios/var/archives/`, status `/opt/nagios/var/status.dat`, retention `/opt/nagios/var/retention.dat`
+- **Venv note:** broken shebang → `rm -rf venv && python3 -m venv venv && pip install -r requirements.txt`
+- **Dev Waitress:** restart after major template class renames (stale Jinja)
