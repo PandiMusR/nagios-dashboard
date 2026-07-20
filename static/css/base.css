@@ -472,7 +472,7 @@
         [data-theme="dark"] h4, [data-theme="dark"] h5, [data-theme="dark"] h6 { color: var(--text-primary) !important; }
         [data-theme="dark"] p, [data-theme="dark"] label { color: var(--text-primary) !important; }
         [data-theme="dark"] small { color: var(--text-muted) !important; }
-        [data-theme="dark"] a { color: var(--color-primary-light) !important; }
+        [data-theme="dark"] a { color: var(--color-primary) !important; }
         [data-theme="dark"] hr { border-color: var(--input-border) !important; }
 
         /* Inputs */
@@ -481,7 +481,7 @@
         [data-theme="dark"] select { background: var(--bg-primary) !important; color: var(--text-primary) !important; border-color: var(--input-border) !important; }
         [data-theme="dark"] input:focus,
         [data-theme="dark"] textarea:focus,
-        [data-theme="dark"] select:focus { border-color: var(--color-primary-light) !important; box-shadow: 0 0 0 3px rgba(129,140,248,0.2) !important; }
+        [data-theme="dark"] select:focus { border-color: var(--color-primary) !important; box-shadow: 0 0 0 3px rgba(129,140,248,0.2) !important; }
         [data-theme="dark"] input[readonly] { background: var(--bg-tertiary) !important; }
 
         /* Tables */
@@ -493,8 +493,8 @@
         [data-theme="dark"] .sidebar-menu a,
         [data-theme="dark"] .sidebar-menu .menu-toggle { color: var(--text-muted) !important; background: transparent !important; }
         [data-theme="dark"] .sidebar-menu a:hover,
-        [data-theme="dark"] .sidebar-menu .menu-toggle:hover { background: var(--bg-tertiary) !important; color: var(--color-primary-light) !important; }
-        [data-theme="dark"] .sidebar-menu a.active { background: var(--color-primary-darker) !important; color: var(--color-primary-light) !important; }
+        [data-theme="dark"] .sidebar-menu .menu-toggle:hover { background: var(--bg-tertiary) !important; color: var(--color-primary) !important; }
+        [data-theme="dark"] .sidebar-menu a.active { background: var(--color-primary-darker) !important; color: var(--color-primary) !important; }
         [data-theme="dark"] .sidebar::-webkit-scrollbar-thumb { background: var(--input-border) !important; }
 
         /* Navbar (gradient — keep brand colors) */

@@ -103,4 +103,4 @@
     }
     .log-stats span { display: flex; align-items: center; gap: 0.4rem; }
     .log-stats i { font-size: 0.8rem; }
-    [data-theme="dark"] .activity-log-container { background: #0f172a !important; color: var(--border-color) !important; border-color: var(--bg-tertiary) !important; }
+    [data-theme="dark"] .activity-log-container { background: var(--bg-primary) !important; color: var(--text-primary) !important; border-color: var(--border-color) !important; }
