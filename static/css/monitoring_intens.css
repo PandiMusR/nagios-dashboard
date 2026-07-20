@@ -3,12 +3,12 @@
         border-radius: 12px;
         padding: 1.5rem;
         margin-bottom: 1.5rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
         border: 1px solid var(--bg-tertiary);
         transition: all 0.3s ease;
     }
     .monitor-card:hover {
-        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        box-shadow: var(--shadow-md);
         transform: translateY(-2px);
     }
     .empty-state {
@@ -39,13 +39,13 @@
     }
     .btn-primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+        box-shadow: var(--shadow-primary);
     }
     .btn-danger {
         background: linear-gradient(135deg, var(--color-danger-alt) 0%, var(--color-danger-dark) 100%);
     }
     .btn-danger:hover {
-        box-shadow: 0 6px 20px rgba(220, 38, 38, 0.3);
+        box-shadow: var(--shadow-danger);
     }
     .ping-value {
         font-size: 0.9rem;

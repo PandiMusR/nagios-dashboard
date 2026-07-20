@@ -1,7 +1,7 @@
 .form-section {
         background: var(--bg-secondary);
         border-radius: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
         border: 1px solid var(--bg-tertiary);
         padding: 2rem;
         margin-bottom: 2rem;
@@ -37,7 +37,7 @@
     .form-group input:focus {
         outline: none;
         border-color: var(--color-primary);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        box-shadow: var(--shadow-focus);
     }
     .btn-primary {
         background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
@@ -52,7 +52,7 @@
     }
     .btn-primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
+        box-shadow: var(--shadow-primary);
     }
     .btn-primary:disabled {
         opacity: 0.6;
@@ -62,7 +62,7 @@
     .server-table-wrapper {
         background: var(--bg-secondary);
         border-radius: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
         border: 1px solid var(--bg-tertiary);
         overflow: hidden;
     }
@@ -98,7 +98,7 @@
     .btn-info { background: var(--color-info); color: white; }
     .btn-sm:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        box-shadow: var(--shadow-sm);
     }
     .servers-table {
         width: 100%;
@@ -176,7 +176,7 @@
     .modal-content {
         background: var(--bg-secondary);
         border-radius: 16px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        box-shadow: var(--shadow-lg);
         max-width: 90%;
         max-height: 85vh;
         overflow-y: auto;
@@ -249,7 +249,7 @@
         padding: 2rem;
         border-radius: 16px;
         text-align: center;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        box-shadow: var(--shadow-lg);
     }
     .spinner {
         width: 50px;

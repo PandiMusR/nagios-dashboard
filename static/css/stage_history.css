@@ -3,7 +3,7 @@
         border-radius: 16px;
         padding: 2rem;
         margin-bottom: 2rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
         border: 1px solid var(--bg-tertiary);
     }
     .section-card h3 {
@@ -38,7 +38,7 @@
     .form-group select:focus {
         outline: none;
         border-color: var(--color-primary);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        box-shadow: var(--shadow-focus);
     }
     .form-grid {
         display: grid;
@@ -59,7 +59,7 @@
         align-items: center;
         gap: 0.5rem;
     }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-primary); }
     .btn-secondary {
         background: var(--text-muted);
         color: white;
@@ -75,7 +75,7 @@
         align-items: center;
         gap: 0.5rem;
     }
-    .btn-secondary:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+    .btn-secondary:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
     .history-table {
         width: 100%;
         border-collapse: collapse;

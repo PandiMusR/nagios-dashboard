@@ -2,7 +2,7 @@
         background: var(--bg-secondary);
         border-radius: 16px;
         padding: 2rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
         border: 1px solid var(--bg-tertiary);
         overflow: hidden;
     }

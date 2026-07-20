@@ -3,7 +3,7 @@
         border-radius: 16px;
         padding: 2rem;
         margin-bottom: 2rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
         border: 1px solid var(--bg-tertiary);
     }
     .section-card h3 {
@@ -43,7 +43,7 @@
     .form-group select:focus {
         outline: none;
         border-color: var(--color-primary);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        box-shadow: var(--shadow-focus);
     }
     .permissions-section {
         padding: 1.5rem;
@@ -97,7 +97,7 @@
     }
     .btn-primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+        box-shadow: var(--shadow-primary);
     }
     .users-table {
         width: 100%;
@@ -147,13 +147,13 @@
     }
     .btn-sm:hover {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        box-shadow: var(--shadow-info);
     }
     .btn-delete {
         background: var(--color-danger-alt);
     }
     .btn-delete:hover {
-        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        box-shadow: var(--shadow-danger);
     }
     @media (max-width: 768px) {
         .form-grid {

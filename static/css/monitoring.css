@@ -19,7 +19,7 @@
     .filters-section {
         background: var(--bg-secondary);
         border-radius: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
         border: 1px solid var(--bg-tertiary);
         padding: 2rem;
         margin-bottom: 2rem;
@@ -35,7 +35,7 @@
     }
     .filter-group label {
         font-weight: 600;
-        color: var(--bg-tertiary);
+        color: var(--text-secondary);
         margin-bottom: 0.5rem;
         font-size: 0.9rem;
     }
@@ -49,12 +49,12 @@
     .filter-group select:focus {
         outline: none;
         border-color: var(--color-primary);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        box-shadow: var(--shadow-focus);
     }
     .table-section {
         background: var(--bg-secondary);
         border-radius: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
         border: 1px solid var(--bg-tertiary);
         overflow: hidden;
     }
@@ -83,7 +83,7 @@
     }
     .btn-batch-ack:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
+        box-shadow: var(--shadow-primary);
     }
     .hosts-table {
         width: 100%;
@@ -164,7 +164,7 @@
     }
     .btn-stage:hover {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(79,70,229,0.35);
+        box-shadow: var(--shadow-primary);
     }
 
     /* Stage radio buttons */
@@ -211,7 +211,7 @@
     .modal-content {
         background: var(--bg-secondary);
         border-radius: 16px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        box-shadow: var(--shadow-lg);
         width: 95%;
         max-width: 500px;
         animation: slideUp 0.3s ease;
@@ -257,7 +257,7 @@
     .form-group label {
         display: block;
         font-weight: 600;
-        color: var(--bg-tertiary);
+        color: var(--text-secondary);
         margin-bottom: 0.5rem;
     }
     .form-group input,
@@ -274,7 +274,7 @@
     .form-group textarea:focus {
         outline: none;
         border-color: var(--color-primary);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        box-shadow: var(--shadow-focus);
     }
     .btn-sm {
         padding: 0.75rem 1.25rem;
@@ -288,7 +288,7 @@
     .btn-primary { background: var(--color-primary); color: white; }
     .btn-secondary { background: var(--text-muted); color: white; }
     .btn-primary:hover { background: var(--color-primary-dark); transform: translateY(-2px); }
-    .btn-secondary:hover { background: #78716c; transform: translateY(-2px); }
+    .btn-secondary:hover { background: var(--color-gray); transform: translateY(-2px); }
     .notification-toast {
         position: fixed;
         top: 20px;
@@ -301,7 +301,7 @@
         padding: 1.25rem;
         border-radius: 12px;
         margin-bottom: 0.75rem;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        box-shadow: var(--shadow-md);
         border-left: 4px solid;
         animation: slideIn 0.3s ease-out;
     }
