@@ -7,7 +7,8 @@
     --ms-radius: 16px;
     --ms-radius-sm: 12px;
     --ms-gap: 1rem;
-    max-width: 1120px;
+    width: 100%;
+    max-width: none;
 }
 
 /* Hero */
