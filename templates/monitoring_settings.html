@@ -3,361 +3,459 @@
 {% block content %}
 <link rel="stylesheet" href="/static/css/monitoring_settings.css">
 
-<div class="page-header">
-    <h1><i class="fas fa-sliders-h"></i> Monitoring Settings</h1>
-    <p>Kelola kategori, mapping server, alarm, dan CR auto-reset</p>
-</div>
-
-<nav class="settings-nav" aria-label="Sections">
-    <a href="#refresh-interval"><i class="fas fa-clock"></i><span>Refresh</span></a>
-    <a href="#categories"><i class="fas fa-folder"></i><span>Categories</span><em>{{ categories|length }}</em></a>
-    <a href="#server-mappings"><i class="fas fa-sitemap"></i><span>Mappings</span></a>
-    <a href="#alarms"><i class="fas fa-bell"></i><span>Alarms</span></a>
-</nav>
-
-<section class="section-card section-compact" id="refresh-interval">
-    <div class="compact-row">
-        <div class="compact-copy">
-            <div class="section-kicker"><i class="fas fa-clock"></i> Global</div>
-            <h3>Refresh Interval</h3>
-            <p class="section-desc">Seberapa sering halaman monitoring me-refresh data host.</p>
+<div class="ms-page">
+    <header class="ms-hero page-header">
+        <div class="ms-hero-copy">
+            <p class="ms-eyebrow"><i class="fas fa-sliders-h"></i> Configuration</p>
+            <h1>Monitoring Settings</h1>
+            <p>Atur kategori monitoring, mapping server Nagios, alarm suara, dan jadwal CR auto-reset — tanpa mengubah alur kerja yang sudah ada.</p>
         </div>
-        <form method="POST" action="/monitoring-settings/update-config" class="compact-form">
+        <div class="ms-hero-stats" aria-label="Overview">
+            <div class="ms-stat">
+                <span class="ms-stat-value">{{ categories|length }}</span>
+                <span class="ms-stat-label">Categories</span>
+            </div>
+            <div class="ms-stat">
+                <span class="ms-stat-value">{{ nagios_servers_list|length }}</span>
+                <span class="ms-stat-label">Servers</span>
+            </div>
+            <div class="ms-stat">
+                <span class="ms-stat-value">{{ monitoring_config.get('refresh_interval', 30) }}s</span>
+                <span class="ms-stat-label">Refresh</span>
+            </div>
+        </div>
+    </header>
+
+    <nav class="ms-tabs" aria-label="Sections">
+        <a class="ms-tab" href="#refresh-interval"><i class="fas fa-clock"></i><span>Interval</span></a>
+        <a class="ms-tab" href="#categories"><i class="fas fa-folder"></i><span>Categories</span><em>{{ categories|length }}</em></a>
+        <a class="ms-tab" href="#server-mappings"><i class="fas fa-sitemap"></i><span>Mappings</span></a>
+        <a class="ms-tab" href="#alarms"><i class="fas fa-bell"></i><span>Alarms</span></a>
+    </nav>
+
+    <section class="ms-card" id="refresh-interval">
+        <div class="ms-card-head">
+            <div>
+                <p class="ms-kicker"><i class="fas fa-sync-alt"></i> Retention &amp; Intervals</p>
+                <h2>Refresh Interval</h2>
+                <p class="ms-sub">Seberapa sering live monitoring mengambil data host terbaru dari semua server ter-map.</p>
+            </div>
+        </div>
+        <form method="POST" action="/monitoring-settings/update-config" class="ms-inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="form-group mb-0">
-                <label for="refresh_interval">Seconds</label>
-                <div class="input-action">
+            <div class="ms-field">
+                <label for="refresh_interval">Interval (seconds)</label>
+                <div class="ms-input-group">
+                    <span class="ms-input-icon" aria-hidden="true"><i class="fas fa-hourglass-half"></i></span>
                     <input type="number" id="refresh_interval" name="refresh_interval" value="{{ monitoring_config.get('refresh_interval', 30) }}" min="5" max="300" required>
-                    <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save</button>
+                    <span class="ms-input-suffix">sec</span>
+                    <button type="submit" class="ms-btn ms-btn-primary"><i class="fas fa-save"></i> Save</button>
                 </div>
+                <p class="ms-hint">Min 5 · Max 300. Nilai tipikal NOC: 15–60 detik.</p>
             </div>
         </form>
-    </div>
-</section>
+    </section>
 
-<section class="section-card" id="categories">
-    <div class="section-header">
-        <div>
-            <div class="section-kicker"><i class="fas fa-folder-open"></i> Structure</div>
-            <h3>Categories</h3>
-            <p class="section-desc">Kelompok monitoring yang muncul di sidebar. Edit source status atau hapus kategori di sini.</p>
+    <section class="ms-card" id="categories">
+        <div class="ms-card-head ms-card-head-split">
+            <div>
+                <p class="ms-kicker"><i class="fas fa-layer-group"></i> Structure</p>
+                <h2>Monitoring Categories</h2>
+                <p class="ms-sub">Kategori muncul di menu Monitoring. Source status menentukan apakah detail host atau service yang ditampilkan.</p>
+            </div>
+            <button type="button" class="ms-btn ms-btn-primary" onclick="openAddCategoryModal()">
+                <i class="fas fa-plus"></i> Add Category
+            </button>
         </div>
-        <button type="button" class="btn-primary" onclick="openAddCategoryModal()">
-            <i class="fas fa-plus"></i> Add Category
-        </button>
-    </div>
 
-    {% if categories %}
-    <div class="category-list">
-        {% for category in categories %}
-        <article class="category-item">
-            <div class="category-top">
-                <div class="category-identity">
-                    <div class="category-avatar"><i class="fas fa-folder"></i></div>
-                    <div>
-                        <h4>{{ category|title }}</h4>
-                        <code class="slug-chip">{{ category }}</code>
+        {% if categories %}
+        <div class="ms-cat-grid">
+            {% for category in categories %}
+            {% set mapped = server_mappings.get(category, [])|length %}
+            {% set use_svc = monitoring_config.get('category_settings', {}).get(category, {}).get('use_service_plugin') %}
+            <article class="ms-cat-card">
+                <div class="ms-cat-top">
+                    <div class="ms-cat-id">
+                        <div class="ms-cat-icon"><i class="fas fa-folder"></i></div>
+                        <div>
+                            <h3>{{ category|title }}</h3>
+                            <code class="ms-code">{{ category }}</code>
+                        </div>
                     </div>
+                    <a href="/monitoring/{{ category }}" class="ms-btn ms-btn-ghost" title="Open monitoring page">
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
                 </div>
-                <a href="/monitoring/{{ category }}" class="btn-ghost" title="Open monitoring page">
-                    <i class="fas fa-external-link-alt"></i> Open
-                </a>
-            </div>
 
-            <div class="category-meta">
-                <span class="meta-badge"><i class="fas fa-server"></i> {{ server_mappings.get(category, [])|length }} server</span>
-                {% if monitoring_config.get('category_settings', {}).get(category, {}).get('use_service_plugin') %}
-                <span class="meta-badge service"><i class="fas fa-plug"></i> Service plugin</span>
-                {% else %}
-                <span class="meta-badge muted"><i class="fas fa-desktop"></i> Host plugin</span>
-                {% endif %}
-            </div>
+                <div class="ms-badge-row">
+                    <span class="ms-badge"><i class="fas fa-server"></i> {{ mapped }} server{{ '' if mapped == 1 else 's' }}</span>
+                    {% if use_svc %}
+                    <span class="ms-badge ms-badge-info"><i class="fas fa-plug"></i> Service plugin</span>
+                    {% else %}
+                    <span class="ms-badge ms-badge-muted"><i class="fas fa-desktop"></i> Host plugin</span>
+                    {% endif %}
+                </div>
 
-            <div class="category-actions">
-                <button type="button" class="btn-soft" onclick="editCategory('{{ category }}', {{ monitoring_config.get('category_settings', {}).get(category, {}).get('use_service_plugin', false)|tojson }})">
-                    <i class="fas fa-pen"></i> Edit source
-                </button>
-                <form method="POST" action="/monitoring-settings/delete/{{ category }}" class="inline-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn-soft danger" onclick="return confirm('Hapus kategori {{ category }}? Mapping &amp; alarm-nya ikut hilang.')">
-                        <i class="fas fa-trash"></i> Delete
+                <div class="ms-cat-actions">
+                    <button type="button" class="ms-btn ms-btn-secondary" onclick="editCategory('{{ category }}', {{ use_svc|tojson }})">
+                        <i class="fas fa-pen"></i> Edit source
                     </button>
-                </form>
-            </div>
-        </article>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <div class="empty-icon-wrap"><i class="fas fa-folder-plus"></i></div>
-        <h4>Belum ada kategori</h4>
-        <p>Buat kategori dulu, lalu mapping server Nagios ke kategori tersebut.</p>
-        <button type="button" class="btn-primary" onclick="openAddCategoryModal()"><i class="fas fa-plus"></i> Add Category</button>
-    </div>
-    {% endif %}
-</section>
-
-<section class="section-card" id="server-mappings">
-    <div class="section-header">
-        <div>
-            <div class="section-kicker"><i class="fas fa-link"></i> Connections</div>
-            <h3>Server Mappings</h3>
-            <p class="section-desc">Tentukan server mana yang masuk ke kategori mana. Satu server bisa di-map ke satu kategori.</p>
-        </div>
-    </div>
-
-    <form method="POST" action="/monitoring-settings/map-server" class="map-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="map-form-grid">
-            <div class="form-group mb-0">
-                <label for="map_server">Server</label>
-                <select id="map_server" name="server" required {% if not nagios_servers_list %}disabled{% endif %}>
-                    {% if nagios_servers_list %}
-                        {% for server in nagios_servers_list %}
-                        <option value="{{ server }}">{{ server }}</option>
-                        {% endfor %}
-                    {% else %}
-                        <option value="">No servers available</option>
-                    {% endif %}
-                </select>
-            </div>
-            <div class="form-group mb-0">
-                <label for="map_category">Category</label>
-                <select id="map_category" name="category" required {% if not categories %}disabled{% endif %}>
-                    {% if categories %}
-                        {% for category in categories %}
-                        <option value="{{ category }}">{{ category|title }}</option>
-                        {% endfor %}
-                    {% else %}
-                        <option value="">Create a category first</option>
-                    {% endif %}
-                </select>
-            </div>
-            <div class="map-form-action">
-                <button type="submit" class="btn-primary btn-block" {% if not categories or not nagios_servers_list %}disabled{% endif %}>
-                    <i class="fas fa-link"></i> Map Server
-                </button>
-            </div>
-        </div>
-    </form>
-
-    {% if categories %}
-    <div class="mapping-groups">
-        {% for category in categories %}
-        <div class="mapping-group">
-            <div class="mapping-group-header">
-                <div>
-                    <h4>{{ category|title }}</h4>
-                    <span class="subtle-count">{{ server_mappings.get(category, [])|length }} mapped</span>
-                </div>
-            </div>
-            {% if server_mappings.get(category) %}
-            <div class="mappings-grid">
-                {% for server in server_mappings[category] %}
-                <div class="mapping-badge">
-                    <i class="fas fa-server"></i>
-                    <span>{{ server }}</span>
-                    <form method="POST" action="/monitoring-settings/unmap-server" class="inline-form">
+                    <form method="POST" action="/monitoring-settings/delete/{{ category }}" class="ms-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="server" value="{{ server }}">
-                        <input type="hidden" name="category" value="{{ category }}">
-                        <button type="submit" class="chip-remove" title="Remove mapping" aria-label="Remove {{ server }}">
-                            <i class="fas fa-times"></i>
+                        <button type="submit" class="ms-btn ms-btn-danger-soft" onclick="return confirm('Hapus kategori {{ category }}? Mapping &amp; alarm-nya ikut hilang.')">
+                            <i class="fas fa-trash"></i> Delete
                         </button>
                     </form>
                 </div>
-                {% endfor %}
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="ms-empty">
+            <div class="ms-empty-icon"><i class="fas fa-folder-plus"></i></div>
+            <h3>Belum ada kategori</h3>
+            <p>Buat kategori dulu, lalu hubungkan server Nagios lewat Server Mappings.</p>
+            <button type="button" class="ms-btn ms-btn-primary" onclick="openAddCategoryModal()"><i class="fas fa-plus"></i> Add Category</button>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="ms-card" id="server-mappings">
+        <div class="ms-card-head">
+            <div>
+                <p class="ms-kicker"><i class="fas fa-project-diagram"></i> Connections</p>
+                <h2>Server Mappings</h2>
+                <p class="ms-sub">Hubungkan container Nagios ke kategori. Mapping menentukan data server mana yang muncul di halaman monitoring kategori.</p>
             </div>
-            {% else %}
-            <p class="empty-inline"><i class="fas fa-info-circle"></i> Belum ada server di kategori ini</p>
-            {% endif %}
         </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-state subtle">
-        <p>Mapping baru bisa dibuat setelah ada kategori.</p>
-    </div>
-    {% endif %}
-</section>
 
-<section class="section-card" id="alarms">
-    <div class="section-header">
-        <div>
-            <div class="section-kicker"><i class="fas fa-bell"></i> Per category</div>
-            <h3>Alarms &amp; CR Auto-Reset</h3>
-            <p class="section-desc">Buka kategori untuk atur suara alarm dan jadwal reset CR Verification → New.</p>
-        </div>
-    </div>
-
-    {% if categories %}
-    <div class="accordion" id="alarm-accordion">
-        {% for category in categories %}
-        {% set alarm = monitoring_config.get('alarm_settings', {}).get(category, {}) %}
-        {% set catset = monitoring_config.get('category_settings', {}).get(category, {}) %}
-        <details class="accordion-item" {% if loop.first %}open{% endif %}>
-            <summary class="accordion-summary">
-                <div class="accordion-summary-main">
-                    <span class="accordion-icon"><i class="fas fa-bell"></i></span>
-                    <div>
-                        <strong>{{ category|title }}</strong>
-                        <div class="accordion-tags">
-                            {% if alarm.get('alarm_down') %}<span class="tag danger">DOWN</span>{% endif %}
-                            {% if alarm.get('alarm_up') %}<span class="tag success">UP</span>{% endif %}
-                            {% if catset.get('cr_reset_interval_days', 0)|int > 0 %}
-                            <span class="tag info">Auto-reset {{ catset.get('cr_reset_interval_days') }}d</span>
+        <form method="POST" action="/monitoring-settings/map-server" class="ms-map-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="ms-map-grid">
+                <div class="ms-field">
+                    <label for="map_server">Server</label>
+                    <div class="ms-input-group">
+                        <span class="ms-input-icon" aria-hidden="true"><i class="fas fa-server"></i></span>
+                        <select id="map_server" name="server" required {% if not nagios_servers_list %}disabled{% endif %}>
+                            {% if nagios_servers_list %}
+                                {% for server in nagios_servers_list %}
+                                <option value="{{ server }}">{{ server }}</option>
+                                {% endfor %}
                             {% else %}
-                            <span class="tag muted">Auto-reset off</span>
+                                <option value="">No servers available</option>
                             {% endif %}
+                        </select>
+                    </div>
+                </div>
+                <div class="ms-field">
+                    <label for="map_category">Category</label>
+                    <div class="ms-input-group">
+                        <span class="ms-input-icon" aria-hidden="true"><i class="fas fa-folder"></i></span>
+                        <select id="map_category" name="category" required {% if not categories %}disabled{% endif %}>
+                            {% if categories %}
+                                {% for category in categories %}
+                                <option value="{{ category }}">{{ category|title }}</option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="">Create a category first</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                </div>
+                <div class="ms-map-submit">
+                    <button type="submit" class="ms-btn ms-btn-primary ms-btn-block" {% if not categories or not nagios_servers_list %}disabled{% endif %}>
+                        <i class="fas fa-link"></i> Map Server
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        {% if categories %}
+        <div class="ms-map-list">
+            {% for category in categories %}
+            <div class="ms-map-group">
+                <div class="ms-map-group-head">
+                    <h3>{{ category|title }}</h3>
+                    <span class="ms-badge ms-badge-muted">{{ server_mappings.get(category, [])|length }} mapped</span>
+                </div>
+                {% if server_mappings.get(category) %}
+                <div class="ms-chip-row">
+                    {% for server in server_mappings[category] %}
+                    <div class="ms-chip">
+                        <i class="fas fa-server"></i>
+                        <span>{{ server }}</span>
+                        <form method="POST" action="/monitoring-settings/unmap-server" class="ms-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="server" value="{{ server }}">
+                            <input type="hidden" name="category" value="{{ category }}">
+                            <button type="submit" class="ms-chip-x" title="Remove mapping" aria-label="Remove {{ server }}">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="ms-empty-inline"><i class="fas fa-info-circle"></i> Belum ada server di kategori ini</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="ms-empty ms-empty-soft">
+            <p>Mapping bisa dibuat setelah ada minimal satu kategori.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="ms-card" id="alarms">
+        <div class="ms-card-head">
+            <div>
+                <p class="ms-kicker"><i class="fas fa-bell"></i> Notification Thresholds &amp; Channels</p>
+                <h2>Alarms &amp; CR Auto-Reset</h2>
+                <p class="ms-sub">Per kategori: aktifkan alarm DOWN/UP + unggah suara, lalu atur jadwal reset otomatis stage CR Verification → New.</p>
+            </div>
+        </div>
+
+        {% if categories %}
+        <div class="ms-accordion" id="alarm-accordion">
+            {% for category in categories %}
+            {% set alarm = monitoring_config.get('alarm_settings', {}).get(category, {}) %}
+            {% set catset = monitoring_config.get('category_settings', {}).get(category, {}) %}
+            {% set reset_days = catset.get('cr_reset_interval_days', 0)|int %}
+            <details class="ms-acc" {% if loop.first %}open{% endif %}>
+                <summary class="ms-acc-sum">
+                    <div class="ms-acc-left">
+                        <span class="ms-acc-icon"><i class="fas fa-bell"></i></span>
+                        <div>
+                            <strong>{{ category|title }}</strong>
+                            <div class="ms-badge-row">
+                                {% if alarm.get('alarm_down') %}
+                                <span class="ms-badge ms-badge-danger">DOWN on</span>
+                                {% else %}
+                                <span class="ms-badge ms-badge-muted">DOWN off</span>
+                                {% endif %}
+                                {% if alarm.get('alarm_up') %}
+                                <span class="ms-badge ms-badge-success">UP on</span>
+                                {% else %}
+                                <span class="ms-badge ms-badge-muted">UP off</span>
+                                {% endif %}
+                                {% if reset_days > 0 %}
+                                <span class="ms-badge ms-badge-info">Auto-reset {{ reset_days }}d</span>
+                                {% else %}
+                                <span class="ms-badge ms-badge-muted">Auto-reset off</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-down ms-acc-chev" aria-hidden="true"></i>
+                </summary>
+
+                <div class="ms-acc-body">
+                    <div class="ms-panel-grid">
+                        <div class="ms-panel">
+                            <div class="ms-panel-title">
+                                <i class="fas fa-volume-up"></i>
+                                <div>
+                                    <h3>Alarm sounds</h3>
+                                    <p>Toggle channel + unggah file audio untuk notifikasi status.</p>
+                                </div>
+                            </div>
+
+                            <form method="POST" action="/monitoring-settings/update-config" enctype="multipart/form-data">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="category" value="{{ category }}">
+                                <input type="hidden" name="refresh_interval" value="{{ monitoring_config.get('refresh_interval', 30) }}">
+
+                                <div class="ms-toggle-list">
+                                    <label class="ms-toggle">
+                                        <input type="checkbox" name="alarm_down" {% if alarm.get('alarm_down') %}checked{% endif %}>
+                                        <span class="ms-toggle-ui" aria-hidden="true"></span>
+                                        <span class="ms-toggle-copy">
+                                            <strong>Alarm on DOWN</strong>
+                                            <small>Bunyikan saat host/service down</small>
+                                        </span>
+                                    </label>
+                                    <label class="ms-toggle">
+                                        <input type="checkbox" name="alarm_up" {% if alarm.get('alarm_up') %}checked{% endif %}>
+                                        <span class="ms-toggle-ui" aria-hidden="true"></span>
+                                        <span class="ms-toggle-copy">
+                                            <strong>Alarm on UP</strong>
+                                            <small>Bunyikan saat host/service recover</small>
+                                        </span>
+                                    </label>
+                                </div>
+
+                                <div class="ms-sound-grid">
+                                    <div class="ms-sound-card">
+                                        <div class="ms-sound-head">
+                                            <span class="ms-dot danger"></span>
+                                            <label for="sound_down_{{ category }}">DOWN sound</label>
+                                        </div>
+                                        {% if alarm.get('sound_down') %}
+                                        <p class="ms-file"><i class="fas fa-file-audio"></i> {{ alarm.get('sound_down').split('/')[-1] }}</p>
+                                        {% else %}
+                                        <p class="ms-file muted"><i class="fas fa-file"></i> No file uploaded</p>
+                                        {% endif %}
+                                        <input type="file" name="sound_down" accept="audio/*" id="sound_down_{{ category }}">
+                                        <button type="button" onclick="testSound('sound_down_{{ category }}')" class="ms-btn ms-btn-secondary ms-btn-sm">
+                                            <i class="fas fa-play"></i> Test
+                                        </button>
+                                    </div>
+                                    <div class="ms-sound-card">
+                                        <div class="ms-sound-head">
+                                            <span class="ms-dot success"></span>
+                                            <label for="sound_up_{{ category }}">UP sound</label>
+                                        </div>
+                                        {% if alarm.get('sound_up') %}
+                                        <p class="ms-file"><i class="fas fa-file-audio"></i> {{ alarm.get('sound_up').split('/')[-1] }}</p>
+                                        {% else %}
+                                        <p class="ms-file muted"><i class="fas fa-file"></i> No file uploaded</p>
+                                        {% endif %}
+                                        <input type="file" name="sound_up" accept="audio/*" id="sound_up_{{ category }}">
+                                        <button type="button" onclick="testSound('sound_up_{{ category }}')" class="ms-btn ms-btn-secondary ms-btn-sm">
+                                            <i class="fas fa-play"></i> Test
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="ms-panel-actions">
+                                    <button type="submit" class="ms-btn ms-btn-primary"><i class="fas fa-save"></i> Save alarms</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="ms-panel">
+                            <div class="ms-panel-title">
+                                <i class="fas fa-redo-alt"></i>
+                                <div>
+                                    <h3>CR auto-reset</h3>
+                                    <p>Reset host CR Verification ke New pada jam terjadwal.</p>
+                                </div>
+                            </div>
+
+                            <form method="POST" action="/monitoring-settings/update-cr-reset" onsubmit="return validateCrReset(this)">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="category" value="{{ category }}">
+
+                                <div class="ms-field">
+                                    <label>
+                                        Reset hours (0–23)
+                                        <span class="ms-tip" title="Gunakan koma untuk multi jam. Contoh: 03,15">?</span>
+                                    </label>
+                                    <div class="ms-input-group">
+                                        <span class="ms-input-icon" aria-hidden="true"><i class="fas fa-clock"></i></span>
+                                        <input type="text" name="cr_reset_hours" value="{{ catset.get('cr_reset_hours', '') }}" placeholder="15 or 03,15" pattern="[0-9, ]*" title="Angka dan koma saja">
+                                    </div>
+                                    <p class="ms-hint"><code>15</code> = 15:00 · <code>03,15</code> = 03:00 &amp; 15:00</p>
+                                </div>
+
+                                <div class="ms-field-grid">
+                                    <div class="ms-field">
+                                        <label>
+                                            Interval (days)
+                                            <span class="ms-tip" title="0 = nonaktif, 1 = setiap hari">?</span>
+                                        </label>
+                                        <input type="number" name="cr_reset_interval_days" value="{{ catset.get('cr_reset_interval_days', 0) }}" min="0" max="365">
+                                        <p class="ms-hint"><code>0</code> off · <code>1</code> daily</p>
+                                    </div>
+                                    <div class="ms-field">
+                                        <label>
+                                            Grace period (hours)
+                                            <span class="ms-tip" title="Skip host yang baru di-set stage dalam N jam terakhir">?</span>
+                                        </label>
+                                        <input type="number" name="cr_reset_grace_hours" value="{{ catset.get('cr_reset_grace_hours', 0) }}" min="0" max="720">
+                                        <p class="ms-hint">Skip host yang baru di-set</p>
+                                    </div>
+                                </div>
+
+                                <div class="ms-panel-actions">
+                                    <button type="submit" class="ms-btn ms-btn-primary"><i class="fas fa-save"></i> Save auto-reset</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
-                <i class="fas fa-chevron-down chev"></i>
-            </summary>
-
-            <div class="accordion-body">
-                <div class="panel-grid">
-                    <div class="panel">
-                        <div class="panel-title"><i class="fas fa-volume-up"></i> Alarm sounds</div>
-                        <form method="POST" action="/monitoring-settings/update-config" enctype="multipart/form-data">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="category" value="{{ category }}">
-                            <input type="hidden" name="refresh_interval" value="{{ monitoring_config.get('refresh_interval', 30) }}">
-
-                            <div class="checkbox-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" name="alarm_down" {% if alarm.get('alarm_down') %}checked{% endif %}>
-                                    <span>Alarm on DOWN</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" name="alarm_up" {% if alarm.get('alarm_up') %}checked{% endif %}>
-                                    <span>Alarm on UP</span>
-                                </label>
-                            </div>
-
-                            <div class="sound-group">
-                                <div class="sound-field">
-                                    <label for="sound_down_{{ category }}"><i class="fas fa-arrow-down text-danger"></i> DOWN sound</label>
-                                    {% if alarm.get('sound_down') %}
-                                    <p class="current-file">{{ alarm.get('sound_down').split('/')[-1] }}</p>
-                                    {% else %}
-                                    <p class="current-file muted">No file</p>
-                                    {% endif %}
-                                    <input type="file" name="sound_down" accept="audio/*" id="sound_down_{{ category }}">
-                                    <button type="button" onclick="testSound('sound_down_{{ category }}')" class="btn-soft sm"><i class="fas fa-play"></i> Test</button>
-                                </div>
-                                <div class="sound-field">
-                                    <label for="sound_up_{{ category }}"><i class="fas fa-arrow-up text-success"></i> UP sound</label>
-                                    {% if alarm.get('sound_up') %}
-                                    <p class="current-file">{{ alarm.get('sound_up').split('/')[-1] }}</p>
-                                    {% else %}
-                                    <p class="current-file muted">No file</p>
-                                    {% endif %}
-                                    <input type="file" name="sound_up" accept="audio/*" id="sound_up_{{ category }}">
-                                    <button type="button" onclick="testSound('sound_up_{{ category }}')" class="btn-soft sm"><i class="fas fa-play"></i> Test</button>
-                                </div>
-                            </div>
-
-                            <div class="panel-actions">
-                                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save alarms</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <div class="panel">
-                        <div class="panel-title"><i class="fas fa-redo-alt"></i> CR auto-reset</div>
-                        <p class="helper-text">Reset host di stage CR Verification kembali ke New sesuai jam &amp; interval.</p>
-                        <form method="POST" action="/monitoring-settings/update-cr-reset" onsubmit="return validateCrReset(this)">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="category" value="{{ category }}">
-                            <div class="form-stack">
-                                <div class="form-group mb-0">
-                                    <label>Reset hours (0–23)</label>
-                                    <input type="text" name="cr_reset_hours" value="{{ catset.get('cr_reset_hours', '') }}" placeholder="15 or 03,15" pattern="[0-9, ]*" title="Angka dan koma saja">
-                                    <small class="field-hint"><code>15</code> = 15:00 · <code>03,15</code> = 03:00 &amp; 15:00</small>
-                                </div>
-                                <div class="form-group mb-0">
-                                    <label>Interval (days)</label>
-                                    <input type="number" name="cr_reset_interval_days" value="{{ catset.get('cr_reset_interval_days', 0) }}" min="0" max="365">
-                                    <small class="field-hint"><code>0</code> = off · <code>1</code> = daily</small>
-                                </div>
-                                <div class="form-group mb-0">
-                                    <label>Grace period (hours)</label>
-                                    <input type="number" name="cr_reset_grace_hours" value="{{ catset.get('cr_reset_grace_hours', 0) }}" min="0" max="720">
-                                    <small class="field-hint">Skip host yang baru di-set dalam N jam terakhir</small>
-                                </div>
-                            </div>
-                            <div class="panel-actions">
-                                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save auto-reset</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </details>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-state subtle">
-        <p>Alarm &amp; auto-reset muncul setelah ada kategori.</p>
-    </div>
-    {% endif %}
-</section>
+            </details>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="ms-empty ms-empty-soft">
+            <p>Alarm &amp; auto-reset muncul setelah ada kategori.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
 
 <script src="/static/js/monitoring_settings.js"></script>
 
-<div id="addCategoryModal" class="modal-overlay">
-    <div class="modal-card">
-        <div class="modal-head">
-            <h3><i class="fas fa-folder-plus"></i> Add category</h3>
-            <button type="button" class="icon-btn" onclick="closeAddCategoryModal()" aria-label="Close"><i class="fas fa-times"></i></button>
+<div id="addCategoryModal" class="ms-modal">
+    <div class="ms-modal-card">
+        <div class="ms-modal-head">
+            <div>
+                <p class="ms-kicker">New</p>
+                <h3><i class="fas fa-folder-plus"></i> Add category</h3>
+            </div>
+            <button type="button" class="ms-icon-btn" onclick="closeAddCategoryModal()" aria-label="Close"><i class="fas fa-times"></i></button>
         </div>
         <form method="POST" action="/monitoring-settings/add">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="form-group">
+            <div class="ms-field">
                 <label for="add_category_name">Category name</label>
-                <input type="text" id="add_category_name" name="category" required placeholder="e.g. Network Backbone" autofocus>
-                <p class="helper-text">Disimpan sebagai slug: <code>Network Backbone</code> → <code>network-backbone</code></p>
+                <div class="ms-input-group">
+                    <span class="ms-input-icon" aria-hidden="true"><i class="fas fa-tag"></i></span>
+                    <input type="text" id="add_category_name" name="category" required placeholder="e.g. Network Backbone" autofocus>
+                </div>
+                <p class="ms-hint">Disimpan sebagai slug: <code>Network Backbone</code> → <code>network-backbone</code></p>
             </div>
-            <div class="form-group mb-0">
+            <div class="ms-field mb-0">
                 <label for="add_use_service_plugin">Status information source</label>
-                <select id="add_use_service_plugin" name="use_service_plugin">
-                    <option value="false">Host plugin output (default)</option>
-                    <option value="true">Service plugin output</option>
-                </select>
+                <div class="ms-input-group">
+                    <span class="ms-input-icon" aria-hidden="true"><i class="fas fa-database"></i></span>
+                    <select id="add_use_service_plugin" name="use_service_plugin">
+                        <option value="false">Host plugin output (default)</option>
+                        <option value="true">Service plugin output</option>
+                    </select>
+                </div>
             </div>
-            <div class="modal-actions">
-                <button type="button" class="btn-soft" onclick="closeAddCategoryModal()">Cancel</button>
-                <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Add</button>
+            <div class="ms-modal-actions">
+                <button type="button" class="ms-btn ms-btn-secondary" onclick="closeAddCategoryModal()">Cancel</button>
+                <button type="submit" class="ms-btn ms-btn-primary"><i class="fas fa-plus"></i> Add</button>
             </div>
         </form>
     </div>
 </div>
 
-<div id="editCategoryModal" class="modal-overlay">
-    <div class="modal-card">
-        <div class="modal-head">
-            <h3><i class="fas fa-pen"></i> Edit category</h3>
-            <button type="button" class="icon-btn" onclick="closeEditCategoryModal()" aria-label="Close"><i class="fas fa-times"></i></button>
+<div id="editCategoryModal" class="ms-modal">
+    <div class="ms-modal-card">
+        <div class="ms-modal-head">
+            <div>
+                <p class="ms-kicker">Edit</p>
+                <h3><i class="fas fa-pen"></i> Edit category</h3>
+            </div>
+            <button type="button" class="ms-icon-btn" onclick="closeEditCategoryModal()" aria-label="Close"><i class="fas fa-times"></i></button>
         </div>
         <form method="POST" action="/monitoring-settings/edit-category">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="category" id="editCategoryName">
-            <div class="form-group">
+            <div class="ms-field">
                 <label for="editCategoryNameDisplay">Category</label>
                 <input type="text" id="editCategoryNameDisplay" readonly>
             </div>
-            <div class="form-group mb-0">
+            <div class="ms-field mb-0">
                 <label for="editUseServicePlugin">Status information source</label>
-                <select name="use_service_plugin" id="editUseServicePlugin">
-                    <option value="false">Host plugin output (default)</option>
-                    <option value="true">Service plugin output</option>
-                </select>
-                <p class="helper-text">Service plugin = ambil detail status dari service check, bukan host check default.</p>
+                <div class="ms-input-group">
+                    <span class="ms-input-icon" aria-hidden="true"><i class="fas fa-database"></i></span>
+                    <select name="use_service_plugin" id="editUseServicePlugin">
+                        <option value="false">Host plugin output (default)</option>
+                        <option value="true">Service plugin output</option>
+                    </select>
+                </div>
+                <p class="ms-hint">Service plugin = ambil detail status dari service check, bukan host check default.</p>
             </div>
-            <div class="modal-actions">
-                <button type="button" class="btn-soft" onclick="closeEditCategoryModal()">Cancel</button>
-                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save</button>
+            <div class="ms-modal-actions">
+                <button type="button" class="ms-btn ms-btn-secondary" onclick="closeEditCategoryModal()">Cancel</button>
+                <button type="submit" class="ms-btn ms-btn-primary"><i class="fas fa-save"></i> Save</button>
             </div>
         </form>
     </div>
