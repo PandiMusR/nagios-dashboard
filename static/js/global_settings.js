@@ -87,21 +87,27 @@ function deleteBackup(name) {
 }
 
 function refreshLogs() {
+    const el = document.getElementById('activityLogs');
+    if (!el) {
+        window.location.href = '/activity-logs';
+        return;
+    }
     fetch('/global-settings/logs')
         .then(r => r.text())
         .then(data => {
-            document.getElementById('activityLogs').textContent = data || 'No logs yet';
+            el.textContent = data || 'No logs yet';
         });
 }
 
 function clearLogs() {
     if (!confirm('Clear all activity logs?')) return;
-    
+
     csrfFetch('/global-settings/clear-logs', {method: 'POST'})
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            document.getElementById('activityLogs').textContent = '';
+            const el = document.getElementById('activityLogs');
+            if (el) el.textContent = '';
             showToast('Activity logs cleared', 'success');
         }
     });

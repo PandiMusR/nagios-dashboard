@@ -1,163 +1,261 @@
 {% extends "base.html" %}
 {% block title %}Global Settings{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/global_settings.css?v=20260721g1">
+{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="/static/css/global_settings.css">
-
-<div class="page-header">
-    <h1><i class="fas fa-cog"></i> Global Settings</h1>
-    <p>Configure system-wide settings and backups</p>
-</div>
-
-<div class="section-card">
-    <h3><i class="fas fa-globe"></i> Domain Configuration</h3>
-    <form method="POST" action="/global-settings/update-domain">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group">
-            <label>Domain Name</label>
-            <input type="text" name="domain" value="{{ global_config.get('domain', '') }}" placeholder="e.g. nagios.example.com">
-            <small style="color: var(--text-secondary); font-size: 0.85rem;"><i class="fas fa-info-circle"></i> Leave empty to use IP address. Used for generating URLs and links.</small>
+<div class="gs-page">
+    <header class="gs-hero page-header">
+        <div class="gs-hero-copy">
+            <p class="gs-eyebrow"><i class="fas fa-cog"></i> System</p>
+            <h1>Global Settings</h1>
+            <p>Konfigurasi domain, integrasi, backup, dan API key untuk seluruh dashboard.</p>
         </div>
-        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Domain</button>
-    </form>
-</div>
-
-<div class="section-card">
-    <h3><i class="fas fa-cloud"></i> Nextcloud Backup Configuration</h3>
-    <form method="POST" action="/global-settings/update-nextcloud">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-grid">
-            <div class="form-group" style="grid-column: 1 / -1;">
-                <label>Share Link</label>
-                <input type="text" name="nextcloud_share" value="{{ global_config.get('nextcloud_share', '') }}" placeholder="https://cloud.example.com/index.php/s/SHAREID">
-                <small style="color: var(--text-secondary); font-size: 0.85rem;">Format: https://cloud.example.com/index.php/s/SHAREID</small>
+        <div class="gs-hero-stats" aria-label="Overview">
+            <div class="gs-stat">
+                <span class="gs-stat-value">{% if global_config.get('domain') %}<i class="fas fa-check"></i>{% else %}<i class="fas fa-minus"></i>{% endif %}</span>
+                <span class="gs-stat-label">Domain</span>
             </div>
-            <div class="form-group">
-                <label>Share Password</label>
-                <input type="password" name="nextcloud_password" value="{{ global_config.get('nextcloud_password', '') }}" placeholder="Enter share password">
+            <div class="gs-stat">
+                <span class="gs-stat-value">{% if global_config.get('uptime_kuma_enabled') %}ON{% else %}OFF{% endif %}</span>
+                <span class="gs-stat-label">Uptime Kuma</span>
+            </div>
+            <div class="gs-stat">
+                <span class="gs-stat-value">{% if global_config.get('api_key') %}Set{% else %}-{% endif %}</span>
+                <span class="gs-stat-label">API Key</span>
             </div>
         </div>
-        
-        <div class="info-box">
-            <strong>How to get Share Link:</strong>
-            <ol>
-                <li>Open Nextcloud and create/select a folder</li>
-                <li>Click "Share" icon → "Share link"</li>
-                <li>Set password and copy the share link</li>
-                <li>Paste link here (format: https://cloud.example.com/index.php/s/SHAREID)</li>
-            </ol>
+    </header>
+
+    <nav class="gs-tabs" aria-label="Sections">
+        <a class="gs-tab" href="#domain"><i class="fas fa-globe"></i><span>Domain</span></a>
+        <a class="gs-tab" href="#nextcloud"><i class="fas fa-cloud"></i><span>Nextcloud</span></a>
+        <a class="gs-tab" href="#backup"><i class="fas fa-database"></i><span>Backup</span></a>
+        <a class="gs-tab" href="#uptime-kuma"><i class="fas fa-heartbeat"></i><span>Uptime Kuma</span></a>
+        <a class="gs-tab" href="#api-key"><i class="fas fa-key"></i><span>API Key</span></a>
+    </nav>
+
+    <section class="gs-card" id="domain">
+        <div class="gs-card-head">
+            <div>
+                <p class="gs-kicker"><i class="fas fa-globe"></i> Identity</p>
+                <h2>Domain Configuration</h2>
+                <p class="gs-sub">Domain dipakai untuk generate URL/link. Kosongkan jika ingin memakai IP.</p>
+            </div>
         </div>
-
-        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Nextcloud Config</button>
-    </form>
-</div>
-
-<div class="section-card">
-    <h3><i class="fas fa-database"></i> Backup & Pulihkan</h3>
-    <div class="two-column">
-        <div>
-            <h4 style="margin: 0 0 1rem 0; color: var(--text-primary); font-weight: 600;"><i class="fas fa-save"></i> Buat Backup</h4>
-            <form method="POST" action="/global-settings/backup">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="form-group">
-                    <label>Backup Name</label>
-                    <input type="text" name="backup_name" placeholder="e.g. before_update">
-                    <small style="color: var(--text-secondary); font-size: 0.85rem;">Leave empty for auto-generated name</small>
+        <form method="POST" action="/global-settings/update-domain">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="gs-field gs-field-lg">
+                <label for="domain">Domain name</label>
+                <div class="gs-input-group">
+                    <span class="gs-input-icon" aria-hidden="true"><i class="fas fa-link"></i></span>
+                    <input type="text" id="domain" name="domain" value="{{ global_config.get('domain', '') }}" placeholder="e.g. nagios.example.com">
                 </div>
-                <button type="submit" class="btn-primary btn-success" style="width: 100%;"><i class="fas fa-download"></i> Buat Backup</button>
-            </form>
+                <p class="gs-hint"><i class="fas fa-info-circle"></i> Leave empty to use IP address.</p>
+            </div>
+            <div class="gs-actions">
+                <button type="submit" class="gs-btn gs-btn-primary"><i class="fas fa-save"></i> Save Domain</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="gs-card" id="nextcloud">
+        <div class="gs-card-head">
+            <div>
+                <p class="gs-kicker"><i class="fas fa-cloud"></i> Offsite storage</p>
+                <h2>Nextcloud Backup Configuration</h2>
+                <p class="gs-sub">Share link + password untuk upload backup ke folder Nextcloud bersama.</p>
+            </div>
         </div>
-        <div>
-            <h4 style="margin: 0 0 1rem 0; color: var(--text-primary); font-weight: 600;"><i class="fas fa-upload"></i> Upload Backup</h4>
-            <form method="POST" action="/global-settings/upload-backup" enctype="multipart/form-data">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="form-group">
-                    <label>Backup File</label>
-                    <input type="file" name="backup_file" accept=".tar.gz" required>
+        <form method="POST" action="/global-settings/update-nextcloud">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="gs-field">
+                <label for="nextcloud_share">Share link</label>
+                <div class="gs-input-group">
+                    <span class="gs-input-icon" aria-hidden="true"><i class="fas fa-share-alt"></i></span>
+                    <input type="text" id="nextcloud_share" name="nextcloud_share" value="{{ global_config.get('nextcloud_share', '') }}" placeholder="https://cloud.example.com/index.php/s/SHAREID">
                 </div>
-                <button type="submit" class="btn-primary" style="width: 100%;"><i class="fas fa-cloud-upload-alt"></i> Upload Backup</button>
-            </form>
-        </div>
-    </div>
-</div>
+                <p class="gs-hint">Format: <code>https://cloud.example.com/index.php/s/SHAREID</code></p>
+            </div>
+            <div class="gs-field gs-field-md">
+                <label for="nextcloud_password">Share password</label>
+                <div class="gs-input-group">
+                    <span class="gs-input-icon" aria-hidden="true"><i class="fas fa-lock"></i></span>
+                    <input type="password" id="nextcloud_password" name="nextcloud_password" value="{{ global_config.get('nextcloud_password', '') }}" placeholder="Enter share password">
+                </div>
+            </div>
 
-<div class="section-card">
-    <h3><i class="fas fa-history"></i> Backup History & Rollback</h3>
-    <div style="margin-bottom: 1.5rem;">
-        <button onclick="loadBackups()" class="btn-primary btn-success"><i class="fas fa-sync-alt"></i> Refresh</button>
-    </div>
-    <div id="backupList">
-        <p style="text-align: center; color: var(--text-muted); padding: 2rem;"><i class="fas fa-spinner"></i> Memuat backup...</p>
-    </div>
-</div>
+            <div class="gs-info">
+                <strong><i class="fas fa-lightbulb"></i> How to get Share Link</strong>
+                <ol>
+                    <li>Open Nextcloud and create/select a folder</li>
+                    <li>Click “Share” → “Share link”</li>
+                    <li>Set password and copy the share link</li>
+                    <li>Paste the link here</li>
+                </ol>
+            </div>
 
-<div class="section-card">
-    <h3><i class="fas fa-heartbeat"></i> Uptime Kuma Configuration</h3>
-    <form method="POST" action="/global-settings/update-uptime-kuma">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="info-box">
-            <strong><i class="fas fa-info-circle"></i> Uptime Kuma Integration</strong>
-            <p style="margin: 0.5rem 0; color: var(--text-secondary); font-size: 0.9rem;">
-                Enable monitoring of hosts in Uptime Kuma. Hosts can be added to Uptime Kuma when created or edited in the Host Manager. Uses Socket.IO with user credentials.
-            </p>
-        </div>
-        
-        <div class="form-group">
-            <label>Uptime Kuma URL</label>
-            <input type="url" name="uptime_kuma_url" value="{{ global_config.get('uptime_kuma_url', '') }}" placeholder="https://uptime-kuma.example.com">
-            <small style="color: var(--text-secondary); font-size: 0.85rem;"><i class="fas fa-info-circle"></i> Base URL of your Uptime Kuma instance (e.g., http://localhost:3001)</small>
-        </div>
+            <div class="gs-actions">
+                <button type="submit" class="gs-btn gs-btn-primary"><i class="fas fa-save"></i> Save Nextcloud Config</button>
+            </div>
+        </form>
+    </section>
 
-        <div class="form-group">
-            <label>Username</label>
-            <input type="text" name="uptime_kuma_username" value="{{ global_config.get('uptime_kuma_username', '') }}" placeholder="admin">
-            <small style="color: var(--text-secondary); font-size: 0.85rem;"><i class="fas fa-info-circle"></i> Uptime Kuma account username for authentication</small>
+    <section class="gs-card" id="backup">
+        <div class="gs-card-head">
+            <div>
+                <p class="gs-kicker"><i class="fas fa-database"></i> Data protection</p>
+                <h2>Backup &amp; Restore</h2>
+                <p class="gs-sub">Buat, unggah, pulihkan, atau hapus arsip konfigurasi dashboard.</p>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label>Password</label>
-            <input type="password" name="uptime_kuma_password" placeholder="Enter password (leave empty to keep current)">
-            <small style="color: var(--text-secondary); font-size: 0.85rem;"><i class="fas fa-info-circle"></i> Uptime Kuma account password for authentication</small>
+        <div class="gs-two-col">
+            <div class="gs-panel">
+                <div class="gs-panel-title"><i class="fas fa-download"></i> Create backup</div>
+                <form method="POST" action="/global-settings/backup">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="gs-field mb-0">
+                        <label for="backup_name">Backup name</label>
+                        <div class="gs-input-group">
+                            <span class="gs-input-icon" aria-hidden="true"><i class="fas fa-tag"></i></span>
+                            <input type="text" id="backup_name" name="backup_name" placeholder="e.g. before_update">
+                        </div>
+                        <p class="gs-hint">Leave empty for auto-generated name</p>
+                    </div>
+                    <div class="gs-actions">
+                        <button type="submit" class="gs-btn gs-btn-success gs-btn-block"><i class="fas fa-download"></i> Buat Backup</button>
+                    </div>
+                </form>
+            </div>
+            <div class="gs-panel">
+                <div class="gs-panel-title"><i class="fas fa-upload"></i> Upload backup</div>
+                <form method="POST" action="/global-settings/upload-backup" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="gs-field mb-0">
+                        <label for="backup_file">Backup file</label>
+                        <input type="file" id="backup_file" name="backup_file" accept=".tar.gz" required>
+                        <p class="gs-hint">Only <code>.tar.gz</code> archives</p>
+                    </div>
+                    <div class="gs-actions">
+                        <button type="submit" class="gs-btn gs-btn-primary gs-btn-block"><i class="fas fa-cloud-upload-alt"></i> Upload Backup</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                <input type="checkbox" name="uptime_kuma_enabled" value="1" {% if global_config.get('uptime_kuma_enabled') %}checked{% endif %} style="width: auto;">
-                <span>Enable Uptime Kuma Integration</span>
+        <div class="gs-divider"></div>
+
+        <div class="gs-subhead">
+            <div>
+                <h3><i class="fas fa-history"></i> Backup history &amp; rollback</h3>
+                <p class="gs-sub">Daftar arsip di server. Restore akan menimpa config aktif.</p>
+            </div>
+            <button type="button" onclick="loadBackups()" class="gs-btn gs-btn-secondary"><i class="fas fa-sync-alt"></i> Refresh</button>
+        </div>
+        <div id="backupList" class="gs-backup-list">
+            <p class="gs-loading"><i class="fas fa-spinner fa-spin"></i> Memuat backup...</p>
+        </div>
+    </section>
+
+    <section class="gs-card" id="uptime-kuma">
+        <div class="gs-card-head">
+            <div>
+                <p class="gs-kicker"><i class="fas fa-heartbeat"></i> Integrations</p>
+                <h2>Uptime Kuma Configuration</h2>
+                <p class="gs-sub">Integrasi Socket.IO agar host bisa dipantau di Uptime Kuma saat dibuat/diubah di Host Manager.</p>
+            </div>
+        </div>
+        <form method="POST" action="/global-settings/update-uptime-kuma">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="gs-info">
+                <strong><i class="fas fa-info-circle"></i> Uptime Kuma Integration</strong>
+                <p>Enable monitoring of hosts in Uptime Kuma. Hosts can be added when created or edited in Host Manager. Uses Socket.IO with user credentials.</p>
+            </div>
+
+            <div class="gs-field">
+                <label for="uptime_kuma_url">Uptime Kuma URL</label>
+                <div class="gs-input-group">
+                    <span class="gs-input-icon" aria-hidden="true"><i class="fas fa-globe"></i></span>
+                    <input type="url" id="uptime_kuma_url" name="uptime_kuma_url" value="{{ global_config.get('uptime_kuma_url', '') }}" placeholder="https://uptime-kuma.example.com">
+                </div>
+                <p class="gs-hint">Base URL, e.g. <code>http://localhost:3001</code></p>
+            </div>
+
+            <div class="gs-field-grid">
+                <div class="gs-field mb-0">
+                    <label for="uptime_kuma_username">Username</label>
+                    <div class="gs-input-group">
+                        <span class="gs-input-icon" aria-hidden="true"><i class="fas fa-user"></i></span>
+                        <input type="text" id="uptime_kuma_username" name="uptime_kuma_username" value="{{ global_config.get('uptime_kuma_username', '') }}" placeholder="admin">
+                    </div>
+                </div>
+                <div class="gs-field mb-0">
+                    <label for="uptime_kuma_password">Password</label>
+                    <div class="gs-input-group">
+                        <span class="gs-input-icon" aria-hidden="true"><i class="fas fa-lock"></i></span>
+                        <input type="password" id="uptime_kuma_password" name="uptime_kuma_password" placeholder="Enter password (leave empty to keep current)">
+                    </div>
+                    <p class="gs-hint">Leave empty to keep current password</p>
+                </div>
+            </div>
+
+            <label class="gs-toggle">
+                <input type="checkbox" name="uptime_kuma_enabled" value="1" {% if global_config.get('uptime_kuma_enabled') %}checked{% endif %}>
+                <span class="gs-toggle-ui" aria-hidden="true"></span>
+                <span class="gs-toggle-copy">
+                    <strong>Enable Uptime Kuma Integration</strong>
+                    <small>Aktifkan monitoring host otomatis di Uptime Kuma</small>
+                </span>
             </label>
-            <small style="color: var(--text-secondary); font-size: 0.85rem;"><i class="fas fa-info-circle"></i> Check to enable automatic host monitoring in Uptime Kuma</small>
-        </div>
 
-        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Uptime Kuma Config</button>
-    </form>
-</div>
+            <div class="gs-actions">
+                <button type="submit" class="gs-btn gs-btn-primary"><i class="fas fa-save"></i> Save Uptime Kuma Config</button>
+            </div>
+        </form>
+    </section>
 
-<div class="section-card">
-    <h3><i class="fas fa-key"></i> API Key</h3>
-    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
-        API Key untuk integrasi dengan server lain. Gunakan header <code>X-API-Key</code> atau query param <code>?api_key=YOUR_KEY</code>.
-    </p>
-    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-        <div class="form-group" style="flex: 1; min-width: 300px; margin-bottom: 0;">
-            <label>Current API Key</label>
-            <div style="display: flex; gap: 0.5rem;">
-                <input type="text" id="apiKeyDisplay" value="{{ global_config.get('api_key', 'Not generated') }}" readonly style="font-family: monospace; background: var(--bg-primary);">
-                <button type="button" onclick="copyApiKey()" class="btn-small" title="Copy"><i class="fas fa-copy"></i></button>
+    <section class="gs-card" id="api-key">
+        <div class="gs-card-head">
+            <div>
+                <p class="gs-kicker"><i class="fas fa-key"></i> External access</p>
+                <h2>API Key</h2>
+                <p class="gs-sub">Key untuk integrasi server lain. Header <code>X-API-Key</code> atau query <code>?api_key=YOUR_KEY</code>.</p>
             </div>
         </div>
-        <button type="button" onclick="generateApiKey()" class="btn-primary" style="white-space: nowrap;"><i class="fas fa-sync-alt"></i> Generate New Key</button>
-    </div>
-    <div style="margin-top: 1rem; padding: 1rem; background: var(--alert-warning-bg); border: 1px solid var(--alert-warning-color); border-radius: 8px; font-size: 0.85rem; color: var(--alert-warning-color);">
-        <i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> Generating a new key will invalidate the previous key. Update all integrations immediately.
-    </div>
-</div>
 
-<div class="section-card">
-    <h3><i class="fas fa-file-alt"></i> Activity Logs</h3>
-    <div style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem;">
-        <button onclick="refreshLogs()" class="btn-primary"><i class="fas fa-sync-alt"></i> Refresh</button>
-        <button onclick="clearLogs()" class="btn-primary btn-danger"><i class="fas fa-trash"></i> Bersihkan Log</button>
-    </div>
-    <div class="activity-log" id="activityLogs">{{ activity_logs }}</div>
+        <div class="gs-api-row">
+            <div class="gs-field mb-0 gs-field-grow">
+                <label for="apiKeyDisplay">Current API key</label>
+                <div class="gs-input-group">
+                    <span class="gs-input-icon" aria-hidden="true"><i class="fas fa-fingerprint"></i></span>
+                    <input type="text" id="apiKeyDisplay" value="{{ global_config.get('api_key', 'Not generated') }}" readonly>
+                    <button type="button" onclick="copyApiKey()" class="gs-btn gs-btn-icon" title="Copy"><i class="fas fa-copy"></i></button>
+                </div>
+            </div>
+            <button type="button" onclick="generateApiKey()" class="gs-btn gs-btn-primary"><i class="fas fa-sync-alt"></i> Generate New Key</button>
+        </div>
+
+        <div class="gs-warn">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+                <strong>Warning</strong>
+                <p>Generating a new key invalidates the previous key. Update all integrations immediately.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="gs-card gs-card-soft" id="audit-link">
+        <div class="gs-linkout">
+            <div class="gs-linkout-icon"><i class="fas fa-clipboard-list"></i></div>
+            <div class="gs-linkout-copy">
+                <h3>Activity Logs</h3>
+                <p>Log aktivitas user dipindah ke menu <strong>Audit → Activity Logs</strong> agar tidak duplikat di halaman settings.</p>
+            </div>
+            <a href="/activity-logs" class="gs-btn gs-btn-secondary"><i class="fas fa-external-link-alt"></i> Buka Activity Logs</a>
+        </div>
+    </section>
 </div>
 
 <script src="/static/js/global_settings.js"></script>
