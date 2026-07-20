@@ -294,7 +294,7 @@ function loadMonitoringData() {
             console.error('Error loading data:', error);
             const tbody = document.getElementById('hosts_table');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="10" style="padding: 2rem; text-align: center;"><i class="fas fa-exclamation-triangle" style="color: var(--color-danger); margin-right: 8px;"></i>Gagal memuat data monitoring<button onclick="loadData()" style="margin-left: 12px; padding: 4px 12px; border: 1px solid var(--color-danger); background: white; color: var(--color-danger); border-radius: 6px; cursor: pointer;">Retry</button></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" style="padding: 2rem; text-align: center;"><i class="fas fa-exclamation-triangle" style="color: var(--color-danger); margin-right: 8px;"></i>Gagal memuat data monitoring<button onclick="loadData()" style="margin-left: 12px; padding: 4px 12px; border: 1px solid var(--color-danger); background: var(--bg-secondary); color: var(--color-danger); border-radius: 6px; cursor: pointer;">Retry</button></td></tr>';
             }
         });
 }
@@ -842,7 +842,7 @@ function toggleViewOnly() {
     body.style.margin = '0';
     body.style.padding = '0';
     body.style.overflow = 'auto';
-    body.style.background = isDark ? 'var(--bg-primary)' : 'white';
+    body.style.background = isDark ? 'var(--bg-primary)' : 'var(--bg-secondary)';
     html.style.margin = '0';
     html.style.padding = '0';
     

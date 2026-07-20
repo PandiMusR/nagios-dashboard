@@ -593,59 +593,49 @@
         [data-theme="dark"] .user-section { background: var(--bg-secondary) !important; }
         [data-theme="dark"] .filter-group select { background: var(--bg-secondary) !important; color: var(--text-primary) !important; }
 
-        /* === DASHBOARD SPECIFIC === */
-        [data-theme="dark"] .dashboard-header {
-            background: linear-gradient(135deg, #4e54c8 0%, #00f2fe 100%) !important;
-            color: white !important;
-            box-shadow: var(--shadow-primary) !important;
-        }
-        [data-theme="dark"] .dashboard-header h1,
-        [data-theme="dark"] .dashboard-header p,
-        [data-theme="dark"] .dashboard-header span { color: white !important; background: transparent !important; }
-        [data-theme="dark"] .stat-badge { background: rgba(17, 22, 34, 0.6) !important; color: #e0e0e0 !important; border: none !important; }
+        /* === DASHBOARD SPECIFIC (token-based; templates use .page-header) === */
+        [data-theme="dark"] .stat-badge { background: rgba(15, 23, 42, 0.55) !important; color: var(--text-primary) !important; border: none !important; }
         [data-theme="dark"] .server-card {
-            background: #1e2530 !important;
-            border: 1px solid #2d3748 !important;
+            background: var(--bg-secondary) !important;
+            border: 1px solid var(--border-color) !important;
             box-shadow: var(--shadow-sm) !important;
         }
         [data-theme="dark"] .server-card:hover { box-shadow: var(--shadow-lg) !important; }
-        [data-theme="dark"] .server-header { border-color: #2d3748 !important; }
-        [data-theme="dark"] .server-name { color: #ffffff !important; }
+        [data-theme="dark"] .server-header { border-color: var(--border-color) !important; }
+        [data-theme="dark"] .server-name { color: var(--text-primary) !important; }
         [data-theme="dark"] .resource-item {
-            background: #111622 !important;
-            border: 1px solid #2d3748 !important;
+            background: var(--bg-primary) !important;
+            border: 1px solid var(--border-color) !important;
         }
-        [data-theme="dark"] .resource-label { color: #8892a4 !important; }
-        [data-theme="dark"] .resource-value { color: #ffffff !important; }
-        [data-theme="dark"] .status-title { color: #8892a4 !important; }
-        [data-theme="dark"] .status-grid { gap: 0.75rem !important; }
-        [data-theme="dark"] .status-badge { border-radius: 10px !important; }
+        [data-theme="dark"] .resource-label { color: var(--text-secondary) !important; }
+        [data-theme="dark"] .resource-value { color: var(--text-primary) !important; }
+        [data-theme="dark"] .status-title { color: var(--text-secondary) !important; }
         [data-theme="dark"] .status-up {
-            background: #052e16 !important;
-            color: #ffffff !important;
-            border: 1.5px solid #22c55e !important;
+            background: var(--alert-success-bg) !important;
+            color: var(--alert-success-color) !important;
+            border: 1.5px solid var(--color-success) !important;
         }
         [data-theme="dark"] .status-down {
-            background: #450a0a !important;
-            color: #ffffff !important;
-            border: 1.5px solid #ef4444 !important;
+            background: var(--alert-error-bg) !important;
+            color: var(--alert-error-color) !important;
+            border: 1.5px solid var(--color-danger) !important;
         }
         [data-theme="dark"] .status-warning {
-            background: #451a03 !important;
-            color: #ffffff !important;
-            border: 1.5px solid #f59e0b !important;
+            background: var(--alert-warning-bg) !important;
+            color: var(--alert-warning-color) !important;
+            border: 1.5px solid var(--color-warning) !important;
         }
         [data-theme="dark"] .status-unknown {
-            background: #1e293b !important;
-            color: #94a3b8 !important;
-            border: 1.5px solid #475569 !important;
+            background: var(--bg-tertiary) !important;
+            color: var(--text-secondary) !important;
+            border: 1.5px solid var(--border-color-alt) !important;
         }
         [data-theme="dark"] .btn-open {
-            background: #00a8e8 !important;
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%) !important;
             color: white !important;
             border: none !important;
         }
-        [data-theme="dark"] .loading-spinner { border-color: #475569 !important; border-top-color: #00f2fe !important; }
+        [data-theme="dark"] .loading-spinner { border-color: var(--border-color-alt) !important; border-top-color: var(--color-secondary) !important; }
 
 /* ============================================
            PRINT STYLES — force light theme

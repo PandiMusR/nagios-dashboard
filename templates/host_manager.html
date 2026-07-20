@@ -341,7 +341,7 @@ function addBatchRow() {
     
     const row = document.createElement('div');
     row.id = rowId;
-    row.style.cssText = 'padding: 1rem; background: white; border: 1px solid var(--border-color); border-radius: 8px;';
+    row.style.cssText = 'padding: 1rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;';
     
     const serverOptions = {{ servers|tojson }}.map(s => `<option value="${s}">${s}</option>`).join('');
     

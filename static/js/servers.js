@@ -265,7 +265,7 @@ function loadPluginList(serverName) {
             const list = document.getElementById('pluginList');
             if (data.plugins && data.plugins.length > 0) {
                 list.innerHTML = data.plugins.map(p => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: white; border-radius: 6px; margin-bottom: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--bg-secondary); border-radius: 6px; margin-bottom: 0.5rem;">
                         <div>
                             <strong style="color: var(--text-primary);">${p.name}</strong>
                             <span style="color: var(--text-secondary); font-size: 0.8rem; margin-left: 0.5rem;">${p.size}</span>
