@@ -80,7 +80,7 @@ nagiosDashboard/
 │   ├── monitoring.py         # /monitoring/<page>, stage system, batch set stage, export CSV
 │   ├── host_manager.py       # /host-manager CRUD, backup/restore, batch add
 │   ├── monitoring_settings.py# /monitoring-settings — categories, server mappings, alarms, CR auto-reset config
-│   ├── global_settings.py    # /global-settings — domain, Nextcloud, Uptime Kuma, API key, backup, logs
+│   ├── global_settings.py    # /global-settings — domain, Nextcloud, backup, Uptime Kuma, API key (activity logs → Audit)
 │   ├── nagios_proxy.py       # /nagios/*, /proxy/* — reverse proxy to Nagios containers
 │   ├── monitoring_intens.py  # /monitoring-intens — Uptime Kuma monitors page
 │   └── api.py                # REST API: /api/hosts/*, /api/servers, /api/monitoring, /api/stage-history (ONU auto-parse)
@@ -240,7 +240,18 @@ Admin bypasses all checks. Admin = all main permissions enabled OR `nagiosadmins
 
 ---
 
-## Recent Changes (as of 2026-07-12)
+## Recent Changes (as of 2026-07-21)
+
+### Settings UI redesign + theme (2026-07-21)
+- **Theme Batch A/B** on `main` and prod (`theme_deploy_20260721_025201`)
+- **`{% block extra_css %}`** in `base.html` `<head>` for page CSS (avoid body-only stylesheet links)
+- **`/monitoring-settings`**: modern redesign (hero, sticky tabs, category cards, mapping chips, alarm accordion + CSS toggles); full-width content; Waitress restart required after class-namespace redesigns
+  - Commits: `8e2062d` → `3d8e22e` → `33df9f2` → `d5ede70` → `173072a`
+  - Prod: `ms_ui_deploy_20260721_033712` (UI only; config PRE==POST)
+- **`/global-settings`**: same UI pattern; **Activity Logs panel removed** (link to **Audit → Activity Logs**); backup JS classes preserved
+  - Commit: `72c9950`
+  - Prod: `gs_ui_deploy_20260721_034854` (UI only; config PRE==POST)
+- UI-only prod deploy: backup target files, SCP templates/css/js only, never `config/`, MD5 verify local==prod + config unchanged
 
 ### Security Audit: Phase 1-4 (2026-07-12)
 Comprehensive security audit covering P0-P3 vulnerabilities.
@@ -307,6 +318,7 @@ Comprehensive security audit covering P0-P3 vulnerabilities.
 - New route `GET /activity-logs` in `blueprints/auth.py`
 - New template `templates/activity_logs.html`
 - Standalone page with limit selector, refresh, clear logs (admin only)
+- **Canonical UI for activity logs** — do not re-embed a full log viewer on Global Settings
 
 ### Path Refactoring
 - All hardcoded `/svr/dashboard-nagios` paths replaced with `APP_ROOT` auto-detection

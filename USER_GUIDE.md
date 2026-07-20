@@ -319,26 +319,45 @@ Centang beberapa server, lalu:
 
 ## Monitoring Settings
 
+Halaman ini memakai layout modern (tab section + card). Urutan: **Refresh → Categories → Server Mappings → Alarms & CR Auto-Reset**.
+
 ### Refresh Interval
 
 Atur seberapa sering halaman monitoring auto-refresh:
 
 1. Isi **Refresh Interval** (dalam detik, default: 30)
-2. Klik **Update Interval**
+2. Klik **Save** / **Update Interval**
+
+### Kategori Monitoring
+
+1. Klik **Add Category** (modal) untuk membuat kategori baru
+2. Isi nama kategori dan pilih **Status Information Source**:
+   - **Host plugin output (default)** — output host plugin
+   - **Service plugin output** — output service plugin
+3. Klik **Add**
+4. **Edit source** / **Delete** tersedia di kartu kategori
+
+### Server Mapping
+
+Kaitkan server Nagios ke kategori monitoring:
+
+1. Pilih **Server** dan **Category** di form Map Server
+2. Klik **Map Server**
+3. Hapus mapping lewat tombol **X** pada chip server
+
+Server yang sudah di-map akan muncul di halaman monitoring kategori tersebut.
 
 ### Alarm Settings
 
-Atur notifikasi suara untuk setiap kategori monitoring:
+Di section **Alarms**, buka accordion per kategori:
 
-1. Centang **Alarm on DOWN** untuk notifikasi saat host mati
-2. Centang **Alarm on UP** untuk notifikasi saat host hidup kembali
-3. Upload file suara untuk masing-masing (format: MP3, WAV, dll)
-4. Klik **Test** untuk preview suara
-5. Klik **Save Alarm Settings**
+1. Aktifkan toggle **Alarm on DOWN** / **Alarm on UP**
+2. Upload file suara (MP3, WAV, dll) lalu **Test**
+3. Klik **Save alarms**
 
 ### CR Auto-Reset
 
-Otomatis reset host CR Verification ke New pada jadwal tertentu:
+Di panel **CR auto-reset** (masih per kategori di accordion yang sama):
 
 | Field | Keterangan | Contoh |
 |---|---|---|
@@ -347,23 +366,6 @@ Otomatis reset host CR Verification ke New pada jadwal tertentu:
 | **Grace Period** | Skip host yang baru di-set dalam X jam | `6` = host yang di-set CR Verif < 6 jam lalu tidak ikut reset |
 
 > **Grace Period** mencegah host yang baru kamu set CR Verification langsung di-reset ke New saat scheduler berjalan.
-
-### Kategori Monitoring
-
-1. Klik **Add Category** untuk membuat kategori baru
-2. Isi nama kategori dan pilih **Status Information Source**:
-   - **Default** — menggunakan output host plugin
-   - **Service Plugin Output** — menggunakan output service plugin
-3. Klik **Add Category**
-
-### Server Mapping
-
-Kaitkan server Nagios ke kategori monitoring:
-
-1. Pilih **Server** dan **Category**
-2. Klik **Map Server**
-
-Server yang sudah di-map akan muncul di halaman monitoring kategori tersebut.
 
 ---
 
@@ -421,13 +423,9 @@ API Key digunakan untuk integrasi dengan server lain (misalnya: auto-add host da
 
 ### Activity Logs
 
-Melihat log aktivitas semua user:
+Panel log di **Global Settings sudah dihapus** (duplikat).
 
-1. Klik **Refresh** untuk memuat log terbaru
-2. Log menampilkan: timestamp, user, IP, aksi, detail
-3. Klik **Clear Logs** untuk menghapus semua log
-
-> Log tersimpan per bulan dan tidak dihapus otomatis.
+Gunakan **Audit → Activity Logs** di sidebar, atau buka `/activity-logs` (ada juga tombol link di bawah halaman Global Settings).
 
 ---
 

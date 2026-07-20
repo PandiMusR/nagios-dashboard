@@ -294,10 +294,10 @@ Each user has a permission set stored in `config/user_permissions.json`. Admins 
 
 - **Domain settings** — base domain for proxy URLs
 - **Nextcloud** — configure WebDAV share for backup uploads
+- **Backup & Restore** — full config backup as `.tar.gz`, upload/download/restore
 - **Uptime Kuma** — URL, username, password, enable/disable
 - **API Key** — generate/copy API key for external integrations
-- **Activity Log** — view last 500 lines of the activity log (from all monthly files), or clear it
-- **Backup & Restore** — full config backup as `.tar.gz`, upload/download/restore
+- **Activity Logs** — not embedded here; use **Audit → Activity Logs** (`/activity-logs`). Global Settings only links out to that page.
 
 ---
 
