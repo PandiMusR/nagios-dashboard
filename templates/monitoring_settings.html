@@ -5,241 +5,258 @@
 
 <div class="page-header">
     <h1><i class="fas fa-sliders-h"></i> Monitoring Settings</h1>
-    <p>Manage monitoring categories, alarms, and server mappings</p>
+    <p>Kelola kategori monitoring, alarm, CR auto-reset, dan mapping server</p>
 </div>
 
-<div class="section-card">
+<div class="settings-nav" aria-label="Sections">
+    <a href="#refresh-interval"><i class="fas fa-clock"></i> Refresh</a>
+    <a href="#categories"><i class="fas fa-folder"></i> Categories</a>
+    <a href="#server-mappings"><i class="fas fa-sitemap"></i> Mappings</a>
+    <a href="#alarms"><i class="fas fa-bell"></i> Alarms &amp; Auto-Reset</a>
+</div>
+
+<div class="section-card" id="refresh-interval">
     <h3><i class="fas fa-clock"></i> Refresh Interval</h3>
+    <p class="section-desc">Interval refresh data live monitoring (semua kategori).</p>
     <form method="POST" action="/monitoring-settings/update-config">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group" style="max-width: 300px;">
-            <label>Refresh Interval (seconds)</label>
-            <input type="number" name="refresh_interval" value="{{ monitoring_config.get('refresh_interval', 30) }}" min="5" max="300" required>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group form-group-sm">
+            <label for="refresh_interval">Refresh Interval (seconds)</label>
+            <input type="number" id="refresh_interval" name="refresh_interval" value="{{ monitoring_config.get('refresh_interval', 30) }}" min="5" max="300" required>
         </div>
         <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Update Interval</button>
     </form>
 </div>
 
-<div class="section-card">
-    <h3><i class="fas fa-volume-up"></i> Alarm Settings</h3>
-    {% for category in categories %}
-    <div class="alarm-card">
-        <h4><i class="fas fa-bell"></i> {{ category|title }}</h4>
-        <form method="POST" action="/monitoring-settings/update-config" enctype="multipart/form-data" style="margin-bottom: 1.5rem;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="category" value="{{ category }}">
-            <input type="hidden" name="refresh_interval" value="{{ monitoring_config.get('refresh_interval', 30) }}">
-            
-            <div class="checkbox-group">
-                <label class="checkbox-label">
-                    <input type="checkbox" name="alarm_down" {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('alarm_down') %}checked{% endif %}>
-                    <span>Alarm on DOWN</span>
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" name="alarm_up" {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('alarm_up') %}checked{% endif %}>
-                    <span>Alarm on UP</span>
-                </label>
-            </div>
-
-            <div class="sound-group">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label><i class="fas fa-arrow-down"></i> DOWN Sound</label>
-                    {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_down') %}
-                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.5rem 0;">Current: {{ monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_down').split('/')[-1] }}</p>
-                    {% endif %}
-                    <input type="file" name="sound_down" accept="audio/*" id="sound_down_{{ category }}">
-                    <button type="button" onclick="testSound('sound_down_{{ category }}')" class="btn-small" style="margin-top: 0.5rem;"><i class="fas fa-play"></i> Test</button>
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label><i class="fas fa-arrow-up"></i> UP Sound</label>
-                    {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_up') %}
-                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.5rem 0;">Current: {{ monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_up').split('/')[-1] }}</p>
-                    {% endif %}
-                    <input type="file" name="sound_up" accept="audio/*" id="sound_up_{{ category }}">
-                    <button type="button" onclick="testSound('sound_up_{{ category }}')" class="btn-small" style="margin-top: 0.5rem;"><i class="fas fa-play"></i> Test</button>
-                </div>
-            </div>
-
-            <button type="submit" class="btn-primary" style="margin-top: 1rem;"><i class="fas fa-save"></i> Save Alarm Settings</button>
-        </form>
-
-        <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);">
-
-        <h4 style="margin-bottom: 1rem; color: var(--text-primary); font-weight: 600;"><i class="fas fa-clock"></i> CR Auto-Reset</h4>
-        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">Otomatis reset host CR Verification ke New pada jam dan interval yang ditentukan.</p>
-        <form method="POST" action="/monitoring-settings/update-cr-reset" onsubmit="return validateCrReset(this)">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="category" value="{{ category }}">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label>Reset Hours (24h)</label>
-                    <input type="text" name="cr_reset_hours" value="{{ monitoring_config.get('category_settings', {}).get(category, {}).get('cr_reset_hours', '') }}" placeholder="15" pattern="[0-9, ]*" title="Angka dan koma saja, contoh: 03,15">
-                    <small style="color: var(--text-secondary); font-size: 0.8rem;">Contoh: <code>15</code> = jam 3 sore, <code>03,15</code> = jam 3 pagi & 3 sore</small>
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label>Interval (hari)</label>
-                    <input type="number" name="cr_reset_interval_days" value="{{ monitoring_config.get('category_settings', {}).get(category, {}).get('cr_reset_interval_days', 0) }}" min="0" max="365">
-                    <small style="color: var(--text-secondary); font-size: 0.8rem;"><code>1</code> = setiap hari, <code>4</code> = setiap 4 hari, <code>0</code> = nonaktif</small>
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label>Grace Period (jam)</label>
-                    <input type="number" name="cr_reset_grace_hours" value="{{ monitoring_config.get('category_settings', {}).get(category, {}).get('cr_reset_grace_hours', 0) }}" min="0" max="720">
-                    <small style="color: var(--text-secondary); font-size: 0.8rem;"><code>0</code> = semua reset, <code>6</code> = skip host yang baru di-set 6 jam terakhir</small>
-                </div>
-            </div>
-            <button type="submit" class="btn-primary" style="margin-top: 1rem;"><i class="fas fa-save"></i> Save Auto-Reset</button>
-        </form>
-    </div>
-    {% endfor %}
-</div>
-
-<div class="section-card">
-    <h3><i class="fas fa-plus-circle"></i> Tambah Kategori Monitoring</h3>
-    <div class="category-grid">
-        <div class="alarm-card" style="margin-bottom: 0;">
-            <h4><i class="fas fa-folder-plus"></i> Add New Category</h4>
-            <form method="POST" action="/monitoring-settings/add">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="form-group">
-                    <label>Category Name</label>
-                    <input type="text" name="category" required placeholder="e.g. Network Backbone">
-                    <p class="helper-text">Nama akan disimpan sebagai slug, misalnya `Network Backbone` menjadi `network-backbone`.</p>
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="editUseServicePlugin">Status Information Source</label>
-                    <select name="use_service_plugin">
-                        <option value="false">Default (Host Plugin Output)</option>
-                        <option value="true">Service Plugin Output</option>
-                    </select>
-                    <p class="helper-text">Pilih `Service Plugin Output` jika kategori perlu menampilkan detail status service, bukan output host default.</p>
-                </div>
-                <button type="submit" class="btn-primary" style="margin-top: 1rem;"><i class="fas fa-plus"></i> Add Category</button>
-            </form>
-        </div>
-
+<div class="section-card" id="categories">
+    <div class="section-header">
         <div>
-            {% if categories %}
-            <div class="category-list">
-                {% for category in categories %}
-                <div class="category-item">
-                    <div class="category-item-header">
-                        <div>
-                            <h4><i class="fas fa-folder-open"></i> {{ category|title }}</h4>
-                            <p class="helper-text" style="margin-top: 0.35rem;">Slug: <code>{{ category }}</code></p>
-                        </div>
-                        <a href="/monitoring/{{ category }}" class="btn-secondary"><i class="fas fa-eye"></i> View</a>
-                    </div>
-
-                    <div class="category-meta">
-                        <span class="meta-badge"><i class="fas fa-server"></i> {{ server_mappings.get(category, [])|length }} server(s)</span>
-                        {% if monitoring_config.get('category_settings', {}).get(category, {}).get('use_service_plugin') %}
-                        <span class="meta-badge service"><i class="fas fa-plug"></i> Service Plugin</span>
-                        {% else %}
-                        <span class="meta-badge"><i class="fas fa-desktop"></i> Host Plugin</span>
-                        {% endif %}
-                    </div>
-
-                    <div class="category-actions">
-                        <button type="button" class="btn-small" onclick="editCategory('{{ category }}', {{ monitoring_config.get('category_settings', {}).get(category, {}).get('use_service_plugin', false)|tojson }})">
-                            <i class="fas fa-pen"></i> Edit
-                        </button>
-                        <form method="POST" action="/monitoring-settings/delete/{{ category }}" style="display: inline;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn-danger" onclick="return confirm('Delete category {{ category }}?')">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </form>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <i class="fas fa-folder-open" style="font-size: 1.5rem; margin-bottom: 0.75rem;"></i>
-                <p style="margin: 0;">No categories found yet.</p>
-            </div>
-            {% endif %}
+            <h3><i class="fas fa-folder-open"></i> Categories</h3>
+            <p class="section-desc">Tambah, edit source status, atau hapus kategori monitoring.</p>
         </div>
+        <button type="button" class="btn-primary" onclick="openAddCategoryModal()">
+            <i class="fas fa-plus"></i> Add Category
+        </button>
     </div>
+
+    {% if categories %}
+    <div class="category-list">
+        {% for category in categories %}
+        <div class="category-item">
+            <div class="category-item-header">
+                <div>
+                    <h4><i class="fas fa-folder"></i> {{ category|title }}</h4>
+                    <p class="helper-text">Slug: <code>{{ category }}</code></p>
+                </div>
+                <a href="/monitoring/{{ category }}" class="btn-secondary"><i class="fas fa-eye"></i> View</a>
+            </div>
+
+            <div class="category-meta">
+                <span class="meta-badge"><i class="fas fa-server"></i> {{ server_mappings.get(category, [])|length }} server(s)</span>
+                {% if monitoring_config.get('category_settings', {}).get(category, {}).get('use_service_plugin') %}
+                <span class="meta-badge service"><i class="fas fa-plug"></i> Service Plugin</span>
+                {% else %}
+                <span class="meta-badge"><i class="fas fa-desktop"></i> Host Plugin</span>
+                {% endif %}
+            </div>
+
+            <div class="category-actions">
+                <button type="button" class="btn-small" onclick="editCategory('{{ category }}', {{ monitoring_config.get('category_settings', {}).get(category, {}).get('use_service_plugin', false)|tojson }})">
+                    <i class="fas fa-pen"></i> Edit
+                </button>
+                <form method="POST" action="/monitoring-settings/delete/{{ category }}" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-danger" onclick="return confirm('Delete category {{ category }}?')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-folder-open empty-icon"></i>
+        <p>Belum ada kategori. Klik <strong>Add Category</strong> untuk mulai.</p>
+    </div>
+    {% endif %}
 </div>
 
-<div class="section-card">
-    <h3><i class="fas fa-link"></i> Map Server to Category</h3>
-    <form method="POST" action="/monitoring-settings/map-server">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-grid">
-            <div class="form-group" style="margin-bottom: 0;">
-                <label>Server</label>
-                <select name="server" required>
+<div class="section-card" id="server-mappings">
+    <div class="section-header">
+        <div>
+            <h3><i class="fas fa-sitemap"></i> Server Mappings</h3>
+            <p class="section-desc">Hubungkan container Nagios ke kategori monitoring.</p>
+        </div>
+    </div>
+
+    <form method="POST" action="/monitoring-settings/map-server" class="map-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-grid form-grid-3">
+            <div class="form-group mb-0">
+                <label for="map_server">Server</label>
+                <select id="map_server" name="server" required>
                     {% for server in nagios_servers_list %}
                     <option value="{{ server }}">{{ server }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
-                <label for="editCategoryNameDisplay">Category</label>
-                <select name="category" required>
+            <div class="form-group mb-0">
+                <label for="map_category">Category</label>
+                <select id="map_category" name="category" required>
                     {% for category in categories %}
                     <option value="{{ category }}">{{ category|title }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="form-group" style="display: flex; align-items: flex-end; margin-bottom: 0;">
-                <button type="submit" class="btn-primary" style="width: 100%;"><i class="fas fa-link"></i> Map Server</button>
+            <div class="form-group mb-0 form-group-action">
+                <button type="submit" class="btn-primary btn-block"><i class="fas fa-link"></i> Map Server</button>
             </div>
         </div>
     </form>
-</div>
 
-<div class="section-card" id="server-mappings">
-    <div class="section-header">
-        <h3><i class="fas fa-sitemap"></i> Server Mappings</h3>
-        <button type="button" class="btn-primary" onclick="openAddCategoryModal()">
-            <i class="fas fa-plus"></i> Add Category
-        </button>
-    </div>
-    {% for category in categories %}
-    <div style="margin-bottom: 2rem;">
-        <h4 style="color: var(--text-primary); margin-bottom: 1rem; font-weight: 600;"><i class="fas fa-chevron-right"></i> {{ category|title }}</h4>
-        {% if server_mappings.get(category) %}
+    {% if categories %}
+    <div class="mapping-groups">
+        {% for category in categories %}
+        <div class="mapping-group">
+            <div class="mapping-group-header">
+                <h4><i class="fas fa-folder"></i> {{ category|title }}</h4>
+                <span class="meta-badge">{{ server_mappings.get(category, [])|length }} mapped</span>
+            </div>
+            {% if server_mappings.get(category) %}
             <div class="mappings-grid">
                 {% for server in server_mappings[category] %}
                 <div class="mapping-badge">
                     <span><i class="fas fa-server"></i> {{ server }}</span>
-                    <form method="POST" action="/monitoring-settings/unmap-server" style="display: inline;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <form method="POST" action="/monitoring-settings/unmap-server" class="inline-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="server" value="{{ server }}">
                         <input type="hidden" name="category" value="{{ category }}">
-                        <button type="submit" title="Remove mapping"><i class="fas fa-times"></i></button>
+                        <button type="submit" title="Remove mapping" aria-label="Remove {{ server }}"><i class="fas fa-times"></i></button>
                     </form>
                 </div>
                 {% endfor %}
             </div>
-        {% else %}
-            <p style="color: var(--text-muted); font-size: 0.9rem;"><i class="fas fa-info-circle"></i> No servers mapped</p>
-        {% endif %}
+            {% else %}
+            <p class="empty-inline"><i class="fas fa-info-circle"></i> No servers mapped</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>Buat kategori dulu sebelum mapping server.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="section-card" id="alarms">
+    <h3><i class="fas fa-volume-up"></i> Alarms &amp; CR Auto-Reset</h3>
+    <p class="section-desc">Pengaturan per kategori: suara alarm + jadwal reset CR Verification → New.</p>
+
+    {% if categories %}
+    {% for category in categories %}
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <h4><i class="fas fa-bell"></i> {{ category|title }}</h4>
+            <a href="/monitoring/{{ category }}" class="btn-secondary btn-xs"><i class="fas fa-eye"></i> Open</a>
+        </div>
+
+        <div class="settings-subcard">
+            <h5><i class="fas fa-volume-up"></i> Alarm Sounds</h5>
+            <form method="POST" action="/monitoring-settings/update-config" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="category" value="{{ category }}">
+                <input type="hidden" name="refresh_interval" value="{{ monitoring_config.get('refresh_interval', 30) }}">
+
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="alarm_down" {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('alarm_down') %}checked{% endif %}>
+                        <span>Alarm on DOWN</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="alarm_up" {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('alarm_up') %}checked{% endif %}>
+                        <span>Alarm on UP</span>
+                    </label>
+                </div>
+
+                <div class="sound-group">
+                    <div class="form-group mb-0">
+                        <label for="sound_down_{{ category }}"><i class="fas fa-arrow-down"></i> DOWN Sound</label>
+                        {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_down') %}
+                        <p class="current-file">Current: {{ monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_down').split('/')[-1] }}</p>
+                        {% endif %}
+                        <input type="file" name="sound_down" accept="audio/*" id="sound_down_{{ category }}">
+                        <button type="button" onclick="testSound('sound_down_{{ category }}')" class="btn-small mt-sm"><i class="fas fa-play"></i> Test</button>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label for="sound_up_{{ category }}"><i class="fas fa-arrow-up"></i> UP Sound</label>
+                        {% if monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_up') %}
+                        <p class="current-file">Current: {{ monitoring_config.get('alarm_settings', {}).get(category, {}).get('sound_up').split('/')[-1] }}</p>
+                        {% endif %}
+                        <input type="file" name="sound_up" accept="audio/*" id="sound_up_{{ category }}">
+                        <button type="button" onclick="testSound('sound_up_{{ category }}')" class="btn-small mt-sm"><i class="fas fa-play"></i> Test</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary mt-md"><i class="fas fa-save"></i> Save Alarm Settings</button>
+            </form>
+        </div>
+
+        <div class="settings-subcard">
+            <h5><i class="fas fa-clock"></i> CR Auto-Reset</h5>
+            <p class="helper-text">Otomatis reset host CR Verification ke New pada jam dan interval yang ditentukan.</p>
+            <form method="POST" action="/monitoring-settings/update-cr-reset" onsubmit="return validateCrReset(this)">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="category" value="{{ category }}">
+                <div class="form-grid form-grid-3">
+                    <div class="form-group mb-0">
+                        <label>Reset Hours (24h)</label>
+                        <input type="text" name="cr_reset_hours" value="{{ monitoring_config.get('category_settings', {}).get(category, {}).get('cr_reset_hours', '') }}" placeholder="15" pattern="[0-9, ]*" title="Angka dan koma saja, contoh: 03,15">
+                        <small class="field-hint">Contoh: <code>15</code> = jam 3 sore, <code>03,15</code> = jam 3 pagi &amp; 3 sore</small>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Interval (hari)</label>
+                        <input type="number" name="cr_reset_interval_days" value="{{ monitoring_config.get('category_settings', {}).get(category, {}).get('cr_reset_interval_days', 0) }}" min="0" max="365">
+                        <small class="field-hint"><code>1</code> = setiap hari, <code>4</code> = setiap 4 hari, <code>0</code> = nonaktif</small>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Grace Period (jam)</label>
+                        <input type="number" name="cr_reset_grace_hours" value="{{ monitoring_config.get('category_settings', {}).get(category, {}).get('cr_reset_grace_hours', 0) }}" min="0" max="720">
+                        <small class="field-hint"><code>0</code> = semua reset, <code>6</code> = skip host yang baru di-set 6 jam terakhir</small>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary mt-md"><i class="fas fa-save"></i> Save Auto-Reset</button>
+            </form>
+        </div>
     </div>
     {% endfor %}
+    {% else %}
+    <div class="empty-state">
+        <p>Belum ada kategori untuk dikonfigurasi alarm.</p>
+    </div>
+    {% endif %}
 </div>
 
 <script src="/static/js/monitoring_settings.js"></script>
 
 <div id="addCategoryModal" class="modal-overlay">
     <div class="modal-card">
-        <h3 style="margin-top: 0;"><i class="fas fa-folder-plus"></i> Add Monitoring Category</h3>
+        <h3 class="modal-title"><i class="fas fa-folder-plus"></i> Add Monitoring Category</h3>
         <form method="POST" action="/monitoring-settings/add">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
-                <label>Category Name</label>
-                <input type="text" name="category" required placeholder="e.g. Network Backbone">
-                <p class="helper-text">Kategori baru akan tampil di menu Monitoring dan bisa dipakai di Server Mappings.</p>
+                <label for="add_category_name">Category Name</label>
+                <input type="text" id="add_category_name" name="category" required placeholder="e.g. Network Backbone">
+                <p class="helper-text">Nama disimpan sebagai slug, mis. <code>Network Backbone</code> → <code>network-backbone</code>.</p>
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
-                <label>Status Information Source</label>
-                <select name="use_service_plugin">
+            <div class="form-group mb-0">
+                <label for="add_use_service_plugin">Status Information Source</label>
+                <select id="add_use_service_plugin" name="use_service_plugin">
                     <option value="false">Default (Host Plugin Output)</option>
                     <option value="true">Service Plugin Output</option>
                 </select>
+                <p class="helper-text">Pilih Service Plugin Output jika kategori menampilkan detail service, bukan host default.</p>
             </div>
             <div class="modal-actions">
                 <button type="button" class="btn-small" onclick="closeAddCategoryModal()">Cancel</button>
@@ -251,21 +268,21 @@
 
 <div id="editCategoryModal" class="modal-overlay">
     <div class="modal-card">
-        <h3 style="margin-top: 0;"><i class="fas fa-pen"></i> Edit Category Settings</h3>
+        <h3 class="modal-title"><i class="fas fa-pen"></i> Edit Category Settings</h3>
         <form method="POST" action="/monitoring-settings/edit-category">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="category" id="editCategoryName">
             <div class="form-group">
-                <label>Category</label>
+                <label for="editCategoryNameDisplay">Category</label>
                 <input type="text" id="editCategoryNameDisplay" readonly>
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
-                <label>Status Information Source</label>
+            <div class="form-group mb-0">
+                <label for="editUseServicePlugin">Status Information Source</label>
                 <select name="use_service_plugin" id="editUseServicePlugin">
                     <option value="false">Default (Host Plugin Output)</option>
                     <option value="true">Service Plugin Output</option>
                 </select>
-                <p class="helper-text">Gunakan `Service Plugin Output` jika status untuk kategori ini berasal dari service check.</p>
+                <p class="helper-text">Gunakan Service Plugin Output jika status kategori ini dari service check.</p>
             </div>
             <div class="modal-actions">
                 <button type="button" class="btn-small" onclick="closeEditCategoryModal()">Cancel</button>
