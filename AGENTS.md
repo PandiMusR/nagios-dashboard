@@ -153,7 +153,11 @@ When a host goes DOWN, it enters a stage workflow managed entirely by the dashbo
 - Resolved sends ACK command to Nagios CGI and removes stage entry
 - Flapping retention: Watchlist stage preserved for 30 minutes if host recovers
 - CR Auto-Reset: background scheduler resets `cs` → `new` at configurable hours
-- Stage history: every change recorded in `config/stage_history/` (JSONL, monthly files)
+- Stage history: every stage change recorded in `config/stage_history/` (JSONL, monthly files), including:
+  - Manual stage changes by users (set-stage, batch-set-stage)
+  - CR Auto-Reset by scheduler (`cs` → `new`)
+  - **Auto-detect events by system:** host first DOWN (`up` → `new`), host recovered (`<stage>` → `up`),
+    DOWN again while flapping (`up` → `<stage>`), watchlist retention (30min expiry)
 - Thread safety: `host_stages_transaction()` context manager with `threading.Lock`
 
 ### Monitoring Data Flow
