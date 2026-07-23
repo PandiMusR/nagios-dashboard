@@ -226,6 +226,7 @@ def _fetch_monitoring_hosts(page: str) -> list[dict]:
                                 if not stage_info.get('host_up_since'):
                                     stage_info['host_up_since'] = now.isoformat()
                                     stages_dirty = True
+                                    append_stage_history(hostname, container_name, current_stage, 'up', 'system (auto-detect)', 'Host recovered (flapping — watching for 30min)')
                                 else:
                                     try:
                                         up_since = datetime.fromisoformat(stage_info['host_up_since'])
@@ -233,14 +234,17 @@ def _fetch_monitoring_hosts(page: str) -> list[dict]:
                                             del host_stages[stage_key]
                                             stages_dirty = True
                                             stage_info = None
+                                            append_stage_history(hostname, container_name, current_stage, 'up', 'system (auto-detect)', 'Host recovered (watchlist — 30min flapping window expired)')
                                     except (ValueError, TypeError):
                                         del host_stages[stage_key]
                                         stages_dirty = True
                                         stage_info = None
+                                        append_stage_history(hostname, container_name, current_stage, 'up', 'system (auto-detect)', 'Host recovered (watchlist — parse error, removed)')
                             else:
                                 del host_stages[stage_key]
                                 stages_dirty = True
                                 stage_info = None
+                                append_stage_history(hostname, container_name, current_stage, 'up', 'system (auto-detect)', 'Host recovered')
                             continue
 
                         # --- Handle DOWN hosts ---
@@ -256,6 +260,7 @@ def _fetch_monitoring_hosts(page: str) -> list[dict]:
                         if stage_info and stage_info.get('host_up_since'):
                             stage_info['host_up_since'] = None
                             stages_dirty = True
+                            append_stage_history(hostname, container_name, 'up', stage_info.get('stage', STAGE_NEW), 'system (auto-detect)', 'Host went DOWN again (flapping)')
 
                         if not stage_info:
                             stage_info = {
@@ -266,6 +271,7 @@ def _fetch_monitoring_hosts(page: str) -> list[dict]:
                             }
                             host_stages[stage_key] = stage_info
                             stages_dirty = True
+                            append_stage_history(hostname, container_name, 'up', STAGE_NEW, 'system (auto-detect)', 'Host went DOWN')
 
                         last_check = datetime.fromtimestamp(host.get('last_check', 0)/1000)
                         last_state = datetime.fromtimestamp(host.get('last_state_change', 0)/1000)

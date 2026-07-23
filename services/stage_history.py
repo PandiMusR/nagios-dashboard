@@ -60,8 +60,7 @@ def read_stage_history(host: str | None = None, container: str | None = None, li
         try:
             with open(filepath, 'r') as f:
                 file_lines = f.readlines()
-                start = max(0, len(file_lines) - limit)
-                for line in reversed(file_lines[start:]):
+                for line in reversed(file_lines):
                     line = line.strip()
                     if not line:
                         continue
@@ -74,9 +73,7 @@ def read_stage_history(host: str | None = None, container: str | None = None, li
                     if container and entry.get('container') != container:
                         continue
                     results.append(entry)
-                    if len(results) >= limit:
-                        return results
         except OSError:
             continue
 
-    return results
+    return results[:limit]
