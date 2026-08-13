@@ -129,7 +129,7 @@ function executeBatchAction() {
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Processing...';
     
-    fetch(`/servers/batch-${batchAction}`, {
+    csrfFetch(`/servers/batch-${batchAction}`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({servers: batchServers})
@@ -181,7 +181,7 @@ document.getElementById('addServerForm').addEventListener('submit', function(e) 
     
     document.getElementById('loadingOverlay').classList.add('show');
     
-    fetch('/servers/add', {
+    csrfFetch('/servers/add', {
         method: 'POST',
         body: formData
     })
@@ -284,7 +284,7 @@ function loadPluginList(serverName) {
 function deletePlugin(serverName, pluginName) {
     if (!confirm('Delete: ' + pluginName + '?')) return;
     
-    fetch('/servers/plugins/' + serverName + '/' + pluginName, {method: 'DELETE'})
+    csrfFetch('/servers/plugins/' + serverName + '/' + pluginName, {method: 'DELETE'})
         .then(r => r.json())
         .then(data => {
             if (data.success) loadPluginList(serverName);
@@ -297,7 +297,7 @@ document.getElementById('uploadPluginForm').addEventListener('submit', function(
     const formData = new FormData(this);
     const serverName = document.getElementById('uploadServerName').value;
     
-    fetch('/servers/plugins/upload', {
+    csrfFetch('/servers/plugins/upload', {
         method: 'POST',
         body: formData
     })

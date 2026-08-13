@@ -104,6 +104,7 @@ FILES_TO_UPDATE=(
     "templates/active_users.html"
     "templates/global_settings.html"
     "templates/activity_logs.html"
+    "static/js/servers.js"
     "requirements.txt"
     "migrate_encrypt_creds.py"
     "preflight_check.sh"

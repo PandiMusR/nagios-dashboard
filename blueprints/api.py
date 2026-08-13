@@ -47,14 +47,21 @@ def _error(message: str, status: int = 400) -> tuple[Response, int]:
     return jsonify({'success': False, 'error': message}), status
 
 
-def _parse_onu_host_name(host_name: str) -> tuple[str, str | None]:
+# Servers excluded from ONU host_name auto-parse / check_status_onu auto-add
+ONU_EXCLUDED_SERVERS = frozenset({'Staging'})
+
+
+def _parse_onu_host_name(host_name: str, server: str = '') -> tuple[str, str | None]:
     """Parse ONU host_name format and return (transformed_name, id_ne).
 
     Input:  "<Customer ID> - <ID NE> - <nama site>"
     Output: ("<ID NE> - <nama site> - <Customer ID>", "<ID NE>")
 
     If host_name doesn't match the 3-part format, returns (host_name, None).
+    Skipped entirely for servers in ONU_EXCLUDED_SERVERS (e.g. Staging).
     """
+    if server in ONU_EXCLUDED_SERVERS:
+        return host_name, None
     parts = [p.strip() for p in host_name.split(' - ')]
     if len(parts) == 3 and all(parts):
         customer_id, id_ne, site_name = parts
@@ -127,7 +134,8 @@ def api_add_host() -> tuple[Response, int]:
         (3 non-empty parts separated by " - "), it is automatically:
         1. Rearranged to "<ID NE> - <site name> - <Customer ID>"
         2. A check_status_onu service is added with ID NE as argument
-        This behavior is skipped if service_plugin is explicitly provided.
+        This behavior is skipped if service_plugin is explicitly provided,
+        or if server is in ONU_EXCLUDED_SERVERS (Staging).
 
     Response:
     {
@@ -167,9 +175,9 @@ def api_add_host() -> tuple[Response, int]:
     if not host_name:
         return _error('Invalid host_name after sanitization')
 
-    # Auto-parse ONU format
+    # Auto-parse ONU format (skipped for Staging)
     original_host_name = host_name
-    host_name, id_ne = _parse_onu_host_name(host_name)
+    host_name, id_ne = _parse_onu_host_name(host_name, server)
 
     # Check server exists
     config_path = f'/svr/{server}/etc/objects/localhost.cfg'
@@ -245,7 +253,8 @@ def api_batch_add_hosts() -> tuple[Response, int]:
     ONU Auto-Parse:
         Each host_name is checked for "<Customer ID> - <ID NE> - <site name>" format.
         If matched, host_name is rearranged and check_status_onu service is auto-added.
-        Skipped if service_plugin is explicitly provided.
+        Skipped if service_plugin is explicitly provided,
+        or if server is in ONU_EXCLUDED_SERVERS (Staging).
     """
     if not _check_api_key(request):
         return _error('Invalid or missing API key', 401)
@@ -294,9 +303,9 @@ def api_batch_add_hosts() -> tuple[Response, int]:
             fail_count += 1
             continue
 
-        # Auto-parse ONU format
+        # Auto-parse ONU format (skipped for Staging)
         original_host_name = host_name
-        host_name, id_ne = _parse_onu_host_name(host_name)
+        host_name, id_ne = _parse_onu_host_name(host_name, server)
 
         if f'host_name               {host_name}' in content or f'host_name    {host_name}' in content or f'host_name               {host_name}' in new_entries:
             results.append({'host_name': host_name, 'success': False, 'error': 'Already exists'})
@@ -343,6 +352,130 @@ def api_batch_add_hosts() -> tuple[Response, int]:
         'fail_count': fail_count,
         'results': results
     }), 201
+
+
+def _replace_host_name_references(content: str, old_host_name: str, host_name: str) -> tuple[str, bool]:
+    """Rename a host while preserving its definition, services, and child parents."""
+    found = False
+
+    def replace_host_block(match: re.Match) -> str:
+        nonlocal found
+        block = match.group(0)
+        host_match = re.search(r'^(\s*host_name\s+)(.+?)\s*$', block, re.MULTILINE)
+        if host_match and host_match.group(2) == old_host_name:
+            found = True
+            return block[:host_match.start(2)] + host_name + block[host_match.end(2):]
+        return block
+
+    host_block_pattern = re.compile(r'define\s+host\s*\{[^}]*\}', re.DOTALL)
+    updated = host_block_pattern.sub(replace_host_block, content)
+    if not found:
+        return content, False
+
+    def replace_service_block(match: re.Match) -> str:
+        block = match.group(0)
+        return re.sub(
+            rf'^(\s*host_name\s+){re.escape(old_host_name)}(\s*)$',
+            rf'\g<1>{host_name}\2',
+            block,
+            flags=re.MULTILINE,
+        )
+
+    def replace_parent_reference(match: re.Match) -> str:
+        parents = match.group(2)
+        updated_parents = ','.join(
+            host_name if parent.strip() == old_host_name else parent
+            for parent in parents.split(',')
+        )
+        return match.group(1) + updated_parents + match.group(3)
+
+    service_block_pattern = re.compile(r'define\s+service\s*\{[^}]*\}', re.DOTALL)
+    updated = service_block_pattern.sub(replace_service_block, updated)
+    return re.sub(
+        r'^(\s*parents\s+)(.*?)(\s*)$',
+        replace_parent_reference,
+        updated,
+        flags=re.MULTILINE,
+    ), True
+
+
+@api_bp.route('/api/hosts/rename', methods=['POST'])
+def api_rename_host() -> tuple[Response, int]:
+    """POST /api/hosts/rename — Rename a host and update its Nagios references.
+
+    Auth: X-API-Key header or ?api_key query param
+
+    Body (JSON):
+    {
+        "server": "BhomeTest",
+        "old_host_name": "switch-gedung-a",
+        "host_name": "switch-gedung-b"
+    }
+    """
+    if not _check_api_key(request):
+        return _error('Invalid or missing API key', 401)
+
+    data = request.get_json()
+    if not data:
+        return _error('Request body must be JSON')
+
+    server = data.get('server', '').strip()
+    old_host_name = data.get('old_host_name', '').strip()
+    host_name = data.get('host_name', '').strip()
+
+    if not server or not old_host_name or not host_name:
+        return _error('Missing required fields: server, old_host_name, host_name')
+
+    old_host_name = re.sub(r'[^a-zA-Z0-9_. -]', '', old_host_name)
+    host_name = re.sub(r'[^a-zA-Z0-9_. -]', '', host_name)
+    if not old_host_name or not host_name:
+        return _error('Invalid hostname after sanitization')
+    if old_host_name == host_name:
+        return _error('old_host_name and host_name must be different')
+
+    config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+    if not os.path.exists(config_path):
+        return _error(f'Server "{server}" not found', 404)
+
+    try:
+        with open(config_path, 'r') as f:
+            content = f.read()
+
+        host_pattern = re.compile(
+            rf'define\s+host\s*\{{[^}}]*^\s*host_name\s+{re.escape(host_name)}\s*$[^}}]*\}}',
+            re.DOTALL | re.MULTILINE,
+        )
+        if host_pattern.search(content):
+            return _error(f'Host "{host_name}" already exists on server "{server}"', 409)
+
+        updated_content, found = _replace_host_name_references(content, old_host_name, host_name)
+        if not found:
+            return _error(f'Host "{old_host_name}" not found on server "{server}"', 404)
+
+        with open(config_path, 'w') as f:
+            f.write(updated_content)
+
+        from services.stage_service import get_stage_key, host_stages_transaction
+        with host_stages_transaction() as stages:
+            old_stage_key = get_stage_key(server, old_host_name)
+            new_stage_key = get_stage_key(server, host_name)
+            if old_stage_key in stages:
+                stages[new_stage_key] = stages.pop(old_stage_key)
+
+        subprocess.run(['docker', 'restart', server], check=True, capture_output=True, timeout=60)
+        log_activity('API: Rename Host', f'Host: {old_host_name} renamed to {host_name} on {server}', username='API')
+
+        return jsonify({
+            'success': True,
+            'server': server,
+            'old_host_name': old_host_name,
+            'host_name': host_name,
+            'message': 'Host renamed and Nagios restarted'
+        }), 200
+    except subprocess.CalledProcessError as e:
+        return _error(f'Failed to restart Nagios: {str(e)}', 500)
+    except OSError as e:
+        return _error(f'File error: {str(e)}', 500)
 
 
 @api_bp.route('/api/hosts/delete', methods=['DELETE'])
