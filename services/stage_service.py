@@ -1,54 +1,88 @@
 from __future__ import annotations
 
-import os
-import json
-import threading
-from contextlib import contextmanager
-from collections.abc import Generator
+import sqlite3
 
 from services.config import (
-    HOST_STAGES_PATH,
     STAGE_NEW, STAGE_CS, STAGE_ESCALATED, STAGE_WATCHLIST, STAGE_RESOLVED,
     STAGE_LABELS, STAGE_RETAIN_MINUTES
 )
-
-_stages_lock = threading.Lock()
-
-
-def load_host_stages() -> dict:
-    """Load host stage data from the JSON file."""
-    try:
-        if os.path.exists(HOST_STAGES_PATH):
-            with open(HOST_STAGES_PATH, 'r') as f:
-                return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        pass
-    return {}
-
-
-def save_host_stages(stages: dict) -> None:
-    """Persist host stage data to the JSON file."""
-    try:
-        with _stages_lock:
-            with open(HOST_STAGES_PATH, 'w') as f:
-                json.dump(stages, f, indent=2)
-    except Exception as e:
-        print(f'Failed to save host stages: {e}')
-
-
-@contextmanager
-def host_stages_transaction() -> Generator[dict]:
-    """Context manager that loads stages, yields them for mutation, then saves."""
-    with _stages_lock:
-        stages = load_host_stages()
-        yield stages
-        try:
-            with open(HOST_STAGES_PATH, 'w') as f:
-                json.dump(stages, f, indent=2)
-        except Exception as e:
-            print(f'Failed to save host stages: {e}')
+from services.stage_db import (
+    clear_host_up_since as db_clear_host_up_since,
+    delete_stage as db_delete_stage,
+    insert_stage_if_absent,
+    list_stage_rows,
+    select_stage,
+    set_host_up_since_if_unset as db_set_host_up_since_if_unset,
+    upsert_stage as db_upsert_stage,
+)
 
 
 def get_stage_key(container: str, hostname: str) -> str:
     """Return the composite key for a host within a container."""
     return f'{container}__{hostname}'
+
+
+def get_host_stage(container: str, hostname: str) -> dict | None:
+    try:
+        return select_stage(container, hostname)
+    except (OSError, ValueError, sqlite3.Error):
+        return None
+
+
+def list_host_stages(stage: str | None = None) -> list[dict]:
+    try:
+        return list_stage_rows(stage=stage)
+    except (OSError, ValueError, sqlite3.Error):
+        return []
+
+
+def upsert_host_stage(
+    container: str,
+    hostname: str,
+    stage: str,
+    updated_at: str | None = None,
+    updated_by: str | None = None,
+    note: str | None = None,
+    host_up_since: str | None = None,
+) -> None:
+    db_upsert_stage(
+        container,
+        hostname,
+        stage,
+        updated_at=updated_at,
+        updated_by=updated_by,
+        note=note,
+        host_up_since=host_up_since,
+    )
+
+
+def delete_host_stage(container: str, hostname: str) -> None:
+    db_delete_stage(container, hostname)
+
+
+def insert_host_stage_if_absent(
+    container: str,
+    hostname: str,
+    stage: str,
+    updated_at: str | None = None,
+    updated_by: str | None = None,
+    note: str | None = None,
+    host_up_since: str | None = None,
+) -> bool:
+    return insert_stage_if_absent(
+        container,
+        hostname,
+        stage,
+        updated_at=updated_at,
+        updated_by=updated_by,
+        note=note,
+        host_up_since=host_up_since,
+    )
+
+
+def set_host_up_since_if_unset(container: str, hostname: str, host_up_since: str) -> bool:
+    return db_set_host_up_since_if_unset(container, hostname, host_up_since)
+
+
+def clear_host_up_since(container: str, hostname: str) -> None:
+    db_clear_host_up_since(container, hostname)

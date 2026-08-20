@@ -455,12 +455,19 @@ def api_rename_host() -> tuple[Response, int]:
         with open(config_path, 'w') as f:
             f.write(updated_content)
 
-        from services.stage_service import get_stage_key, host_stages_transaction
-        with host_stages_transaction() as stages:
-            old_stage_key = get_stage_key(server, old_host_name)
-            new_stage_key = get_stage_key(server, host_name)
-            if old_stage_key in stages:
-                stages[new_stage_key] = stages.pop(old_stage_key)
+        from services.stage_service import get_host_stage, delete_host_stage, upsert_host_stage
+        existing = get_host_stage(server, old_host_name)
+        if existing:
+            delete_host_stage(server, old_host_name)
+            upsert_host_stage(
+                server,
+                host_name,
+                existing.get('stage', 'new'),
+                updated_at=existing.get('updated_at'),
+                updated_by=existing.get('updated_by'),
+                note=existing.get('note', ''),
+                host_up_since=existing.get('host_up_since'),
+            )
 
         subprocess.run(['docker', 'restart', server], check=True, capture_output=True, timeout=60)
         log_activity('API: Rename Host', f'Host: {old_host_name} renamed to {host_name} on {server}', username='API')
@@ -631,24 +638,23 @@ def api_monitoring() -> tuple[Response, int]:
     # This returns a simplified view — the full monitoring data requires session auth
     # For API, we return host_stages data
     try:
-        from services.stage_service import load_host_stages, STAGE_LABELS
-        host_stages = load_host_stages()
-
+        from services.stage_service import list_host_stages, STAGE_LABELS
         category_filter = request.args.get('category', '').strip()
 
         hosts = []
-        for key, data in host_stages.items():
-            container, hostname = key.split('__', 1) if '__' in key else ('', key)
+        for row in list_host_stages():
+            container = row.get('container') or ''
+            hostname = row.get('hostname') or ''
             if category_filter and container != category_filter:
                 continue
             hosts.append({
                 'host_name': hostname,
                 'container': container,
-                'stage': data.get('stage', 'new'),
-                'stage_label': STAGE_LABELS.get(data.get('stage', 'new'), 'Unknown'),
-                'note': data.get('note', ''),
-                'updated_at': data.get('updated_at', ''),
-                'updated_by': data.get('updated_by', '')
+                'stage': row.get('stage', 'new'),
+                'stage_label': STAGE_LABELS.get(row.get('stage', 'new'), 'Unknown'),
+                'note': row.get('note', ''),
+                'updated_at': row.get('updated_at', ''),
+                'updated_by': row.get('updated_by', '')
             })
 
         return jsonify({'success': True, 'hosts': hosts, 'total': len(hosts)}), 200

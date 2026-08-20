@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from flask import Blueprint, Response, render_template, request, redirect, session, jsonify, flash
 import logging
-import os, json
 
-from services.config import LDAP_SERVER, LDAP_BASE_DN, HOST_STAGES_PATH
+from services.config import LDAP_SERVER, LDAP_BASE_DN
 from services.encryption import encrypt_session_value
 from services.ldap_service import get_ldap_admin_connection, check_admin_user_exists, ldap_auth, log_activity
 from services.active_users import active_users
@@ -29,14 +28,14 @@ def health() -> tuple[Response, int]:
         checks['ldap'] = f'error: {e}'
         all_ok = False
 
-    # 2. Host stages file accessible
+    # 2. Host stages store accessible
     try:
-        if os.path.exists(HOST_STAGES_PATH):
-            with open(HOST_STAGES_PATH, 'r') as f:
-                json.load(f)
-            checks['host_stages'] = 'ok'
+        from services.stage_db import count_stages, integrity_ok
+        if not integrity_ok():
+            checks['host_stages'] = 'error: sqlite integrity_check failed'
+            all_ok = False
         else:
-            checks['host_stages'] = 'missing (will be created on first use)'
+            checks['host_stages'] = f'ok ({count_stages()} rows)'
     except Exception as e:
         checks['host_stages'] = f'error: {e}'
         all_ok = False

@@ -15,6 +15,7 @@ build/
 
 # Runtime config (contains credentials, secrets, and instance-specific data)
 config/*.json
+config/*.json.migrated
 config/*.db
 config/*.db-wal
 config/*.db-shm

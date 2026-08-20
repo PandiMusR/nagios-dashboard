@@ -22,6 +22,7 @@ MONITORING_SERVER_MAPPINGS_PATH = f'{CONFIG_DIR}/monitoring_server_mappings.json
 MONITORING_CONFIG_PATH = f'{CONFIG_DIR}/monitoring_config.json'
 GLOBAL_CONFIG_PATH = f'{CONFIG_DIR}/global_config.json'
 HOST_STAGES_PATH = f'{CONFIG_DIR}/host_stages.json'
+HOST_STAGES_DB_PATH = f'{CONFIG_DIR}/host_stages.db'
 USER_PERMISSIONS_PATH = f'{CONFIG_DIR}/user_permissions.json'
 INTENSIVE_HOSTS_PATH = f'{CONFIG_DIR}/intensive_hosts.json'
 PING_HISTORY_DB_PATH = f'{CONFIG_DIR}/ping_history.db'

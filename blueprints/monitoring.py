@@ -11,7 +11,10 @@ from services.config import (
 )
 from services.encryption import decrypt_session_value
 from services.ldap_service import log_activity
-from services.stage_service import load_host_stages, save_host_stages, host_stages_transaction, get_stage_key, _stages_lock
+from services.stage_service import (
+    get_host_stage, upsert_host_stage, delete_host_stage, insert_host_stage_if_absent,
+    set_host_up_since_if_unset, clear_host_up_since,
+)
 from services.docker_cache import docker_cache
 from services.stage_history import append_stage_history
 from utils.permissions import check_permission
@@ -211,11 +214,6 @@ def _fetch_monitoring_hosts(page: str) -> tuple[list[dict], list[str]]:
     all_hosts = []
     errors: list[str] = []
 
-    # Load host stages once before processing all containers (thread-safe)
-    with _stages_lock:
-        host_stages = load_host_stages()
-    stages_dirty = False
-
     # Get all running nagios containers (cached for 15s)
     docker_output = docker_cache.get_or_run(
         'nagios_containers',
@@ -271,8 +269,7 @@ def _fetch_monitoring_hosts(page: str) -> tuple[list[dict], list[str]]:
                         status_code = host.get('status', 0)
                         host_is_down = status_code in (4, 8)
                         host_is_up = status_code == 2
-                        stage_key = get_stage_key(container_name, hostname)
-                        stage_info = host_stages.get(stage_key)
+                        stage_info = get_host_stage(container_name, hostname)
 
                         # --- Handle UP hosts ---
                         if host_is_up and stage_info:
@@ -280,26 +277,19 @@ def _fetch_monitoring_hosts(page: str) -> tuple[list[dict], list[str]]:
 
                             if current_stage == STAGE_WATCHLIST:
                                 if not stage_info.get('host_up_since'):
-                                    stage_info['host_up_since'] = now.isoformat()
-                                    stages_dirty = True
-                                    append_stage_history(hostname, container_name, current_stage, 'up', 'system (auto-detect)', 'Host recovered (flapping — watching for 30min)')
+                                    if set_host_up_since_if_unset(container_name, hostname, now.isoformat()):
+                                        append_stage_history(hostname, container_name, current_stage, 'up', 'system (auto-detect)', 'Host recovered (flapping — watching for 30min)')
                                 else:
                                     try:
                                         up_since = datetime.fromisoformat(stage_info['host_up_since'])
                                         if (now - up_since).total_seconds() > STAGE_RETAIN_MINUTES * 60:
-                                            del host_stages[stage_key]
-                                            stages_dirty = True
-                                            stage_info = None
+                                            delete_host_stage(container_name, hostname)
                                             append_stage_history(hostname, container_name, current_stage, 'up', 'system (auto-detect)', 'Host recovered (watchlist — 30min flapping window expired)')
                                     except (ValueError, TypeError):
-                                        del host_stages[stage_key]
-                                        stages_dirty = True
-                                        stage_info = None
+                                        delete_host_stage(container_name, hostname)
                                         append_stage_history(hostname, container_name, current_stage, 'up', 'system (auto-detect)', 'Host recovered (watchlist — parse error, removed)')
                             else:
-                                del host_stages[stage_key]
-                                stages_dirty = True
-                                stage_info = None
+                                delete_host_stage(container_name, hostname)
                                 append_stage_history(hostname, container_name, current_stage, 'up', 'system (auto-detect)', 'Host recovered')
                             continue
 
@@ -309,25 +299,32 @@ def _fetch_monitoring_hosts(page: str) -> tuple[list[dict], list[str]]:
 
                         if host.get('problem_has_been_acknowledged', False):
                             if stage_info:
-                                del host_stages[stage_key]
-                                stages_dirty = True
+                                delete_host_stage(container_name, hostname)
                             continue
 
                         if stage_info and stage_info.get('host_up_since'):
-                            stage_info['host_up_since'] = None
-                            stages_dirty = True
+                            clear_host_up_since(container_name, hostname)
                             append_stage_history(hostname, container_name, 'up', stage_info.get('stage', STAGE_NEW), 'system (auto-detect)', 'Host went DOWN again (flapping)')
+                            stage_info = get_host_stage(container_name, hostname)
 
                         if not stage_info:
-                            stage_info = {
+                            inserted = insert_host_stage_if_absent(
+                                container_name,
+                                hostname,
+                                STAGE_NEW,
+                                updated_at=now.isoformat(),
+                                updated_by='system',
+                                host_up_since=None,
+                            )
+                            if inserted:
+                                append_stage_history(hostname, container_name, 'up', STAGE_NEW, 'system (auto-detect)', 'Host went DOWN')
+                            stage_info = get_host_stage(container_name, hostname) or {
                                 'stage': STAGE_NEW,
                                 'updated_at': now.isoformat(),
                                 'updated_by': 'system',
-                                'host_up_since': None
+                                'note': '',
+                                'host_up_since': None,
                             }
-                            host_stages[stage_key] = stage_info
-                            stages_dirty = True
-                            append_stage_history(hostname, container_name, 'up', STAGE_NEW, 'system (auto-detect)', 'Host went DOWN')
 
                         last_check = datetime.fromtimestamp(host.get('last_check', 0)/1000)
                         last_state = datetime.fromtimestamp(host.get('last_state_change', 0)/1000)
@@ -354,10 +351,6 @@ def _fetch_monitoring_hosts(page: str) -> tuple[list[dict], list[str]]:
                     except (ValueError, TypeError, KeyError, OSError):
                         logger.warning('Failed to process a host on container %s', container_name)
                         continue
-
-    # Save stages once after processing all containers (thread-safe)
-    if stages_dirty:
-        save_host_stages(host_stages)
 
     # Sort by last_state_change descending (newest first)
     all_hosts.sort(key=lambda x: x['last_state_change'], reverse=True)
@@ -536,7 +529,8 @@ def set_stage() -> Response | tuple[Response, int]:
 
     username = session.get('username')
     now = datetime.now()
-    stage_key = get_stage_key(container, host_name)
+    existing = get_host_stage(container, host_name)
+    old_stage = existing.get('stage', STAGE_NEW) if existing else STAGE_NEW
 
     if stage == STAGE_RESOLVED:
         # Resolved: ACK to Nagios + remove stage entry
@@ -562,31 +556,24 @@ def set_stage() -> Response | tuple[Response, int]:
         except Exception as e:
             return jsonify({'error': f'Nagios ACK error: {str(e)}'}), 500
 
-        # Remove stage entry (host will disappear from monitoring on next refresh)
-        with host_stages_transaction() as host_stages:
-            old_stage = host_stages.get(stage_key, {}).get('stage', STAGE_NEW)
-            host_stages.pop(stage_key, None)
-        # Write history after transaction
+        delete_host_stage(container, host_name)
         append_stage_history(host_name, container, old_stage, stage, username, comment)
         log_activity('Stage Resolved + ACK', f'Host {host_name} on {container} resolved and acknowledged. Comment: {comment}')
         return jsonify({'success': True, 'action': 'resolved_and_acked'})
-    else:
-        # Non-resolved: only update dashboard stage, DO NOT ACK Nagios
-        with host_stages_transaction() as host_stages:
-            existing = host_stages.get(stage_key, {})
-            old_stage = existing.get('stage', STAGE_NEW)
-            host_stages[stage_key] = {
-                'stage': stage,
-                'updated_at': now.isoformat(),
-                'updated_by': username,
-                'note': comment,
-                'host_up_since': existing.get('host_up_since')  # preserve flapping tracker
-            }
-        # Write history after transaction
-        append_stage_history(host_name, container, old_stage, stage, username, comment)
-        note_msg = f' Note: {comment}' if comment else ''
-        log_activity('Stage Updated', f'Host {host_name} on {container} set to stage "{STAGE_LABELS[stage]}" by {username}.{note_msg}')
-        return jsonify({'success': True, 'action': 'stage_updated', 'stage': stage, 'stage_label': STAGE_LABELS[stage]})
+
+    upsert_host_stage(
+        container,
+        host_name,
+        stage,
+        updated_at=now.isoformat(),
+        updated_by=username,
+        note=comment,
+        host_up_since=existing.get('host_up_since') if existing else None,
+    )
+    append_stage_history(host_name, container, old_stage, stage, username, comment)
+    note_msg = f' Note: {comment}' if comment else ''
+    log_activity('Stage Updated', f'Host {host_name} on {container} set to stage "{STAGE_LABELS[stage]}" by {username}.{note_msg}')
+    return jsonify({'success': True, 'action': 'stage_updated', 'stage': stage, 'stage_label': STAGE_LABELS[stage]})
 
 
 @monitoring_bp.route('/monitoring/batch-set-stage', methods=['POST'])
@@ -618,56 +605,54 @@ def batch_set_stage() -> Response | tuple[Response, int]:
     fail_count = 0
     history_entries: list[tuple[str, str, str, str, str, str]] = []
 
-    with host_stages_transaction() as host_stages:
-        for host in hosts:
-            host_name = host.get('name', '').strip()
-            container = host.get('container', '').strip()
-            port = host.get('port', '').strip()
+    for host in hosts:
+        host_name = host.get('name', '').strip()
+        container = host.get('container', '').strip()
+        port = host.get('port', '').strip()
 
-            if not host_name or not container:
-                fail_count += 1
-                continue
+        if not host_name or not container:
+            fail_count += 1
+            continue
 
-            stage_key = get_stage_key(container, host_name)
-            old_stage = host_stages.get(stage_key, {}).get('stage', STAGE_NEW)
+        existing = get_host_stage(container, host_name)
+        old_stage = existing.get('stage', STAGE_NEW) if existing else STAGE_NEW
 
-            if stage == STAGE_RESOLVED:
-                # Resolved: ACK to Nagios + remove stage entry
-                try:
-                    password = decrypt_session_value(session.get('password'))
-                    auth_header = f"Basic {base64.b64encode(f'{username}:{password}'.encode()).decode()}"
-                    cmd_url = f'http://localhost:{port}/nagios/cgi-bin/cmd.cgi'
-                    ack_data = {
-                        'cmd_typ': '33',
-                        'cmd_mod': '2',
-                        'host': host_name,
-                        'com_author': username,
-                        'com_data': note,
-                        'sticky_ack': 'on',
-                        'send_notification': 'on',
-                        'btnSubmit': 'Commit'
-                    }
-                    resp = requests.post(cmd_url, data=ack_data, headers={'Authorization': auth_header}, timeout=5)
-                    if resp.status_code == 200:
-                        host_stages.pop(stage_key, None)
-                        history_entries.append((host_name, container, old_stage, stage, username, note))
-                        success_count += 1
-                    else:
-                        fail_count += 1
-                except (requests.RequestException, json.JSONDecodeError):
-                    fail_count += 1
-            else:
-                # Non-resolved: only update dashboard stage
-                existing = host_stages.get(stage_key, {})
-                host_stages[stage_key] = {
-                    'stage': stage,
-                    'updated_at': now.isoformat(),
-                    'updated_by': username,
-                    'note': note if note else existing.get('note', ''),
-                    'host_up_since': existing.get('host_up_since')
+        if stage == STAGE_RESOLVED:
+            try:
+                password = decrypt_session_value(session.get('password'))
+                auth_header = f"Basic {base64.b64encode(f'{username}:{password}'.encode()).decode()}"
+                cmd_url = f'http://localhost:{port}/nagios/cgi-bin/cmd.cgi'
+                ack_data = {
+                    'cmd_typ': '33',
+                    'cmd_mod': '2',
+                    'host': host_name,
+                    'com_author': username,
+                    'com_data': note,
+                    'sticky_ack': 'on',
+                    'send_notification': 'on',
+                    'btnSubmit': 'Commit'
                 }
-                history_entries.append((host_name, container, old_stage, stage, username, note))
-                success_count += 1
+                resp = requests.post(cmd_url, data=ack_data, headers={'Authorization': auth_header}, timeout=5)
+                if resp.status_code == 200:
+                    delete_host_stage(container, host_name)
+                    history_entries.append((host_name, container, old_stage, stage, username, note))
+                    success_count += 1
+                else:
+                    fail_count += 1
+            except (requests.RequestException, json.JSONDecodeError):
+                fail_count += 1
+        else:
+            upsert_host_stage(
+                container,
+                host_name,
+                stage,
+                updated_at=now.isoformat(),
+                updated_by=username,
+                note=note if note else (existing.get('note', '') if existing else ''),
+                host_up_since=existing.get('host_up_since') if existing else None,
+            )
+            history_entries.append((host_name, container, old_stage, stage, username, note))
+            success_count += 1
 
     # Write history entries after transaction completes
     for entry in history_entries:

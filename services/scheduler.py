@@ -7,7 +7,7 @@ import time
 from datetime import datetime, date
 
 from services.config import GLOBAL_CONFIG_PATH, MONITORING_CONFIG_PATH, MONITORING_SERVER_MAPPINGS_PATH
-from services.stage_service import host_stages_transaction, STAGE_CS, STAGE_NEW
+from services.stage_service import get_host_stage, list_host_stages, upsert_host_stage, STAGE_CS, STAGE_NEW
 from services.stage_history import append_stage_history
 
 _config_lock = threading.Lock()
@@ -108,7 +108,7 @@ def _reset_category_hosts(category: str, server_names: list[str], grace_hours: i
 
     Only resets hosts whose container (server) is in server_names.
     Notes are preserved — only the stage is changed.
-    History entries are written after the transaction completes.
+    History entries are written after each row update.
 
     Args:
         category: Monitoring category name.
@@ -120,42 +120,46 @@ def _reset_category_hosts(category: str, server_names: list[str], grace_hours: i
     count = 0
     skipped = 0
     history_entries: list[tuple[str, str, str, str, str, str]] = []
+    server_set = set(server_names)
 
-    with host_stages_transaction() as host_stages:
-        for key, data in host_stages.items():
-            if data.get('stage') != STAGE_CS:
-                continue
-            # Key format: "Container__Hostname"
-            container = key.split('__')[0] if '__' in key else ''
-            host_name = key.split('__', 1)[1] if '__' in key else key
-            if container not in server_names:
-                continue
+    for row in list_host_stages(STAGE_CS):
+        container = row.get('container') or ''
+        host_name = row.get('hostname') or ''
+        if container not in server_set:
+            continue
 
-            # Grace period check
-            if grace_hours > 0:
-                updated_at = data.get('updated_at', '')
-                if not updated_at:
-                    # No timestamp available — skip to be safe
+        current = get_host_stage(container, host_name)
+        if not current or current.get('stage') != STAGE_CS:
+            continue
+
+        if grace_hours > 0:
+            updated_at = current.get('updated_at', '')
+            if not updated_at:
+                skipped += 1
+                continue
+            try:
+                updated_time = datetime.fromisoformat(updated_at)
+                hours_since = (now - updated_time).total_seconds() / 3600
+                if hours_since < grace_hours:
                     skipped += 1
                     continue
-                try:
-                    updated_time = datetime.fromisoformat(updated_at)
-                    hours_since = (now - updated_time).total_seconds() / 3600
-                    if hours_since < grace_hours:
-                        skipped += 1
-                        continue
-                except (ValueError, TypeError):
-                    # Can't parse timestamp — skip to be safe
-                    skipped += 1
-                    continue
+            except (ValueError, TypeError):
+                skipped += 1
+                continue
 
-            data['stage'] = STAGE_NEW
-            data['updated_at'] = now.isoformat()
-            data['updated_by'] = 'system (auto-reset)'
-            history_entries.append((host_name, container, STAGE_CS, STAGE_NEW, 'system (auto-reset)', f'Auto-reset ({category})'))
-            count += 1
+        upsert_host_stage(
+            container,
+            host_name,
+            STAGE_NEW,
+            updated_at=now.isoformat(),
+            updated_by='system (auto-reset)',
+            note=current.get('note', ''),
+            host_up_since=current.get('host_up_since'),
+        )
+        history_entries.append((host_name, container, STAGE_CS, STAGE_NEW, 'system (auto-reset)', f'Auto-reset ({category})'))
+        count += 1
 
-    # Write history entries after transaction completes (non-blocking)
+    # Write history entries after row updates (non-blocking)
     for entry in history_entries:
         try:
             append_stage_history(*entry)
