@@ -23,6 +23,8 @@ MONITORING_CONFIG_PATH = f'{CONFIG_DIR}/monitoring_config.json'
 GLOBAL_CONFIG_PATH = f'{CONFIG_DIR}/global_config.json'
 HOST_STAGES_PATH = f'{CONFIG_DIR}/host_stages.json'
 USER_PERMISSIONS_PATH = f'{CONFIG_DIR}/user_permissions.json'
+INTENSIVE_HOSTS_PATH = f'{CONFIG_DIR}/intensive_hosts.json'
+PING_HISTORY_DB_PATH = f'{CONFIG_DIR}/ping_history.db'
 
 LDAP_SERVER = 'localhost:1389'
 LDAP_BASE_DN = 'dc=bnet,dc=id'

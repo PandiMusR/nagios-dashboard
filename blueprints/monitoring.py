@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from flask import Blueprint, Response, render_template, request, redirect, session, jsonify, flash
-import os, json, subprocess, base64, requests, csv, io
+import logging, os, json, subprocess, base64, requests, csv, io
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
@@ -17,6 +17,8 @@ from services.stage_history import append_stage_history
 from utils.permissions import check_permission
 
 monitoring_bp = Blueprint('monitoring', __name__)
+logger = logging.getLogger(__name__)
+CGI_TIMEOUT = float(os.environ.get('MONITORING_CGI_TIMEOUT', '15'))
 
 
 def get_nagios_servers() -> list[str]:
@@ -96,37 +98,68 @@ def monitoring(page: str) -> str | Response:
                          nagios_servers=get_nagios_servers(), monitoring_categories=get_monitoring_categories())
 
 
-def _fetch_container_data(container_name: str, port: str, auth_header: str, use_service_plugin: bool) -> list[dict]:
-    """Fetch host data from a single Nagios container. Runs in a thread."""
-    hosts = []
+def _fetch_error(container_name: str, reason: str) -> str:
+    return f'Failed to fetch data from container {container_name} ({reason})'
+
+
+def _fetch_container_data(
+    container_name: str, port: str, auth_header: str, use_service_plugin: bool
+) -> tuple[list[dict], str | None]:
+    """Fetch host data from a single Nagios container.
+
+    Returns (hosts, error). On CGI/timeout/parse failure, hosts is empty and
+    error is a user-facing message. Callers must not treat that as 'all UP'.
+    """
+    headers = {'Authorization': auth_header}
     try:
         status_url = f'http://localhost:{port}/nagios/cgi-bin/statusjson.cgi?query=hostlist&details=true'
         object_url = f'http://localhost:{port}/nagios/cgi-bin/objectjson.cgi?details=true&query=hostlist'
 
-        status_resp = requests.get(status_url, headers={'Authorization': auth_header}, timeout=5)
-        object_resp = requests.get(object_url, headers={'Authorization': auth_header}, timeout=5)
+        status_resp = requests.get(status_url, headers=headers, timeout=CGI_TIMEOUT)
+        object_resp = requests.get(object_url, headers=headers, timeout=CGI_TIMEOUT)
 
-        if status_resp.status_code != 200 or object_resp.status_code != 200:
-            return hosts
+        if status_resp.status_code != 200:
+            return [], _fetch_error(container_name, f'HTTP {status_resp.status_code} from statusjson.cgi')
+        if object_resp.status_code != 200:
+            return [], _fetch_error(container_name, f'HTTP {object_resp.status_code} from objectjson.cgi')
 
-        status_data = status_resp.json()
-        object_data = object_resp.json()
+        try:
+            status_data = status_resp.json()
+            object_data = object_resp.json()
+        except json.JSONDecodeError:
+            return [], _fetch_error(container_name, 'invalid JSON from Nagios CGI')
 
         hostlist = status_data.get('data', {}).get('hostlist', {})
-        ip_mapping = {h: d.get('address', 'N/A') for h, d in object_data.get('data', {}).get('hostlist', {}).items()}
+        if not isinstance(hostlist, dict):
+            return [], _fetch_error(container_name, 'malformed hostlist')
+
+        object_hostlist = object_data.get('data', {}).get('hostlist', {})
+        ip_mapping = {}
+        if isinstance(object_hostlist, dict):
+            ip_mapping = {h: d.get('address', 'N/A') for h, d in object_hostlist.items() if isinstance(d, dict)}
 
         service_data = {}
         if use_service_plugin:
-            service_url = f'http://localhost:{port}/nagios/cgi-bin/statusjson.cgi?query=servicelist&details=true'
-            service_resp = requests.get(service_url, headers={'Authorization': auth_header}, timeout=5)
-            if service_resp.status_code == 200:
-                services = service_resp.json().get('data', {}).get('servicelist', {})
-                for hostname, host_services in services.items():
-                    for service_name, service_info in host_services.items():
-                        service_data[hostname] = service_info.get('plugin_output', '')
-                        break
+            try:
+                service_url = f'http://localhost:{port}/nagios/cgi-bin/statusjson.cgi?query=servicelist&details=true'
+                service_resp = requests.get(service_url, headers=headers, timeout=CGI_TIMEOUT)
+                if service_resp.status_code == 200:
+                    services = service_resp.json().get('data', {}).get('servicelist', {})
+                    if isinstance(services, dict):
+                        for hostname, host_services in services.items():
+                            if not isinstance(host_services, dict):
+                                continue
+                            for service_info in host_services.values():
+                                if isinstance(service_info, dict):
+                                    service_data[hostname] = service_info.get('plugin_output', '')
+                                break
+            except (requests.RequestException, json.JSONDecodeError, ValueError):
+                logger.warning('Service list fetch failed for %s; continuing with host data', container_name)
 
+        hosts = []
         for hostname, host in hostlist.items():
+            if not isinstance(host, dict):
+                continue
             hosts.append({
                 'hostname': hostname,
                 'host': host,
@@ -135,16 +168,23 @@ def _fetch_container_data(container_name: str, port: str, auth_header: str, use_
                 'ip_mapping': ip_mapping,
                 'service_data': service_data,
             })
-    except (requests.RequestException, json.JSONDecodeError, ValueError, KeyError):
-        pass
-    return hosts
+        return hosts, None
+    except requests.Timeout:
+        logger.warning('CGI timeout after %ss for container %s', CGI_TIMEOUT, container_name)
+        return [], _fetch_error(container_name, f'timeout after {CGI_TIMEOUT:g}s')
+    except requests.RequestException:
+        logger.warning('CGI connection error for container %s', container_name)
+        return [], _fetch_error(container_name, 'connection error')
+    except (ValueError, KeyError, TypeError):
+        logger.warning('CGI parse error for container %s', container_name)
+        return [], _fetch_error(container_name, 'unexpected CGI response')
 
 
-def _fetch_monitoring_hosts(page: str) -> list[dict]:
+def _fetch_monitoring_hosts(page: str) -> tuple[list[dict], list[str]]:
     """Fetch monitoring host data for a category. Shared by monitoring_data and export_csv.
 
-    Returns list of host dicts with stage info. Handles stage transitions
-    (UP cleanup, flapping retention, auto-create New).
+    Returns (hosts, errors). A failed container is reported in errors and is
+    NOT treated as an empty (all-UP) result.
     """
     # Load server mappings for this category
     server_mappings = {}
@@ -169,6 +209,7 @@ def _fetch_monitoring_hosts(page: str) -> list[dict]:
 
     auth_header = f"Basic {base64.b64encode(f'{session.get('username')}:{decrypt_session_value(session.get('password'))}'.encode()).decode()}"
     all_hosts = []
+    errors: list[str] = []
 
     # Load host stages once before processing all containers (thread-safe)
     with _stages_lock:
@@ -193,6 +234,11 @@ def _fetch_monitoring_hosts(page: str) -> list[dict]:
                     port = ports.split(':')[1].split('->')[0]
                     containers_to_fetch.append((container_name, port))
 
+    fetched_names = {name for name, _port in containers_to_fetch}
+    for mapped in category_servers:
+        if mapped not in fetched_names:
+            errors.append(_fetch_error(mapped, 'not running or port unavailable'))
+
     # Parallel fetch from all containers
     if containers_to_fetch:
         with ThreadPoolExecutor(max_workers=min(len(containers_to_fetch), 10)) as executor:
@@ -201,9 +247,19 @@ def _fetch_monitoring_hosts(page: str) -> list[dict]:
                 for name, port in containers_to_fetch
             }
             for future in as_completed(futures):
+                container_name = futures[future]
                 try:
-                    raw_hosts = future.result()
-                    for item in raw_hosts:
+                    raw_hosts, fetch_error = future.result()
+                except Exception:
+                    logger.warning('Unhandled fetch failure for container %s', container_name)
+                    errors.append(_fetch_error(container_name, 'internal error'))
+                    continue
+                if fetch_error:
+                    errors.append(fetch_error)
+                    continue
+
+                for item in raw_hosts:
+                    try:
                         hostname = item['hostname']
                         host = item['host']
                         container_name = item['container_name']
@@ -295,8 +351,9 @@ def _fetch_monitoring_hosts(page: str) -> list[dict]:
                             'stage_updated_at': stage_info.get('updated_at', ''),
                             'stage_note': stage_info.get('note', ''),
                         })
-                except Exception:
-                    continue
+                    except (ValueError, TypeError, KeyError, OSError):
+                        logger.warning('Failed to process a host on container %s', container_name)
+                        continue
 
     # Save stages once after processing all containers (thread-safe)
     if stages_dirty:
@@ -309,7 +366,7 @@ def _fetch_monitoring_hosts(page: str) -> list[dict]:
     if session.get('permissions', {}).get('cr_view_only'):
         all_hosts = [h for h in all_hosts if h.get('stage') == STAGE_CS]
 
-    return all_hosts
+    return all_hosts, errors
 
 
 @monitoring_bp.route('/monitoring/<page>/data')
@@ -321,10 +378,21 @@ def monitoring_data(page: str) -> Response | tuple[Response, int]:
         return jsonify({'error': 'Access denied'}), 403
 
     try:
-        all_hosts = _fetch_monitoring_hosts(page)
-        return jsonify({'hosts': all_hosts, 'total_down': len(all_hosts)})
-    except Exception as e:
-        return jsonify({'hosts': [], 'total_down': 0, 'error': str(e)})
+        all_hosts, errors = _fetch_monitoring_hosts(page)
+        return jsonify({
+            'hosts': all_hosts,
+            'total_down': len(all_hosts),
+            'errors': errors,
+            'incomplete': bool(errors),
+        })
+    except Exception:
+        logger.warning('Monitoring data load failed for category %s', page)
+        return jsonify({
+            'hosts': [],
+            'total_down': 0,
+            'errors': ['Failed to load monitoring data'],
+            'incomplete': True,
+        })
 
 
 @monitoring_bp.route('/monitoring/<page>/export-csv')
@@ -336,9 +404,9 @@ def export_monitoring_csv(page: str) -> Response | tuple[Response, int]:
         return jsonify({'error': 'Access denied'}), 403
 
     try:
-        hosts = _fetch_monitoring_hosts(page)
-    except Exception as e:
-        return jsonify({'error': f'Failed to fetch data: {str(e)}'}), 500
+        hosts, _errors = _fetch_monitoring_hosts(page)
+    except Exception:
+        return jsonify({'error': 'Failed to fetch monitoring data'}), 500
 
     # Apply filters from query params (same as frontend)
     server_filter = request.args.get('server', '')

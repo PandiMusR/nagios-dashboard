@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Monitoring - {{ page|title }}{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="/static/css/monitoring.css">
+<link rel="stylesheet" href="/static/css/monitoring.css?v=20260821">
 
 <div class="page-header">
     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -92,6 +92,8 @@
         </div>
     </div>
 </div>
+
+<div id="fetchErrorsBanner" class="monitoring-fetch-alert" hidden role="alert"></div>
 
 <!-- Hosts Table -->
 <div class="table-section">
@@ -258,6 +260,7 @@
     </div>
 </div>
 
+<script src="/static/js/monitoring.js?v=20260821"></script>
 <script>
 let refreshInterval;
 let countdownInterval;
@@ -278,24 +281,30 @@ function loadMonitoringData() {
     fetch('/monitoring/{{ page }}/data')
         .then(response => response.json())
         .then(data => {
-            detectChanges(data.hosts);
-            allHosts = data.hosts;
+            const errors = data.errors || [];
+            showMonitoringFetchErrors(errors);
+            if (errors.length) {
+                previousHosts = [...(data.hosts || [])];
+            } else {
+                detectChanges(data.hosts || []);
+            }
+            allHosts = data.hosts || [];
             updateServerFilter();
             applyFilters();
             document.getElementById('total_down').textContent = data.total_down;
             document.getElementById('last_update').textContent = new Date().toLocaleTimeString('en-US', {hour12: false});
             countdown = configRefreshInterval;
             
-            // Update view only table if in view only mode
             if (isViewOnlyMode) {
                 updateViewOnlyTable();
             }
         })
         .catch(error => {
             console.error('Error loading data:', error);
+            showMonitoringFetchErrors(['Failed to load monitoring data']);
             const tbody = document.getElementById('hosts_table');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="10" style="padding: 2rem; text-align: center;"><i class="fas fa-exclamation-triangle" style="color: var(--color-danger); margin-right: 8px;"></i>Gagal memuat data monitoring<button onclick="loadData()" style="margin-left: 12px; padding: 4px 12px; border: 1px solid var(--color-danger); background: var(--bg-secondary); color: var(--color-danger); border-radius: 6px; cursor: pointer;">Retry</button></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" style="padding: 2rem; text-align: center;"><i class="fas fa-exclamation-triangle" style="color: var(--color-danger); margin-right: 8px;"></i>Gagal memuat data monitoring<button onclick="loadMonitoringData()" style="margin-left: 12px; padding: 4px 12px; border: 1px solid var(--color-danger); background: var(--bg-secondary); color: var(--color-danger); border-radius: 6px; cursor: pointer;">Retry</button></td></tr>';
             }
         });
 }
@@ -1012,5 +1021,5 @@ function testAlarmSound() {
     }, 2000);
 }
 </script>
-<link rel="stylesheet" href="/static/css/monitoring.css">
+<link rel="stylesheet" href="/static/css/monitoring.css?v=20260821">
 {% endblock %}

@@ -93,6 +93,8 @@ FILES_TO_UPDATE=(
     "templates/host_manager.html"
     "templates/login.html"
     "templates/monitoring.html"
+    "static/js/monitoring.js"
+    "static/css/monitoring.css"
     "templates/monitoring_intens.html"
     "templates/monitoring_settings.html"
     "templates/nagios_view.html"
@@ -118,8 +120,49 @@ MODULE_DIRS=(
     "blueprints"
 )
 
+# HOLD 2026-08-21: Intensive Monitoring must not land on Prod.
+# FILES_TO_UPDATE already omits the UI/worker, but MODULE_DIRS is a full
+# `scp -r` of services/ and blueprints/, which would copy intensive.py,
+# intensive_db.py, and intensive-worker.initd unless we strip them after sync.
+INTENSIVE_HOLD_EXCLUDE=(
+    "intensive_worker.py"
+    "blueprints/intensive.py"
+    "services/intensive_db.py"
+    "services/intensive-worker.initd"
+    "templates/intensive.html"
+    "static/js/intensive.js"
+    "static/css/intensive.css"
+)
+
+is_intensive_hold_file() {
+    local rel="$1"
+    local ex
+    for ex in "${INTENSIVE_HOLD_EXCLUDE[@]}"; do
+        if [ "$rel" = "$ex" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+strip_intensive_hold_files() {
+    log "Ensuring Intensive Monitoring HOLD files are not on Prod..."
+    local rel target
+    for rel in "${INTENSIVE_HOLD_EXCLUDE[@]}"; do
+        target="$PROD_PATH/$rel"
+        if [ -e "$target" ]; then
+            rm -f "$target"
+            ok "Removed (HOLD): $rel"
+        fi
+    done
+}
+
 log "Backing up current files..."
 for FILE in "${FILES_TO_UPDATE[@]}"; do
+    if is_intensive_hold_file "$FILE"; then
+        warn "Skipping HOLD file (not deployed): $FILE"
+        continue
+    fi
     SRC="$PROD_PATH/$FILE"
     DEST="$BACKUP_DIR/$(basename $FILE)"
     if [ -f "$SRC" ]; then
@@ -167,6 +210,10 @@ log "Pulling updated files from dev server ($DEV_USER@$DEV_HOST)..."
 echo ""
 
 for FILE in "${FILES_TO_UPDATE[@]}"; do
+    if is_intensive_hold_file "$FILE"; then
+        warn "Skipping HOLD file (not deployed): $FILE"
+        continue
+    fi
     SRC="${DEV_USER}@${DEV_HOST}:${DEV_PATH}/${FILE}"
     DEST="$PROD_PATH/$FILE"
 
@@ -218,6 +265,11 @@ for DIR in "${MODULE_DIRS[@]}"; do
         fail "Deployment aborted due to SCP failure on $DIR/."
     fi
 done
+
+# MODULE_DIRS is a full directory copy — strip Intensive HOLD files that
+# arrived inside services/ or blueprints/. Also remove leftover UI/worker
+# paths if a previous deploy left them on Prod.
+strip_intensive_hold_files
 echo ""
 
 # -----------------------------------------------------------------------------

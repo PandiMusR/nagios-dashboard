@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Intensive Monitors{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/intensive.css?v=20260820d">
+{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-heartbeat"></i> Intensive Monitors</h1>
+    <p>High-frequency ping latency and packet loss for priority hosts</p>
+</div>
+
+<div class="section-card im-toolbar">
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="imHost">Host</label>
+            <select id="imHost" aria-label="Monitored host"></select>
+        </div>
+        <div class="form-group">
+            <label>Time range</label>
+            <div class="im-range" role="group" aria-label="Time range">
+                <button type="button" class="im-range-btn" data-range="1h">1h</button>
+                <button type="button" class="im-range-btn is-active" data-range="24h">24h</button>
+                <button type="button" class="im-range-btn" data-range="7d">7d</button>
+            </div>
+        </div>
+        <div class="form-group im-toolbar-actions">
+            <label>&nbsp;</label>
+            <div class="im-toolbar-btns">
+                <button type="button" class="btn-secondary" id="imManage">
+                    <i class="fas fa-sliders-h"></i> Manage Hosts
+                </button>
+                <button type="button" class="btn-primary" id="imRefresh">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+    <p class="im-meta" id="imMeta">Memuat data...</p>
+</div>
+
+<div class="im-stats" id="imStats">
+    <div class="im-stat">
+        <span class="im-stat-label">Status</span>
+        <span class="im-stat-value" id="imStatStatus">—</span>
+    </div>
+    <div class="im-stat">
+        <span class="im-stat-label">Latency</span>
+        <span class="im-stat-value" id="imStatLatency">—</span>
+    </div>
+    <div class="im-stat">
+        <span class="im-stat-label">Avg latency</span>
+        <span class="im-stat-value" id="imStatAvg">—</span>
+    </div>
+    <div class="im-stat">
+        <span class="im-stat-label">Uptime</span>
+        <span class="im-stat-value" id="imStatUptime">—</span>
+    </div>
+</div>
+
+<div class="section-card im-chart-card">
+    <h3><i class="fas fa-chart-line"></i> Latency over time</h3>
+    <div class="im-chart-wrap">
+        <div class="empty-state" id="imEmpty">
+            <i class="fas fa-chart-area"></i>
+            <p>Belum ada data ping untuk host ini.</p>
+            <small>Jalankan <code>python3 intensive_worker.py</code> lalu refresh halaman.</small>
+        </div>
+        <canvas id="imChart" aria-label="Latency chart"></canvas>
+    </div>
+</div>
+
+<div id="imHostModal" class="modal" role="dialog" aria-label="Manage intensive hosts" aria-hidden="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-sliders-h"></i> Manage Hosts</h3>
+            <button type="button" class="btn-close" id="imModalClose" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="imAddForm">
+                <div class="form-group">
+                    <label for="imAddName">Name</label>
+                    <input type="text" id="imAddName" maxlength="80" placeholder="e.g. Core Gateway" required>
+                </div>
+                <div class="form-group">
+                    <label for="imAddAddress">IP / hostname</label>
+                    <input type="text" id="imAddAddress" maxlength="253" placeholder="e.g. 10.0.0.1" required>
+                </div>
+                <div class="form-group">
+                    <label for="imAddInterval">Interval (seconds)</label>
+                    <input type="number" id="imAddInterval" min="10" max="300" value="20" required>
+                </div>
+                <button type="submit" class="btn-primary" id="imAddSubmit">
+                    <i class="fas fa-plus"></i> Add host
+                </button>
+            </form>
+            <p class="im-modal-error" id="imModalError" hidden></p>
+            <h4 class="im-host-list-title">Current targets</h4>
+            <div id="imHostList" class="im-host-list"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="/static/js/intensive.js?v=20260820d"></script>
+{% endblock %}

@@ -15,11 +15,11 @@ def monitoring_intens() -> str | Response:
     """GET /monitoring-intens — render the Uptime Kuma monitoring page."""
     if 'username' not in session:
         return redirect('/login')
-    
+
     if not check_permission('monitoring'):
         flash('Access denied', 'error')
         return redirect('/dashboard')
-    
+
     return render_template('monitoring_intens.html')
 
 

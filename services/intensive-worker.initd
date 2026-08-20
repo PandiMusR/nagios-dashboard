@@ -1,0 +1,31 @@
+#!/sbin/openrc-run
+# Intensive ping worker for Nagios Dashboard.
+# Install on Prod:
+#   cp /svr/dashboard-nagios/services/intensive-worker.initd /etc/init.d/intensive-worker
+#   chmod +x /etc/init.d/intensive-worker
+#   rc-update add intensive-worker default
+#   rc-service intensive-worker start
+#
+# Do not enable this on the Dev server.
+
+description="Nagios Dashboard intensive ping worker"
+command="/usr/bin/python3"
+command_args="/svr/dashboard-nagios/intensive_worker.py"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+directory="/svr/dashboard-nagios"
+output_log="/var/log/intensive-worker.log"
+error_log="/var/log/intensive-worker.log"
+
+depend() {
+    need net
+    after firewall
+}
+
+start_pre() {
+    checkpath --directory --mode 0755 /run
+    if [ ! -f "${directory}/intensive_worker.py" ]; then
+        eerror "intensive_worker.py not found in ${directory}"
+        return 1
+    fi
+}
