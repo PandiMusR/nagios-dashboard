@@ -4,7 +4,6 @@ import logging
 
 from flask import Blueprint, Response, jsonify, redirect, render_template, session
 
-from services.docker_cache import docker_cache
 from services.poller_db import (
     container_fetch_error_map,
     count_hosts_by_container,
@@ -23,24 +22,6 @@ def _can_view_container(container_name: str) -> bool:
     if session.get('role') == 'admin':
         return True
     return bool(session.get('permissions', {}).get(f'nagios_{container_name}'))
-
-
-def _docker_resources(container_name: str) -> tuple[str, str]:
-    cpu_usage = '—'
-    mem_usage = '—'
-    try:
-        stats_output = docker_cache.get_or_run(
-            f'stats_{container_name}',
-            ['docker', 'stats', container_name, '--no-stream', '--format', '{{.CPUPerc}}|{{.MemUsage}}'],
-        )
-        if stats_output.strip():
-            parts = stats_output.strip().split('|')
-            if len(parts) == 2:
-                cpu_usage = parts[0]
-                mem_usage = parts[1]
-    except OSError:
-        logger.warning('Docker stats failed for %s', container_name)
-    return cpu_usage, mem_usage
 
 
 @dashboard_bp.route('/dashboard')
@@ -78,7 +59,6 @@ def dashboard_stats() -> Response | tuple[Response, int]:
         host_counts = count_hosts_by_container(names)
         error_map = container_fetch_error_map(names)
         errors = list(error_map.values())
-        running_set = set(running)
 
         servers_stats = []
         for name in names:
@@ -88,14 +68,9 @@ def dashboard_stats() -> Response | tuple[Response, int]:
             services_warning = int(health.get('services_warning') or 0)
             services_critical = int(health.get('services_critical') or 0)
             services_unknown = int(health.get('services_unknown') or 0)
-            cpu_usage, mem_usage = ('—', '—')
-            if name in running_set:
-                cpu_usage, mem_usage = _docker_resources(name)
             servers_stats.append({
                 'name': name,
                 'port': health.get('port') or '',
-                'cpu': cpu_usage,
-                'memory': mem_usage,
                 'fetch_error': error_map.get(name),
                 'hosts': hosts,
                 'services': {

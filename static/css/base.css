@@ -598,17 +598,9 @@
         [data-theme="dark"] .server-card {
             background: var(--bg-secondary) !important;
             border: 1px solid var(--border-color) !important;
-            box-shadow: var(--shadow-sm) !important;
         }
-        [data-theme="dark"] .server-card:hover { box-shadow: var(--shadow-lg) !important; }
         [data-theme="dark"] .server-header { border-color: var(--border-color) !important; }
         [data-theme="dark"] .server-name { color: var(--text-primary) !important; }
-        [data-theme="dark"] .resource-item {
-            background: var(--bg-primary) !important;
-            border: 1px solid var(--border-color) !important;
-        }
-        [data-theme="dark"] .resource-label { color: var(--text-secondary) !important; }
-        [data-theme="dark"] .resource-value { color: var(--text-primary) !important; }
         [data-theme="dark"] .status-title { color: var(--text-secondary) !important; }
         [data-theme="dark"] .status-up {
             background: var(--alert-success-bg) !important;

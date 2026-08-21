@@ -52,6 +52,14 @@ function loadDashboardStats() {
         });
 }
 
+function statusBadge(value, label, kind) {
+    const zero = Number(value) === 0 ? ' is-zero' : '';
+    return `<div class="status-badge ${kind}${zero}">
+        <div class="status-value">${value}</div>
+        <div class="status-label">${label}</div>
+    </div>`;
+}
+
 function updateDashboard(servers, incomplete) {
     const container = document.getElementById('servers_container');
 
@@ -69,74 +77,43 @@ function updateDashboard(servers, incomplete) {
         const services = server.services || {ok: 0, warning: 0, critical: 0, unknown: 0, total: 0};
         const hasDown = hosts.down > 0 || hosts.unreachable > 0;
         const hasError = Boolean(server.fetch_error);
-        let borderColor = 'var(--color-success)';
+        let stateClass = 'is-ok';
         if (hasDown) {
-            borderColor = 'var(--color-danger)';
+            stateClass = 'is-down';
         } else if (hasError) {
-            borderColor = 'var(--color-warning)';
+            stateClass = 'is-stale';
         }
+        const portMeta = server.port
+            ? `<div class="server-meta">Port ${escapeHtml(String(server.port))}</div>`
+            : '';
         const errorNote = server.fetch_error
             ? `<div class="snapshot-error-note"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(String(server.fetch_error))}</div>`
             : '';
         return `
-        <div class="server-card" style="border-left: 4px solid ${borderColor};">
+        <div class="server-card ${stateClass}">
             <div class="server-header">
-                <div class="server-name"><i class="fas fa-server" style="margin-right: 0.5rem; color: var(--color-primary);"></i>${escapeHtml(server.name)}</div>
-                <a href="/nagios/${encodeURIComponent(server.name)}" target="_blank" class="btn-open"><i class="fas fa-external-link-alt"></i> Open Nagios</a>
+                <div class="server-identity">
+                    <div class="server-name"><i class="fas fa-server"></i><span class="server-name-text" title="${escapeHtml(server.name)}">${escapeHtml(server.name)}</span></div>
+                    ${portMeta}
+                </div>
+                <a href="/nagios/${encodeURIComponent(server.name)}" target="_blank" class="btn-open"><i class="fas fa-external-link-alt"></i> Open</a>
             </div>
             ${errorNote}
-            
-            <!-- System Resources -->
-            <div class="resource-grid">
-                <div class="resource-item">
-                    <div class="resource-label"><i class="fas fa-microchip"></i> CPU</div>
-                    <div class="resource-value">${escapeHtml(server.cpu)}</div>
-                </div>
-                <div class="resource-item">
-                    <div class="resource-label"><i class="fas fa-memory"></i> Memory</div>
-                    <div class="resource-value">${escapeHtml(server.memory)}</div>
+            <div class="status-section">
+                <div class="status-title">Hosts <span>${hosts.total}</span></div>
+                <div class="status-grid status-grid-hosts">
+                    ${statusBadge(hosts.up, 'UP', 'status-up')}
+                    ${statusBadge(hosts.down, 'DOWN', 'status-down')}
+                    ${statusBadge(hosts.unreachable, 'UNREACH', 'status-warning')}
                 </div>
             </div>
-            
-            <!-- Hosts Status -->
             <div class="status-section">
-                <div class="status-title">Hosts (${hosts.total})</div>
-                <div class="status-grid">
-                    <div class="status-badge status-up">
-                        <div class="status-value">${hosts.up}</div>
-                        <div class="status-label">UP</div>
-                    </div>
-                    <div class="status-badge status-down">
-                        <div class="status-value">${hosts.down}</div>
-                        <div class="status-label">DOWN</div>
-                    </div>
-                    <div class="status-badge status-warning">
-                        <div class="status-value">${hosts.unreachable}</div>
-                        <div class="status-label">UNREACH</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Services Status -->
-            <div class="status-section">
-                <div class="status-title">Services (${services.total})</div>
-                <div class="status-grid">
-                    <div class="status-badge status-up">
-                        <div class="status-value">${services.ok}</div>
-                        <div class="status-label">OK</div>
-                    </div>
-                    <div class="status-badge status-warning">
-                        <div class="status-value">${services.warning}</div>
-                        <div class="status-label">WARN</div>
-                    </div>
-                    <div class="status-badge status-down">
-                        <div class="status-value">${services.critical}</div>
-                        <div class="status-label">CRIT</div>
-                    </div>
-                    <div class="status-badge status-unknown">
-                        <div class="status-value">${services.unknown}</div>
-                        <div class="status-label">UNKNOWN</div>
-                    </div>
+                <div class="status-title">Services <span>${services.total}</span></div>
+                <div class="status-grid status-grid-services">
+                    ${statusBadge(services.ok, 'OK', 'status-up')}
+                    ${statusBadge(services.warning, 'WARN', 'status-warning')}
+                    ${statusBadge(services.critical, 'CRIT', 'status-down')}
+                    ${statusBadge(services.unknown, 'UNK', 'status-unknown')}
                 </div>
             </div>
         </div>

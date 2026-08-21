@@ -88,6 +88,7 @@ FILES_TO_UPDATE=(
     "app.py"
     "proxy.py"
     "templates/base.html"
+    "static/css/base.css"
     "templates/dashboard.html"
     "static/js/dashboard.js"
     "static/css/dashboard.css"
