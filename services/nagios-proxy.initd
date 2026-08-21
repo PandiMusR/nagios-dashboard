@@ -1,0 +1,44 @@
+#!/sbin/openrc-run
+# Nagios iframe reverse-proxy multiplexer for Nagios Dashboard.
+# One process binds nagios_port+1000 for every running container.
+# Install on Prod (after a Dev soak):
+#   cp /svr/dashboard-nagios/services/nagios-proxy.initd /etc/init.d/nagios-proxy
+#   chmod +x /etc/init.d/nagios-proxy
+#   rc-update add nagios-proxy default
+#   rc-service nagios-proxy start
+#
+# Reload port mappings without dropping the process:
+#   rc-service nagios-proxy reload
+#
+# If a Dev-style daemonized multiplexer is already running, stop it first:
+#   pkill -f async_proxy.py
+#   rm -f /svr/dashboard-nagios/config/nagios-proxy.pid
+
+description="Nagios Dashboard iframe proxy multiplexer"
+command="/usr/bin/python3"
+command_args="/svr/dashboard-nagios/services/async_proxy.py"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+directory="/svr/dashboard-nagios"
+output_log="/var/log/nagios-proxy.log"
+error_log="/var/log/nagios-proxy.log"
+extra_started_commands="reload"
+
+depend() {
+    need net
+    after docker
+}
+
+start_pre() {
+    checkpath --directory --mode 0755 /run
+    if [ ! -f "${directory}/services/async_proxy.py" ]; then
+        eerror "async_proxy.py not found in ${directory}/services"
+        return 1
+    fi
+}
+
+reload() {
+    ebegin "Reloading ${RC_SVCNAME} port mappings"
+    start-stop-daemon --signal HUP --pidfile "${pidfile}"
+    eend $?
+}

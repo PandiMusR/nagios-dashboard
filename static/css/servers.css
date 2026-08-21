@@ -143,19 +143,57 @@
     }
     .action-cell {
         display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
+        flex-direction: column;
+        gap: 0.65rem;
+        min-width: 22rem;
     }
     .action-group {
         display: flex;
-        gap: 0.3rem;
+        gap: 0.65rem;
         align-items: center;
+        flex-wrap: wrap;
     }
     .action-label {
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-        font-weight: 600;
+        flex: 0 0 5.25rem;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        font-weight: 700;
         text-transform: uppercase;
+        letter-spacing: 0.06em;
+        line-height: 1;
+    }
+    .action-buttons {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        flex-wrap: wrap;
+    }
+    .action-cluster {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        flex-wrap: wrap;
+    }
+    .action-cluster form {
+        display: inline-flex;
+        margin: 0;
+    }
+    .action-divider {
+        display: inline-block;
+        width: 1px;
+        height: 1.4rem;
+        background: var(--border-color);
+        flex-shrink: 0;
+    }
+    .action-cell .btn-sm {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.4rem 0.7rem;
+        font-size: 0.8rem;
+        line-height: 1.2;
+        text-decoration: none;
+        white-space: nowrap;
     }
     .modal {
         display: none;
@@ -280,6 +318,18 @@
         }
         .action-cell {
             flex-direction: column;
+            min-width: 0;
+        }
+        .action-group {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.4rem;
+        }
+        .action-label {
+            flex-basis: auto;
+        }
+        .action-divider {
+            display: none;
         }
         .servers-table {
             font-size: 0.8rem;

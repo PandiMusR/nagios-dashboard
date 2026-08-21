@@ -1,34 +1,22 @@
 #!/usr/bin/env python3
 import sys
 import os
-import subprocess
 
-if len(sys.argv) != 4:
-    print('Usage: python3 start_proxy_daemon.py <container_name> <nagios_port> <proxy_port>')
-    sys.exit(1)
-
-container = sys.argv[1]
-nagios_port = sys.argv[2]
-proxy_port = sys.argv[3]
-
-# Auto-detect project root from this file's location
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 os.chdir(APP_ROOT)
+if APP_ROOT not in sys.path:
+    sys.path.insert(0, APP_ROOT)
 
-# Open log file in append mode (preserve previous logs)
-log_file = open(f'/tmp/proxy_{container}.log', 'a')
+from services.proxy_control import ensure_running_and_reload, restart
 
-# Start proxy as daemon
-proc = subprocess.Popen(
-    ['python3', 'proxy.py', container, nagios_port, proxy_port],
-    stdout=log_file,
-    stderr=subprocess.STDOUT,
-    stdin=subprocess.DEVNULL,
-    start_new_session=True,
-    cwd=APP_ROOT
-)
+action = 'reload'
+if len(sys.argv) > 1 and sys.argv[1] in ('start', 'reload', 'restart'):
+    action = sys.argv[1]
 
-log_file.close()
+if action == 'restart':
+    ok, message = restart()
+else:
+    ok, message = ensure_running_and_reload()
 
-print(f'Proxy started for {container} on port {proxy_port} (PID: {proc.pid})')
-print(f'Log: /tmp/proxy_{container}.log')
+print(message)
+sys.exit(0 if ok else 1)

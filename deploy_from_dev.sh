@@ -109,9 +109,12 @@ FILES_TO_UPDATE=(
     "templates/global_settings.html"
     "templates/activity_logs.html"
     "static/js/servers.js"
+    "static/css/servers.css"
     "requirements.txt"
     "migrate_encrypt_creds.py"
     "migrate_stages_to_db.py"
+    "start_proxy_daemon.py"
+    "start_proxy.sh"
     "preflight_check.sh"
     "README.md"
     "USER_GUIDE.md"
@@ -320,28 +323,13 @@ fi
 echo ""
 
 # -----------------------------------------------------------------------------
-# STEP 7: Restart proxy daemons
+# STEP 7: Restart iframe proxy multiplexer (replaces per-container proxy.py)
 # -----------------------------------------------------------------------------
-log "Restarting proxy daemons..."
-pkill -f 'python3.*proxy.py' 2>/dev/null || true
-sleep 1
-
-# Restart proxies for running nagios containers only
-NAGIOS_FOUND=0
-for container in $(docker ps --filter 'ancestor=nagios-ldap:latest' --format '{{.Names}}' 2>/dev/null); do
-    port_info=$(docker port "$container" 80 2>/dev/null)
-    if [ -n "$port_info" ]; then
-        port=$(echo "$port_info" | head -1 | cut -d: -f2)
-        proxy_port=$((port + 1000))
-        log "  Starting proxy: $container (port $port -> proxy $proxy_port)"
-        python3 "$PROD_PATH/start_proxy_daemon.py" "$container" "$port" "$proxy_port" >/dev/null 2>&1
-        NAGIOS_FOUND=$((NAGIOS_FOUND + 1))
-    fi
-done
-if [ "$NAGIOS_FOUND" -gt 0 ]; then
-    ok "Proxy daemons restarted ($NAGIOS_FOUND containers)"
+log "Restarting Nagios iframe proxy multiplexer..."
+if python3 "$PROD_PATH/start_proxy_daemon.py" restart; then
+    ok "Proxy multiplexer restarted"
 else
-    warn "No running Nagios containers found — no proxies to start"
+    warn "Proxy multiplexer failed to restart — check /tmp/nagios-proxy.log or /var/log/nagios-proxy.log"
 fi
 echo ""
 

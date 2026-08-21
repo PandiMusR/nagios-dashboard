@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Server Management{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/servers.css?v=20260822-actions">
+{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="/static/css/servers.css">
 
 <div class="page-header">
     <h1><i class="fas fa-server"></i> Server Management</h1>
@@ -83,69 +85,78 @@
                     <td>
                         <div class="action-cell">
                             <div class="action-group">
-                                <span class="action-label">Container:</span>
-                                {% if server.container_running %}
-                                <form method="POST" action="/servers/stop/{{ server.name }}" style="display: inline;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn-sm btn-danger" title="Stop container">
-                                        <i class="fas fa-stop"></i> Stop
-                                    </button>
-                                </form>
-                                {% else %}
-                                <form method="POST" action="/servers/start/{{ server.name }}" style="display: inline;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn-sm btn-success" title="Start container">
-                                        <i class="fas fa-play"></i> Start
-                                    </button>
-                                </form>
-                                {% endif %}
-                                <form method="POST" action="/servers/restart/{{ server.name }}" style="display: inline;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn-sm btn-warning" title="Restart container">
-                                        <i class="fas fa-sync"></i> Restart
-                                    </button>
-                                </form>
-                                <form method="POST" action="/servers/delete/{{ server.name }}" style="display: inline;" onsubmit="return confirm('Delete {{ server.name }}?');">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn-sm btn-danger" title="Delete container">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </form>
+                                <span class="action-label">Container</span>
+                                <div class="action-buttons">
+                                    <div class="action-cluster">
+                                        {% if server.container_running %}
+                                        <form method="POST" action="/servers/stop/{{ server.name }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-sm btn-danger" title="Stop container">
+                                                <i class="fas fa-stop"></i> Stop
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                        <form method="POST" action="/servers/start/{{ server.name }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-sm btn-success" title="Start container">
+                                                <i class="fas fa-play"></i> Start
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                        <form method="POST" action="/servers/restart/{{ server.name }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-sm btn-warning" title="Restart container">
+                                                <i class="fas fa-sync"></i> Restart
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="/servers/delete/{{ server.name }}" onsubmit="return confirm('Delete {{ server.name }}?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-sm btn-danger" title="Delete container">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <span class="action-divider" aria-hidden="true"></span>
+                                    <div class="action-cluster">
+                                        <a href="/servers/edit-config/{{ server.name }}" class="btn-sm btn-info" title="Edit configuration">
+                                            <i class="fas fa-edit"></i> Config
+                                        </a>
+                                        <button type="button" class="btn-sm btn-info" onclick="openPluginModal('{{ server.name }}')" title="Manage plugins">
+                                            <i class="fas fa-plug"></i> Plugin
+                                        </button>
+                                        <button type="button" class="btn-sm btn-success" onclick="checkConfig('{{ server.name }}')" title="Validate configuration">
+                                            <i class="fas fa-check"></i> Check
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="action-group">
-                                <span class="action-label">Proxy:</span>
-                                {% if server.proxy_running %}
-                                <form method="POST" action="/proxy/stop/{{ server.name }}" style="display: inline;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn-sm btn-danger" title="Stop proxy">
-                                        <i class="fas fa-stop"></i> Stop
-                                    </button>
-                                </form>
-                                {% else %}
-                                <form method="POST" action="/proxy/start/{{ server.name }}" style="display: inline;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn-sm btn-success" title="Start proxy">
-                                        <i class="fas fa-play"></i> Start
-                                    </button>
-                                </form>
-                                {% endif %}
-                                <form method="POST" action="/proxy/restart/{{ server.name }}" style="display: inline;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn-sm btn-warning" title="Restart proxy">
-                                        <i class="fas fa-sync"></i> Restart
-                                    </button>
-                                </form>
-                            </div>
-                            <div class="action-group">
-                                <a href="/servers/edit-config/{{ server.name }}" class="btn-sm btn-info" title="Edit configuration">
-                                    <i class="fas fa-edit"></i> Config
-                                </a>
-                                <button class="btn-sm btn-info" onclick="openPluginModal('{{ server.name }}')" title="Manage plugins">
-                                    <i class="fas fa-plug"></i> Plugin
-                                </button>
-                                <button class="btn-sm btn-success" onclick="checkConfig('{{ server.name }}')" title="Validate configuration">
-                                    <i class="fas fa-check"></i> Check
-                                </button>
+                                <span class="action-label">Proxy</span>
+                                <div class="action-buttons">
+                                    <div class="action-cluster">
+                                        {% if server.proxy_running %}
+                                        <form method="POST" action="/proxy/stop/{{ server.name }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-sm btn-danger" title="Stop proxy">
+                                                <i class="fas fa-stop"></i> Stop
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                        <form method="POST" action="/proxy/start/{{ server.name }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-sm btn-success" title="Start proxy">
+                                                <i class="fas fa-play"></i> Start
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                        <form method="POST" action="/proxy/restart/{{ server.name }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-sm btn-warning" title="Restart proxy">
+                                                <i class="fas fa-sync"></i> Restart
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </td>
@@ -233,5 +244,5 @@
     </div>
 </div>
 
-<script src="/static/js/servers.js"></script>
+<script src="/static/js/servers.js?v=20260822-actions"></script>
 {% endblock %}

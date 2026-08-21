@@ -6,11 +6,25 @@ import os, json, subprocess, threading, time
 from services.config import APP_ROOT, CONFIG_DIR, PROXY_PORT_OFFSET
 from services.encryption import decrypt_session_value, save_encrypted_json
 from services.ldap_service import log_activity
+from services.proxy_control import (
+    disable_container as disable_proxy_container,
+    enable_all as enable_all_proxy_containers,
+    enable_container as enable_proxy_container,
+    ensure_running_and_reload as reload_proxy_multiplexer,
+    restart as restart_proxy_multiplexer,
+)
 from services.shared_helpers import get_nagios_servers, get_monitoring_categories
 from utils.port_check import _get_all_used_ports, check_proxy_running
 from utils.permissions import check_permission
 
 servers_bp = Blueprint('servers', __name__)
+
+
+def _save_proxy_creds(container: str) -> None:
+    username = session.get('username')
+    password = decrypt_session_value(session.get('password'))
+    creds_file = f'{CONFIG_DIR}/nagios_creds_{container}.json'
+    save_encrypted_json(creds_file, {'username': username, 'password': password})
 
 
 @servers_bp.route('/servers')
@@ -122,16 +136,11 @@ def add_server() -> Response | tuple[Response, int]:
                     print(f"Build script error for {name}: {error_msg}")
                     return
                 
-                # Save credentials (encrypted)
                 creds_file = f'{CONFIG_DIR}/nagios_creds_{name}.json'
                 save_encrypted_json(creds_file, {'username': username, 'password': password})
-                
-                # Start proxy
-                result = subprocess.run(['python3', f'{APP_ROOT}/start_proxy_daemon.py', name, str(port_int), str(proxy_port)],
-                                      capture_output=True, text=True, timeout=60)
-                
-                if result.returncode != 0:
-                    error_msg = result.stderr or result.stdout or 'Unknown error'
+                enable_proxy_container(name)
+                ok, error_msg = reload_proxy_multiplexer()
+                if not ok:
                     log_activity('Add Server', f'Server "{name}" container created, but proxy failed: {error_msg}', username=username, ip=client_ip)
                     print(f"Proxy error for {name}: {error_msg}")
                 else:
@@ -169,6 +178,7 @@ def batch_start_servers() -> Response | tuple[Response, int]:
     try:
         for server in servers_list:
             subprocess.run(['docker', 'start', server], capture_output=True, timeout=30)
+        reload_proxy_multiplexer()
         log_activity('Batch Start', f'Started {len(servers_list)} servers')
         return jsonify({'success': True})
     except Exception as e:
@@ -270,6 +280,8 @@ def batch_delete_servers() -> Response | tuple[Response, int]:
             subprocess.run(['docker', 'stop', server], capture_output=True, timeout=30)
             subprocess.run(['docker', 'rm', server], capture_output=True, timeout=30)
             subprocess.run(['rm', '-rf', f'/svr/{server}'], capture_output=True, timeout=30)
+            disable_proxy_container(server)
+        reload_proxy_multiplexer()
         
         log_activity('Batch Delete', f'Deleted {len(servers_list)} servers: {", ".join(servers_list)}')
         return jsonify({'success': True})
@@ -322,6 +334,7 @@ def start_all_containers() -> Response | tuple[Response, int]:
                 if container:
                     subprocess.run(['docker', 'start', container], capture_output=True, timeout=30)
             
+            reload_proxy_multiplexer()
             log_activity('Start All Containers', 'All containers started')
             return jsonify({'success': True})
         return jsonify({'success': False, 'error': 'No containers found'})
@@ -343,22 +356,15 @@ def start_all_proxies() -> Response | tuple[Response, int]:
                               capture_output=True, text=True, timeout=10)
         
         if result.stdout:
-            containers = result.stdout.strip().split('\n')
+            containers = [c for c in result.stdout.strip().split('\n') if c]
             for container in containers:
-                if container:
-                    port_result = subprocess.run(['docker', 'port', container, '80'], capture_output=True, text=True, timeout=10)
-                    if port_result.stdout:
-                        port = port_result.stdout.strip().split(':')[1]
-                        proxy_port = PROXY_PORT_OFFSET + int(port)
-                        
-                        username = session.get('username')
-                        password = decrypt_session_value(session.get('password'))
-                        creds_file = f'{CONFIG_DIR}/nagios_creds_{container}.json'
-                        save_encrypted_json(creds_file, {'username': username, 'password': password})
-                        
-                        subprocess.run(['python3', f'{APP_ROOT}/start_proxy_daemon.py', container, port, str(proxy_port)], timeout=60)
-            
-            log_activity('Start All Proxies', 'All proxies started')
+                _save_proxy_creds(container)
+            enable_all_proxy_containers()
+            ok, error_msg = reload_proxy_multiplexer()
+            if not ok:
+                log_activity('Start All Proxies Failed', error_msg)
+                return jsonify({'success': False, 'error': error_msg})
+            log_activity('Start All Proxies', 'Proxy multiplexer reloaded for all containers')
             return jsonify({'success': True})
         return jsonify({'success': False, 'error': 'No running containers found'})
     except Exception as e:
@@ -380,28 +386,16 @@ def start_all_servers() -> Response | tuple[Response, int]:
                               capture_output=True, text=True, timeout=10)
         
         if result.stdout:
-            containers = result.stdout.strip().split('\n')
+            containers = [c for c in result.stdout.strip().split('\n') if c]
             for container in containers:
-                if container:
-                    # Start container
-                    subprocess.run(['docker', 'start', container], capture_output=True, timeout=30)
-                    
-                    # Start proxy
-                    port_result = subprocess.run(['docker', 'port', container, '80'], capture_output=True, text=True, timeout=10)
-                    if port_result.stdout:
-                        port = port_result.stdout.strip().split(':')[1]
-                        proxy_port = PROXY_PORT_OFFSET + int(port)
-                        
-                        # Store credentials
-                        username = session.get('username')
-                        password = decrypt_session_value(session.get('password'))
-                        creds_file = f'{CONFIG_DIR}/nagios_creds_{container}.json'
-                        save_encrypted_json(creds_file, {'username': username, 'password': password})
-                        
-                        # Start proxy
-                        subprocess.run(['python3', f'{APP_ROOT}/start_proxy_daemon.py', container, port, str(proxy_port)], timeout=60)
-            
-            log_activity('Start All', 'All servers and proxies started')
+                subprocess.run(['docker', 'start', container], capture_output=True, timeout=30)
+                _save_proxy_creds(container)
+            enable_all_proxy_containers()
+            ok, error_msg = reload_proxy_multiplexer()
+            if not ok:
+                log_activity('Start All Failed', error_msg)
+                return jsonify({'success': False, 'error': error_msg})
+            log_activity('Start All', 'All servers started and proxy multiplexer reloaded')
             return jsonify({'success': True})
         return jsonify({'success': False, 'error': 'No servers found'})
     except Exception as e:
@@ -435,6 +429,8 @@ def delete_server(name: str) -> Response:
         subprocess.run(['docker', 'stop', name], check=True, capture_output=True, timeout=30)
         subprocess.run(['docker', 'rm', name], check=True, capture_output=True, timeout=30)
         subprocess.run(['rm', '-rf', f'/svr/{name}'], check=True, capture_output=True, timeout=30)
+        disable_proxy_container(name)
+        reload_proxy_multiplexer()
         flash(f'Server "{name}" deleted successfully!', 'success')
         return redirect('/servers')
     except (subprocess.CalledProcessError, OSError):
@@ -452,6 +448,8 @@ def restart_server(name: str) -> Response:
     
     try:
         subprocess.run(['docker', 'restart', name], check=True, capture_output=True, timeout=60)
+        enable_proxy_container(name)
+        reload_proxy_multiplexer()
         flash(f'Server "{name}" restarted successfully!', 'success')
         return redirect('/servers')
     except (subprocess.CalledProcessError, OSError):
@@ -469,6 +467,7 @@ def stop_server(name: str) -> Response:
     
     try:
         subprocess.run(['docker', 'stop', name], check=True, capture_output=True, timeout=30)
+        reload_proxy_multiplexer()
         flash(f'Server "{name}" stopped successfully!', 'success')
         return redirect('/servers')
     except (subprocess.CalledProcessError, OSError):
@@ -609,6 +608,8 @@ def start_server(name: str) -> Response:
     
     try:
         subprocess.run(['docker', 'start', name], check=True, capture_output=True, timeout=30)
+        enable_proxy_container(name)
+        reload_proxy_multiplexer()
         flash(f'Server "{name}" started successfully!', 'success')
         return redirect('/servers')
     except (subprocess.CalledProcessError, OSError):
@@ -618,7 +619,7 @@ def start_server(name: str) -> Response:
 
 @servers_bp.route('/proxy/start/<name>', methods=['POST'])
 def start_proxy(name: str) -> Response:
-    """POST /proxy/start/<name> — Start the proxy for a Nagios server."""
+    """POST /proxy/start/<name> — Bind this container on the proxy multiplexer."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     if not check_permission('servers'):
@@ -629,40 +630,14 @@ def start_proxy(name: str) -> Response:
         if result.stdout:
             port = result.stdout.strip().split(':')[1]
             proxy_port = PROXY_PORT_OFFSET + int(port)
-            
-            # Store credentials for proxy
-            username = session.get('username')
-            password = decrypt_session_value(session.get('password'))
-            creds_file = f'{CONFIG_DIR}/nagios_creds_{name}.json'
-            save_encrypted_json(creds_file, {'username': username, 'password': password})
-            
-            # Log start attempt
-            with open(f'/tmp/proxy_start_{name}.log', 'w') as log:
-                log.write(f'Starting proxy for {name}\n')
-                log.write(f'Port: {port}, Proxy Port: {proxy_port}\n')
-                log.write(f'Script: {APP_ROOT}/start_proxy.sh {name} {port} {proxy_port}\n')
-            
-            # Start proxy using Python daemon script
-            result = subprocess.run(['python3', f'{APP_ROOT}/start_proxy_daemon.py', name, port, str(proxy_port)], 
-                                  capture_output=True, text=True, timeout=60)
-            
-            with open(f'/tmp/proxy_start_{name}.log', 'a') as log:
-                log.write(f'Return code: {result.returncode}\n')
-                log.write(f'Stdout: {result.stdout}\n')
-                log.write(f'Stderr: {result.stderr}\n')
-            
-            time.sleep(2)
-            
-            # Check if proxy is running
-            check = subprocess.run(['lsof', '-i', f':{proxy_port}', '-t'], capture_output=True, text=True, timeout=5)
-            
-            with open(f'/tmp/proxy_start_{name}.log', 'a') as log:
-                log.write(f'Check running: {check.stdout}\n')
-            
-            if check.stdout.strip():
+            _save_proxy_creds(name)
+            enable_proxy_container(name)
+            ok, error_msg = reload_proxy_multiplexer()
+            time.sleep(1)
+            if ok and check_proxy_running(proxy_port):
                 flash(f'Proxy for "{name}" started on port {proxy_port}!', 'success')
             else:
-                flash(f'Proxy failed to start. Check /tmp/proxy_start_{name}.log and /tmp/proxy_{name}.log', 'error')
+                flash(f'Proxy failed to start: {error_msg}', 'error')
         return redirect('/servers')
     except Exception as e:
         flash(f'Failed to start proxy: {str(e)}', 'error')
@@ -671,19 +646,19 @@ def start_proxy(name: str) -> Response:
 
 @servers_bp.route('/proxy/stop/<name>', methods=['POST'])
 def stop_proxy(name: str) -> Response:
-    """POST /proxy/stop/<name> — Stop the proxy for a Nagios server."""
+    """POST /proxy/stop/<name> — Unbind this container from the proxy multiplexer."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     if not check_permission('servers'):
         return jsonify({'error': 'Access denied'}), 403
     
     try:
-        result = subprocess.run(['docker', 'port', name, '80'], capture_output=True, text=True, timeout=10)
-        if result.stdout:
-            port = result.stdout.strip().split(':')[1]
-            proxy_port = PROXY_PORT_OFFSET + int(port)
-            subprocess.run(['pkill', '-f', f'proxy.py {name} {port}'], check=True, capture_output=True, timeout=10)
+        disable_proxy_container(name)
+        ok, error_msg = reload_proxy_multiplexer()
+        if ok:
             flash(f'Proxy for "{name}" stopped!', 'success')
+        else:
+            flash(f'Failed to stop proxy: {error_msg}', 'error')
         return redirect('/servers')
     except (subprocess.CalledProcessError, OSError):
         flash('Failed to stop proxy!', 'error')
@@ -692,7 +667,7 @@ def stop_proxy(name: str) -> Response:
 
 @servers_bp.route('/proxy/restart/<name>', methods=['POST'])
 def restart_proxy(name: str) -> Response:
-    """POST /proxy/restart/<name> — Restart the proxy for a Nagios server."""
+    """POST /proxy/restart/<name> — Restart the proxy multiplexer and rebind this container."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     if not check_permission('servers'):
@@ -701,22 +676,13 @@ def restart_proxy(name: str) -> Response:
     try:
         result = subprocess.run(['docker', 'port', name, '80'], capture_output=True, text=True, timeout=10)
         if result.stdout:
-            port = result.stdout.strip().split(':')[1]
-            proxy_port = PROXY_PORT_OFFSET + int(port)
-            
-            # Kill existing
-            subprocess.run(['pkill', '-9', '-f', f'proxy.py {name}'], capture_output=True, timeout=10)
-            
-            # Store credentials
-            username = session.get('username')
-            password = decrypt_session_value(session.get('password'))
-            creds_file = f'{CONFIG_DIR}/nagios_creds_{name}.json'
-            save_encrypted_json(creds_file, {'username': username, 'password': password})
-            
-            # Start new
-            subprocess.run(['python3', f'{APP_ROOT}/start_proxy_daemon.py', name, port, str(proxy_port)], timeout=60)
-            
-            flash(f'Proxy for "{name}" restarted!', 'success')
+            _save_proxy_creds(name)
+            enable_proxy_container(name)
+            ok, error_msg = restart_proxy_multiplexer()
+            if ok:
+                flash(f'Proxy multiplexer restarted (including "{name}")!', 'success')
+            else:
+                flash(f'Failed to restart proxy: {error_msg}', 'error')
         return redirect('/servers')
     except (subprocess.CalledProcessError, OSError):
         flash('Failed to restart proxy!', 'error')
