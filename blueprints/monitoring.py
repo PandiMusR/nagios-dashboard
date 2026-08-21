@@ -2,26 +2,23 @@ from __future__ import annotations
 
 from flask import Blueprint, Response, render_template, request, redirect, session, jsonify, flash
 import logging, os, json, subprocess, base64, requests, csv, io
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 from services.config import (
-    CONFIG_DIR, MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH,
-    STAGE_NEW, STAGE_CS, STAGE_ESCALATED, STAGE_WATCHLIST, STAGE_RESOLVED, STAGE_LABELS, STAGE_RETAIN_MINUTES
+    MONITORING_CATEGORIES_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH,
+    STAGE_NEW, STAGE_CS, STAGE_RESOLVED, STAGE_LABELS
 )
 from services.encryption import decrypt_session_value
 from services.ldap_service import log_activity
 from services.stage_service import (
-    get_host_stage, upsert_host_stage, delete_host_stage, insert_host_stage_if_absent,
-    set_host_up_since_if_unset, clear_host_up_since,
+    get_host_stage, upsert_host_stage, delete_host_stage,
 )
-from services.docker_cache import docker_cache
+from services.poller_db import container_fetch_errors, list_snapshot_hosts, set_host_acknowledged
 from services.stage_history import append_stage_history
 from utils.permissions import check_permission
 
 monitoring_bp = Blueprint('monitoring', __name__)
 logger = logging.getLogger(__name__)
-CGI_TIMEOUT = float(os.environ.get('MONITORING_CGI_TIMEOUT', '15'))
 
 
 def get_nagios_servers() -> list[str]:
@@ -101,261 +98,89 @@ def monitoring(page: str) -> str | Response:
                          nagios_servers=get_nagios_servers(), monitoring_categories=get_monitoring_categories())
 
 
-def _fetch_error(container_name: str, reason: str) -> str:
-    return f'Failed to fetch data from container {container_name} ({reason})'
-
-
-def _fetch_container_data(
-    container_name: str, port: str, auth_header: str, use_service_plugin: bool
-) -> tuple[list[dict], str | None]:
-    """Fetch host data from a single Nagios container.
-
-    Returns (hosts, error). On CGI/timeout/parse failure, hosts is empty and
-    error is a user-facing message. Callers must not treat that as 'all UP'.
-    """
-    headers = {'Authorization': auth_header}
-    try:
-        status_url = f'http://localhost:{port}/nagios/cgi-bin/statusjson.cgi?query=hostlist&details=true'
-        object_url = f'http://localhost:{port}/nagios/cgi-bin/objectjson.cgi?details=true&query=hostlist'
-
-        status_resp = requests.get(status_url, headers=headers, timeout=CGI_TIMEOUT)
-        object_resp = requests.get(object_url, headers=headers, timeout=CGI_TIMEOUT)
-
-        if status_resp.status_code != 200:
-            return [], _fetch_error(container_name, f'HTTP {status_resp.status_code} from statusjson.cgi')
-        if object_resp.status_code != 200:
-            return [], _fetch_error(container_name, f'HTTP {object_resp.status_code} from objectjson.cgi')
-
-        try:
-            status_data = status_resp.json()
-            object_data = object_resp.json()
-        except json.JSONDecodeError:
-            return [], _fetch_error(container_name, 'invalid JSON from Nagios CGI')
-
-        hostlist = status_data.get('data', {}).get('hostlist', {})
-        if not isinstance(hostlist, dict):
-            return [], _fetch_error(container_name, 'malformed hostlist')
-
-        object_hostlist = object_data.get('data', {}).get('hostlist', {})
-        ip_mapping = {}
-        if isinstance(object_hostlist, dict):
-            ip_mapping = {h: d.get('address', 'N/A') for h, d in object_hostlist.items() if isinstance(d, dict)}
-
-        service_data = {}
-        if use_service_plugin:
-            try:
-                service_url = f'http://localhost:{port}/nagios/cgi-bin/statusjson.cgi?query=servicelist&details=true'
-                service_resp = requests.get(service_url, headers=headers, timeout=CGI_TIMEOUT)
-                if service_resp.status_code == 200:
-                    services = service_resp.json().get('data', {}).get('servicelist', {})
-                    if isinstance(services, dict):
-                        for hostname, host_services in services.items():
-                            if not isinstance(host_services, dict):
-                                continue
-                            for service_info in host_services.values():
-                                if isinstance(service_info, dict):
-                                    service_data[hostname] = service_info.get('plugin_output', '')
-                                break
-            except (requests.RequestException, json.JSONDecodeError, ValueError):
-                logger.warning('Service list fetch failed for %s; continuing with host data', container_name)
-
-        hosts = []
-        for hostname, host in hostlist.items():
-            if not isinstance(host, dict):
-                continue
-            hosts.append({
-                'hostname': hostname,
-                'host': host,
-                'container_name': container_name,
-                'port': port,
-                'ip_mapping': ip_mapping,
-                'service_data': service_data,
-            })
-        return hosts, None
-    except requests.Timeout:
-        logger.warning('CGI timeout after %ss for container %s', CGI_TIMEOUT, container_name)
-        return [], _fetch_error(container_name, f'timeout after {CGI_TIMEOUT:g}s')
-    except requests.RequestException:
-        logger.warning('CGI connection error for container %s', container_name)
-        return [], _fetch_error(container_name, 'connection error')
-    except (ValueError, KeyError, TypeError):
-        logger.warning('CGI parse error for container %s', container_name)
-        return [], _fetch_error(container_name, 'unexpected CGI response')
+def _container_errors(containers: list[str]) -> list[str]:
+    return container_fetch_errors(containers)
 
 
 def _fetch_monitoring_hosts(page: str) -> tuple[list[dict], list[str]]:
-    """Fetch monitoring host data for a category. Shared by monitoring_data and export_csv.
+    """Read monitoring host data for a category from the poller snapshot.
 
-    Returns (hosts, errors). A failed container is reported in errors and is
-    NOT treated as an empty (all-UP) result.
+    Returns (hosts, errors). A failed/stale container is reported in errors and
+    is NOT treated as an empty (all-UP) result. Last known hosts are still shown.
     """
-    # Load server mappings for this category
     server_mappings = {}
     try:
         if os.path.exists(MONITORING_SERVER_MAPPINGS_PATH):
-            with open(MONITORING_SERVER_MAPPINGS_PATH, 'r') as f:
+            with open(MONITORING_SERVER_MAPPINGS_PATH) as f:
                 server_mappings = json.load(f)
     except (json.JSONDecodeError, OSError):
         pass
 
     category_servers = server_mappings.get(page, [])
+    if not isinstance(category_servers, list):
+        category_servers = []
 
-    # Check if category uses service plugin
     use_service_plugin = False
     try:
         if os.path.exists(MONITORING_CONFIG_PATH):
-            with open(MONITORING_CONFIG_PATH, 'r') as f:
+            with open(MONITORING_CONFIG_PATH) as f:
                 config = json.load(f)
-                use_service_plugin = config.get('category_settings', {}).get(page, {}).get('use_service_plugin', False)
+                use_service_plugin = config.get('category_settings', {}).get(page, {}).get(
+                    'use_service_plugin', False
+                )
     except (json.JSONDecodeError, OSError):
         pass
 
-    auth_header = f"Basic {base64.b64encode(f'{session.get('username')}:{decrypt_session_value(session.get('password'))}'.encode()).decode()}"
-    all_hosts = []
-    errors: list[str] = []
+    errors = _container_errors(category_servers)
+    all_hosts: list[dict] = []
+    now = datetime.now()
 
-    # Get all running nagios containers (cached for 15s)
-    docker_output = docker_cache.get_or_run(
-        'nagios_containers',
-        ['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}:{{.Ports}}']
-    )
-
-    # Collect containers to fetch from
-    containers_to_fetch = []
-    if docker_output:
-        for line in docker_output.strip().split('\n'):
-            if ':' in line:
-                container_name, ports = line.split(':', 1)
-                if container_name not in category_servers:
-                    continue
-                if '->' in ports:
-                    port = ports.split(':')[1].split('->')[0]
-                    containers_to_fetch.append((container_name, port))
-
-    fetched_names = {name for name, _port in containers_to_fetch}
-    for mapped in category_servers:
-        if mapped not in fetched_names:
-            errors.append(_fetch_error(mapped, 'not running or port unavailable'))
-
-    # Parallel fetch from all containers
-    if containers_to_fetch:
-        with ThreadPoolExecutor(max_workers=min(len(containers_to_fetch), 10)) as executor:
-            futures = {
-                executor.submit(_fetch_container_data, name, port, auth_header, use_service_plugin): name
-                for name, port in containers_to_fetch
+    for row in list_snapshot_hosts(category_servers, down_only=True, include_acked=False):
+        try:
+            hostname = row['hostname']
+            container_name = row['container']
+            status_code = int(row.get('status_code') or 0)
+            stage_info = get_host_stage(container_name, hostname) or {
+                'stage': STAGE_NEW,
+                'updated_at': '',
+                'updated_by': '',
+                'note': '',
+                'host_up_since': None,
             }
-            for future in as_completed(futures):
-                container_name = futures[future]
-                try:
-                    raw_hosts, fetch_error = future.result()
-                except Exception:
-                    logger.warning('Unhandled fetch failure for container %s', container_name)
-                    errors.append(_fetch_error(container_name, 'internal error'))
-                    continue
-                if fetch_error:
-                    errors.append(fetch_error)
-                    continue
+            last_check_ms = int(row.get('last_check_ms') or 0)
+            last_state_ms = int(row.get('last_state_change_ms') or 0)
+            last_check = datetime.fromtimestamp(last_check_ms / 1000)
+            last_state = datetime.fromtimestamp(last_state_ms / 1000)
+            dur = now - last_state
+            status_label = 'UNREACHABLE' if status_code == 8 else 'DOWN'
+            if use_service_plugin:
+                status_info = row.get('service_plugin_output') or row.get('plugin_output') or ''
+            else:
+                status_info = row.get('plugin_output') or ''
+            all_hosts.append({
+                'host_name': row.get('name') or hostname,
+                'ip_address': row.get('address') or 'N/A',
+                'status': status_label,
+                'last_check': last_check.strftime('%Y-%m-%d %H:%M:%S'),
+                'last_state_change': last_state_ms,
+                'duration_str': str(dur).split('.')[0],
+                'status_information': status_info,
+                'container': container_name,
+                'port': row.get('port') or '',
+                'stage': stage_info.get('stage', STAGE_NEW),
+                'stage_label': STAGE_LABELS.get(
+                    stage_info.get('stage', STAGE_NEW), 'New / Unacknowledged'
+                ),
+                'stage_updated_by': stage_info.get('updated_by', ''),
+                'stage_updated_at': stage_info.get('updated_at', ''),
+                'stage_note': stage_info.get('note', ''),
+            })
+        except (ValueError, TypeError, KeyError, OSError):
+            logger.warning('Failed to process a snapshot host on container %s', row.get('container'))
+            continue
 
-                for item in raw_hosts:
-                    try:
-                        hostname = item['hostname']
-                        host = item['host']
-                        container_name = item['container_name']
-                        port = item['port']
-                        ip_mapping = item['ip_mapping']
-                        service_data = item['service_data']
-
-                        now = datetime.now()
-                        status_code = host.get('status', 0)
-                        host_is_down = status_code in (4, 8)
-                        host_is_up = status_code == 2
-                        stage_info = get_host_stage(container_name, hostname)
-
-                        # --- Handle UP hosts ---
-                        if host_is_up and stage_info:
-                            current_stage = stage_info.get('stage', STAGE_NEW)
-
-                            if current_stage == STAGE_WATCHLIST:
-                                if not stage_info.get('host_up_since'):
-                                    if set_host_up_since_if_unset(container_name, hostname, now.isoformat()):
-                                        append_stage_history(hostname, container_name, current_stage, 'up', 'system (auto-detect)', 'Host recovered (flapping — watching for 30min)')
-                                else:
-                                    try:
-                                        up_since = datetime.fromisoformat(stage_info['host_up_since'])
-                                        if (now - up_since).total_seconds() > STAGE_RETAIN_MINUTES * 60:
-                                            delete_host_stage(container_name, hostname)
-                                            append_stage_history(hostname, container_name, current_stage, 'up', 'system (auto-detect)', 'Host recovered (watchlist — 30min flapping window expired)')
-                                    except (ValueError, TypeError):
-                                        delete_host_stage(container_name, hostname)
-                                        append_stage_history(hostname, container_name, current_stage, 'up', 'system (auto-detect)', 'Host recovered (watchlist — parse error, removed)')
-                            else:
-                                delete_host_stage(container_name, hostname)
-                                append_stage_history(hostname, container_name, current_stage, 'up', 'system (auto-detect)', 'Host recovered')
-                            continue
-
-                        # --- Handle DOWN hosts ---
-                        if not host_is_down:
-                            continue
-
-                        if host.get('problem_has_been_acknowledged', False):
-                            if stage_info:
-                                delete_host_stage(container_name, hostname)
-                            continue
-
-                        if stage_info and stage_info.get('host_up_since'):
-                            clear_host_up_since(container_name, hostname)
-                            append_stage_history(hostname, container_name, 'up', stage_info.get('stage', STAGE_NEW), 'system (auto-detect)', 'Host went DOWN again (flapping)')
-                            stage_info = get_host_stage(container_name, hostname)
-
-                        if not stage_info:
-                            inserted = insert_host_stage_if_absent(
-                                container_name,
-                                hostname,
-                                STAGE_NEW,
-                                updated_at=now.isoformat(),
-                                updated_by='system',
-                                host_up_since=None,
-                            )
-                            if inserted:
-                                append_stage_history(hostname, container_name, 'up', STAGE_NEW, 'system (auto-detect)', 'Host went DOWN')
-                            stage_info = get_host_stage(container_name, hostname) or {
-                                'stage': STAGE_NEW,
-                                'updated_at': now.isoformat(),
-                                'updated_by': 'system',
-                                'note': '',
-                                'host_up_since': None,
-                            }
-
-                        last_check = datetime.fromtimestamp(host.get('last_check', 0)/1000)
-                        last_state = datetime.fromtimestamp(host.get('last_state_change', 0)/1000)
-                        dur = now - last_state
-                        status_label = "UNREACHABLE" if status_code == 8 else "DOWN"
-                        status_info = service_data.get(hostname, host.get('plugin_output', '')) if use_service_plugin else host.get('plugin_output', '')
-
-                        all_hosts.append({
-                            'host_name': host.get('name', hostname),
-                            'ip_address': ip_mapping.get(hostname, 'N/A'),
-                            'status': status_label,
-                            'last_check': last_check.strftime("%Y-%m-%d %H:%M:%S"),
-                            'last_state_change': host.get('last_state_change', 0),
-                            'duration_str': str(dur).split('.')[0],
-                            'status_information': status_info,
-                            'container': container_name,
-                            'port': port,
-                            'stage': stage_info.get('stage', STAGE_NEW),
-                            'stage_label': STAGE_LABELS.get(stage_info.get('stage', STAGE_NEW), 'New / Unacknowledged'),
-                            'stage_updated_by': stage_info.get('updated_by', ''),
-                            'stage_updated_at': stage_info.get('updated_at', ''),
-                            'stage_note': stage_info.get('note', ''),
-                        })
-                    except (ValueError, TypeError, KeyError, OSError):
-                        logger.warning('Failed to process a host on container %s', container_name)
-                        continue
-
-    # Sort by last_state_change descending (newest first)
     all_hosts.sort(key=lambda x: x['last_state_change'], reverse=True)
 
-    # Filter for cr_view_only users — only show CR Verification stage
     if session.get('permissions', {}).get('cr_view_only'):
         all_hosts = [h for h in all_hosts if h.get('stage') == STAGE_CS]
 
@@ -557,6 +382,7 @@ def set_stage() -> Response | tuple[Response, int]:
             return jsonify({'error': f'Nagios ACK error: {str(e)}'}), 500
 
         delete_host_stage(container, host_name)
+        set_host_acknowledged(container, host_name, True)
         append_stage_history(host_name, container, old_stage, stage, username, comment)
         log_activity('Stage Resolved + ACK', f'Host {host_name} on {container} resolved and acknowledged. Comment: {comment}')
         return jsonify({'success': True, 'action': 'resolved_and_acked'})
@@ -635,6 +461,7 @@ def batch_set_stage() -> Response | tuple[Response, int]:
                 resp = requests.post(cmd_url, data=ack_data, headers={'Authorization': auth_header}, timeout=5)
                 if resp.status_code == 200:
                     delete_host_stage(container, host_name)
+                    set_host_acknowledged(container, host_name, True)
                     history_entries.append((host_name, container, old_stage, stage, username, note))
                     success_count += 1
                 else:

@@ -46,8 +46,8 @@ def main() -> int:
 
     if not os.path.exists(json_path):
         if os.path.exists(migrated_path):
-        print(f'{json_path} not found (already renamed to {migrated_path}).')
-        print('SQLite is the source of truth. Re-run is a no-op.')
+            print(f'{json_path} not found (already renamed to {migrated_path}).')
+            print('SQLite is the source of truth. Re-run is a no-op.')
             init_db(db_path)
             print(f'  DB rows: {count_stages(db_path)}')
             return 0

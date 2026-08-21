@@ -1,0 +1,32 @@
+#!/sbin/openrc-run
+# Nagios CGI snapshot poller for Nagios Dashboard.
+# Install on Prod (after a Dev soak — do not auto-start from Flask):
+#   cp /svr/dashboard-nagios/services/nagios-poller.initd /etc/init.d/nagios-poller
+#   chmod +x /etc/init.d/nagios-poller
+#   rc-update add nagios-poller default
+#   rc-service nagios-poller start
+#
+# Optional env (MONITORING_CGI_TIMEOUT) can live in /etc/conf.d/nagios-poller
+# or be sourced from /etc/conf.d/dashboard-nagios.
+
+description="Nagios Dashboard CGI snapshot poller"
+command="/usr/bin/python3"
+command_args="/svr/dashboard-nagios/services/nagios_poller.py"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+directory="/svr/dashboard-nagios"
+output_log="/var/log/nagios-poller.log"
+error_log="/var/log/nagios-poller.log"
+
+depend() {
+    need net
+    after docker
+}
+
+start_pre() {
+    checkpath --directory --mode 0755 /run
+    if [ ! -f "${directory}/services/nagios_poller.py" ]; then
+        eerror "nagios_poller.py not found in ${directory}/services"
+        return 1
+    fi
+}

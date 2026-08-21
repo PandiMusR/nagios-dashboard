@@ -109,6 +109,7 @@ FILES_TO_UPDATE=(
     "static/js/servers.js"
     "requirements.txt"
     "migrate_encrypt_creds.py"
+    "migrate_stages_to_db.py"
     "preflight_check.sh"
     "README.md"
     "USER_GUIDE.md"
@@ -359,6 +360,19 @@ else
         fi
     done
     fail "App verification failed. Rolled back to backup. Aborting deploy."
+fi
+echo ""
+
+# -----------------------------------------------------------------------------
+# STEP 8b: Migrate host_stages.json → SQLite BEFORE starting Flask
+# Must run while the service is stopped. If Flask starts first it can insert
+# empty 'new' rows, then this script would SKIP and Prod notes/cs would be lost.
+# -----------------------------------------------------------------------------
+log "Migrating host stages JSON to SQLite (WAL)..."
+if python3 "$PROD_PATH/migrate_stages_to_db.py"; then
+    ok "Host stages migration complete"
+else
+    fail "Host stages migration failed. Service left stopped. JSON was not renamed. Aborting deploy."
 fi
 echo ""
 

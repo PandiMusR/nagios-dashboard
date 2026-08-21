@@ -129,6 +129,37 @@
         grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
         gap: 1.5rem;
     }
+    .monitoring-fetch-alert {
+        display: block;
+        background: var(--alert-warning-bg);
+        color: var(--alert-warning-color);
+        border: 1px solid var(--color-warning);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        margin: 0 0 1.5rem 0;
+        font-weight: 600;
+    }
+    .monitoring-fetch-alert[hidden] {
+        display: none !important;
+    }
+    .monitoring-fetch-alert-title::before {
+        content: "⚠️ ";
+    }
+    .monitoring-fetch-alert ul {
+        margin: 0.5rem 0 0 1.25rem;
+        padding: 0;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    .snapshot-error-note {
+        background: var(--alert-warning-bg);
+        color: var(--alert-warning-color);
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 1rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
     @media (max-width: 768px) {
         .servers-grid {
             grid-template-columns: 1fr;

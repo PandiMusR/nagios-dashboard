@@ -40,7 +40,19 @@ def health() -> tuple[Response, int]:
         checks['host_stages'] = f'error: {e}'
         all_ok = False
 
-    # 3. At least one Nagios container running
+    # 3. CGI snapshot store accessible
+    try:
+        from services.poller_db import count_hosts, integrity_ok as snapshot_ok
+        if not snapshot_ok():
+            checks['nagios_snapshot'] = 'error: sqlite integrity_check failed'
+            all_ok = False
+        else:
+            checks['nagios_snapshot'] = f'ok ({count_hosts()} hosts)'
+    except Exception as e:
+        checks['nagios_snapshot'] = f'error: {e}'
+        all_ok = False
+
+    # 4. At least one Nagios container running
     try:
         containers = _get_nagios_servers()
         if containers:

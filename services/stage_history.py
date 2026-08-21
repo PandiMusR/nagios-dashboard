@@ -4,9 +4,8 @@ import json
 import os
 from datetime import datetime
 
-from services.config import CONFIG_DIR
-
-HISTORY_DIR = f'{CONFIG_DIR}/stage_history'
+_APP_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+HISTORY_DIR = os.path.join(_APP_ROOT, 'config', 'stage_history')
 
 
 def append_stage_history(host: str, container: str, from_stage: str, to_stage: str, user: str, note: str = '') -> None:
