@@ -246,6 +246,10 @@ def restart() -> tuple[bool, str]:
         ok, msg = _rc_service('restart')
         if ok or is_running():
             return True, msg or 'Proxy multiplexer restarted via OpenRC'
+        _rc_service('zap')
+        ok, msg = _rc_service('start')
+        if ok or is_running():
+            return True, msg or 'Proxy multiplexer started via OpenRC after failed restart'
         return False, msg
     pid = find_pid()
     if pid is not None:

@@ -385,6 +385,8 @@ async def main() -> None:
     def _sigterm() -> None:
         if _shutdown_event is not None:
             _shutdown_event.set()
+        if _reload_event is not None:
+            _reload_event.set()
 
     for sig, handler in ((signal.SIGHUP, _sighup), (signal.SIGTERM, _sigterm), (signal.SIGINT, _sigterm)):
         try:
@@ -399,6 +401,8 @@ async def main() -> None:
         _reload_event.clear()
         try:
             await asyncio.wait_for(_reload_event.wait(), timeout=RELOAD_INTERVAL)
+            if _shutdown_event.is_set():
+                break
             log('SIGHUP received — reloading port mappings')
         except asyncio.TimeoutError:
             pass

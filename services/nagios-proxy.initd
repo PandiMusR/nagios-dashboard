@@ -22,6 +22,7 @@ pidfile="/run/${RC_SVCNAME}.pid"
 directory="/svr/dashboard-nagios"
 output_log="/var/log/nagios-proxy.log"
 error_log="/var/log/nagios-proxy.log"
+retry="TERM/5/KILL/2"
 extra_started_commands="reload"
 
 depend() {
