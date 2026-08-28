@@ -1,0 +1,41 @@
+# Nagios Dashboard — AI session rules
+
+Read `AGENTS.md` and `README.md` Architecture before changing code. This file is the hard constraint set.
+
+## Tech stack (do not replace)
+
+- OS: Alpine Linux LXC (OpenRC, not systemd)
+- Language: Python 3.12
+- Web: Flask 3 + Waitress (8 threads, one process)
+- Snapshot / stages: SQLite WAL (`config/nagios_snapshot.db`, `config/host_stages.db`)
+- Iframe proxy: `asyncio` + `aiohttp` (`services/async_proxy.py`)
+- Frontend: Jinja2 + Bootstrap + vanilla JS (no Node, no SPA build)
+- Settings still in gitignored JSON; credentials Fernet-encrypted
+
+Production is a **~2 GB RAM** LXC with no swap and OOM history. Extra processes, Redis, Postgres, and Node toolchains are out of scope.
+
+## OpenRC services
+
+| Service | Code | Role |
+|---|---|---|
+| `dashboard-nagios` | `app.py` | UI only |
+| `nagios-poller` | `services/nagios_poller.py` | Live CGI → snapshot DB |
+| `nagios-proxy` | `services/async_proxy.py` | Single iframe multiplexer |
+
+## Core directives
+
+1. **Never introduce synchronous/blocking external API or Docker calls in the Flask request-response cycle for Nagios status.** Always read from the SQLite snapshot (`services/poller_db.py`). `/monitoring/<cat>/data` and `/dashboard/stats` must stay millisecond SELECTs. Do not call Nagios CGI, `docker stats`, or fan out `ThreadPoolExecutor` HTTP from those handlers. Live CGI belongs only in `nagios-poller`. ACK `cmd.cgi` on resolve is the exception for a user-initiated write. Host Manager / Servers lifecycle may still use Docker CLI for create/start/stop — never for dashboard graphs.
+
+2. **Do not spawn multiple proxy processes.** We strictly use the single `services/async_proxy.py` multiplexer (`nagios-proxy`). `proxy.py` is unused leftover. Bind `0.0.0.0:(nagios_port + 1000)`. Control via `services/proxy_control.py` / `start_proxy_daemon.py`. SIGTERM must wake the asyncio wait so OpenRC stop does not hang.
+
+3. **Keep memory usage absolutely minimal** to respect the 2 GB LXC constraint. Do not add a proxy-per-container, a second Waitress, or an in-process CGI loop. Prefer one small background process over work on Waitress threads.
+
+4. **Intensive Monitoring is on HOLD.** Its code is stripped/disabled on Production (`INTENSIVE_HOLD_EXCLUDE` in `deploy_from_dev.sh`). Do not re-enable `intensive_worker.py`, `blueprints/intensive.py`, or the intensive OpenRC unit. Do not confuse this with the Uptime Kuma page (`monitoring_intens.py`).
+
+## Implementation defaults
+
+- Stages: per-row UPSERT/DELETE in `stage_db.py` — never load-mutate-dump a full JSON/table of all hosts.
+- Poller creds: `config/nagios_creds_<container>.json`, not the logged-in LDAP password.
+- Incomplete CGI: store errors on `container_health`; never treat a failed fetch as “all UP”.
+- Do not commit unless asked. Do not add comments unless asked.
+- Config (`config/`) is gitignored — never copy it to Production in a UI deploy.
