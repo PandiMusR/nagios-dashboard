@@ -42,8 +42,15 @@
     }
     .form-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 1.5rem;
+    }
+    .form-group input[type="date"] {
+        color-scheme: light;
+        min-height: 2.7rem;
+    }
+    [data-theme="dark"] .form-group input[type="date"] {
+        color-scheme: dark;
     }
     .btn-primary {
         background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);

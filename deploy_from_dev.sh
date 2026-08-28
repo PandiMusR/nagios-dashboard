@@ -104,6 +104,7 @@ FILES_TO_UPDATE=(
     "templates/servers.html"
     "templates/setup.html"
     "templates/stage_history.html"
+    "static/css/stage_history.css"
     "templates/users.html"
     "templates/user_permissions.html"
     "templates/active_users.html"

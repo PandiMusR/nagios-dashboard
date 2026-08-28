@@ -267,13 +267,18 @@ def stage_history_page() -> str | Response:
 
     host = request.args.get('host', '').strip() or None
     container = request.args.get('container', '').strip() or None
+    start_date = request.args.get('start_date', '').strip() or None
+    end_date = request.args.get('end_date', '').strip() or None
     limit = request.args.get('limit', '100').strip()
     try:
         limit = int(limit)
     except ValueError:
         limit = 100
 
-    entries = read_stage_history(host=host, container=container, limit=limit)
+    entries = read_stage_history(
+        host=host, container=container, limit=limit,
+        start_date=start_date, end_date=end_date,
+    )
     return render_template('stage_history.html', entries=entries, limit=limit, stage_labels=STAGE_LABELS,
                          nagios_servers=_get_nagios_servers(), monitoring_categories=_get_monitoring_categories())
 

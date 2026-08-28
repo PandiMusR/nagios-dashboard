@@ -671,6 +671,8 @@ def api_stage_history() -> tuple[Response, int]:
     Optional query params:
     - host: filter by hostname
     - container: filter by container name
+    - start_date: inclusive start (`YYYY-MM-DD` or ISO datetime)
+    - end_date: inclusive end (`YYYY-MM-DD` means end of that day)
     - limit: max entries (default 100)
     """
     if not _check_api_key(request):
@@ -680,6 +682,8 @@ def api_stage_history() -> tuple[Response, int]:
 
     host = request.args.get('host', '').strip() or None
     container = request.args.get('container', '').strip() or None
+    start_date = request.args.get('start_date', '').strip() or None
+    end_date = request.args.get('end_date', '').strip() or None
     limit = request.args.get('limit', '100').strip()
     try:
         limit = int(limit)
@@ -687,7 +691,10 @@ def api_stage_history() -> tuple[Response, int]:
         limit = 100
 
     try:
-        entries = read_stage_history(host=host, container=container, limit=limit)
+        entries = read_stage_history(
+            host=host, container=container, limit=limit,
+            start_date=start_date, end_date=end_date,
+        )
         return jsonify({'success': True, 'entries': entries, 'total': len(entries)}), 200
     except Exception as e:
         return _error(f'Error: {str(e)}', 500)
