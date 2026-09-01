@@ -12,6 +12,7 @@ from services.encryption import decrypt_session_value
 from services.ldap_service import log_activity
 from services.stage_service import (
     get_host_stage, upsert_host_stage, delete_host_stage,
+    list_host_comments, append_host_comment,
 )
 from services.poller_db import container_fetch_errors, list_snapshot_hosts, set_host_acknowledged
 from services.stage_history import append_stage_history
@@ -281,6 +282,62 @@ def export_monitoring_csv(page: str) -> Response | tuple[Response, int]:
     )
 
 
+def _serialize_comment(row: dict) -> dict:
+    stage = row.get('stage') or ''
+    return {
+        'id': row.get('id'),
+        'user': row.get('user') or '',
+        'timestamp': row.get('timestamp') or '',
+        'stage': stage,
+        'stage_label': STAGE_LABELS.get(stage, stage),
+        'text': row.get('text') or '',
+    }
+
+
+def _append_stage_comment(
+    container: str,
+    host_name: str,
+    username: str,
+    timestamp: str,
+    stage: str,
+    text: str,
+) -> None:
+    if not text:
+        return
+    append_host_comment(
+        container,
+        host_name,
+        username or 'unknown',
+        timestamp,
+        stage,
+        text,
+    )
+
+
+@monitoring_bp.route('/monitoring/stage-info')
+def stage_info() -> Response | tuple[Response, int]:
+    """GET /monitoring/stage-info — current stage plus comment thread for one host."""
+    if 'username' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('monitoring'):
+        return jsonify({'error': 'Access denied'}), 403
+
+    host_name = request.args.get('host_name', '').strip()
+    container = request.args.get('container', '').strip()
+    if not host_name or not container:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    existing = get_host_stage(container, host_name)
+    stage = existing.get('stage', STAGE_NEW) if existing else STAGE_NEW
+    comments = [_serialize_comment(row) for row in list_host_comments(container, host_name)]
+    return jsonify({
+        'success': True,
+        'stage': stage,
+        'stage_label': STAGE_LABELS.get(stage, stage),
+        'comments': comments,
+    })
+
+
 @monitoring_bp.route('/monitoring/acknowledge', methods=['POST'])
 def acknowledge_host() -> Response:
     """POST /monitoring/acknowledge — Acknowledge a single host problem in Nagios."""
@@ -354,6 +411,7 @@ def set_stage() -> Response | tuple[Response, int]:
 
     username = session.get('username')
     now = datetime.now()
+    timestamp = now.isoformat()
     existing = get_host_stage(container, host_name)
     old_stage = existing.get('stage', STAGE_NEW) if existing else STAGE_NEW
 
@@ -381,6 +439,7 @@ def set_stage() -> Response | tuple[Response, int]:
         except Exception as e:
             return jsonify({'error': f'Nagios ACK error: {str(e)}'}), 500
 
+        _append_stage_comment(container, host_name, username, timestamp, stage, comment)
         delete_host_stage(container, host_name)
         set_host_acknowledged(container, host_name, True)
         append_stage_history(host_name, container, old_stage, stage, username, comment)
@@ -391,11 +450,12 @@ def set_stage() -> Response | tuple[Response, int]:
         container,
         host_name,
         stage,
-        updated_at=now.isoformat(),
+        updated_at=timestamp,
         updated_by=username,
-        note=comment,
+        note=comment if comment else (existing.get('note', '') if existing else ''),
         host_up_since=existing.get('host_up_since') if existing else None,
     )
+    _append_stage_comment(container, host_name, username, timestamp, stage, comment)
     append_stage_history(host_name, container, old_stage, stage, username, comment)
     note_msg = f' Note: {comment}' if comment else ''
     log_activity('Stage Updated', f'Host {host_name} on {container} set to stage "{STAGE_LABELS[stage]}" by {username}.{note_msg}')
@@ -460,6 +520,7 @@ def batch_set_stage() -> Response | tuple[Response, int]:
                 }
                 resp = requests.post(cmd_url, data=ack_data, headers={'Authorization': auth_header}, timeout=5)
                 if resp.status_code == 200:
+                    _append_stage_comment(container, host_name, username, now.isoformat(), stage, note)
                     delete_host_stage(container, host_name)
                     set_host_acknowledged(container, host_name, True)
                     history_entries.append((host_name, container, old_stage, stage, username, note))
@@ -478,6 +539,7 @@ def batch_set_stage() -> Response | tuple[Response, int]:
                 note=note if note else (existing.get('note', '') if existing else ''),
                 host_up_since=existing.get('host_up_since') if existing else None,
             )
+            _append_stage_comment(container, host_name, username, now.isoformat(), stage, note)
             history_entries.append((host_name, container, old_stage, stage, username, note))
             success_count += 1
 

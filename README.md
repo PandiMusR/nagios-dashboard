@@ -40,7 +40,7 @@ A web-based management dashboard for multi-server Nagios deployments. Built with
 This dashboard sits in front of multiple Nagios instances (each running in a Docker container) and provides:
 
 - **Centralized login** via LDAP
-- **Live monitoring views** across all Nagios servers by category
+- **Monitoring views** across all Nagios servers by category (SQLite snapshot, ~30s poller)
 - **Host management** (add/edit/delete hosts) without touching config files manually
 - **Stage tracking** for down hosts with optional notes per stage
 - **Batch stage changes** for multiple hosts at once
@@ -59,51 +59,55 @@ This dashboard sits in front of multiple Nagios instances (each running in a Doc
 
 ## Architecture
 
+Production runs on an Alpine Linux LXC with a **~2 GB RAM** budget (no swap). Flask/Waitress must stay a thin HTTP layer: it **never** fans out live Nagios CGI or `docker stats` on a browser request.
+
 ```
-Browser
+Browser (Jinja2 + vanilla JS, 30s poll)
   │
   ▼
-Flask App (app.py) — port configurable via APP_PORT (default: 80)
-  ├── Blueprints     → 11 modules (auth, dashboard, servers, users, monitoring, api, ...)
-  ├── Services       → 12 modules (LDAP, encryption, stages, uptime kuma, nextcloud, active users, scheduler, docker cache, stage history, shared_helpers, config)
-  ├── Utils          → 2 modules (permissions, port check)
-  ├── LDAP Auth      → OpenLDAP container (port 1389)
-  ├── Docker CLI     → Nagios containers (nagios-ldap:latest)
-  ├── Docker Cache   → In-memory cache for Docker CLI (TTL 15s)
-  ├── Nagios API     → http://localhost:<port>/nagios/cgi-bin/...
-  ├── Stage Tracker  → config/host_stages.json (with notes)
-  ├── Stage History  → config/stage_history/ (persistent JSONL audit log)
-  └── Uptime Kuma    → Socket.IO client
+Flask / Waitress (8 threads) — APP_PORT (default 80)
+  ├── /monitoring/<cat>/data  → SELECT nagios_snapshot.db  (milliseconds)
+  ├── /dashboard/stats        → SELECT nagios_snapshot.db  (no docker stats)
+  ├── set-stage / ACK         → SQLite host_stages.db + Nagios cmd.cgi on resolve only
+  └── iframe /nagios/<name>   → http://<host>:<nagios_port + 1000>/
 
-Per-container Proxy (proxy.py) — port 1000 + <nagios_port>
-  └── Forwards requests to Nagios container with Basic Auth injection
+nagios-poller  (OpenRC)     nagios-proxy  (OpenRC)
+  services/nagios_poller.py   services/async_proxy.py
+  • CGI fetch ~every 30s      • ONE asyncio/aiohttp process
+  • UPSERT snapshot SQLite    • binds 0.0.0.0:(port+1000) for every container
+  • reconcile host stages     • injects Basic Auth from nagios_creds_*.json
+  • record fetch errors       • ~40 MB RSS total (not 14× Waitress)
 
-Nagios Containers (Docker)
-  └── /svr/<container_name>/etc/objects/localhost.cfg  ← host config
+SQLite WAL
+  config/nagios_snapshot.db   host + service snapshot + container_health
+  config/host_stages.db       per-row stages / notes (not host_stages.json)
+
+Nagios containers (Docker, nagios-ldap:latest)
+  localhost:<nagios_port>/nagios/cgi-bin/...
 ```
 
-Each Nagios server is a Docker container built from the local `nagios-ldap:latest` image. The dashboard communicates with each container's Nagios CGI API over HTTP.
+| Process | OpenRC service | Role |
+|---|---|---|
+| Flask (`app.py`) | `dashboard-nagios` | UI, LDAP, set-stage, Host Manager writes |
+| Background poller | `nagios-poller` | Live CGI → snapshot DB; stage auto-detect |
+| Iframe multiplexer | `nagios-proxy` | Single reverse proxy with Basic Auth injection |
+
+The legacy file `proxy.py` is unused. Do not spawn per-container proxy processes.
+
+Each Nagios server is a Docker container. Host config lives at `/svr/<container_name>/etc/objects/localhost.cfg`.
 
 ---
 
 ## Requirements
 
-- **Python** 3.8+
+- **Python** 3.12+
 - **Docker** (running, with access to `docker` CLI)
 - **OpenLDAP** Docker container (`osixia/openldap`) — auto-created on first run
+- **Production:** Alpine Linux + OpenRC (not systemd), ~2 GB RAM LXC
 
 ### Python Dependencies
 
-```
-Flask==3.0.0
-ldap3==2.9.1
-requests==2.31.0
-waitress==2.1.2
-python-socketio==5.9.0
-python-engineio==4.7.1
-websocket-client==1.6.2
-cryptography>=41.0.0    # Fernet encryption for session + creds at rest
-```
+See `requirements.txt`. Notable packages: Flask 3, Waitress, ldap3, Flask-WTF, cryptography, requests, **aiohttp** (iframe multiplexer).
 
 ---
 
@@ -157,6 +161,16 @@ nohup python app.py > app.log 2>&1 &
 
 The app runs on `http://0.0.0.0:{APP_PORT}` by default. Port is configured in `services/config.py` via `APP_PORT` (default: 80). Can be overridden with environment variable: `APP_PORT=5000 python app.py`.
 
+On **production** (Alpine OpenRC), three services must run:
+
+```bash
+rc-service dashboard-nagios status
+rc-service nagios-poller status
+rc-service nagios-proxy status
+```
+
+Without `nagios-poller`, monitoring/dashboard cards stay empty or stale. Without `nagios-proxy`, native Nagios iframes fail to connect.
+
 The application auto-detects its root directory via `APP_ROOT` in `services/config.py` — no hardcoded paths to change when relocating the project.
 
 ---
@@ -167,9 +181,9 @@ The application auto-detects its root directory via `APP_ROOT` in `services/conf
 
 The main overview page showing all your Nagios servers at a glance.
 
-- **Per-server stats**: hosts up/down, services OK/warning/critical
-- **CPU & memory usage** of each container
-- **Live auto-refresh** with configurable interval
+- **Per-server stats** from the SQLite snapshot: hosts up/down/unreachable, services OK/warning/critical/unknown
+- **Auto-refresh** (~30s) — Fast SELECT, not live CGI or `docker stats`
+- Incomplete snapshot (poller fetch error) shows a warning banner on the card
 
 ---
 
@@ -185,7 +199,7 @@ Manage the lifecycle of your Nagios Docker containers.
 | Edit Config | Raw editor for the Nagios Apache config |
 | Check Config | Validates Nagios config inside the container |
 | Manage Plugins | Upload/delete check plugins per server |
-| Proxy | Each server gets a proxy on port `1000 + <nagios_port>` |
+| Proxy | One `async_proxy.py` multiplexer binds `1000 + <nagios_port>` per container |
 
 > **Port rules**: Ports must be between 1000–65535. The proxy port is automatically set to `port + 1000`.
 
@@ -212,7 +226,7 @@ Every `localhost.cfg` can be backed up with a timestamp. Backups can be restored
 
 ### Monitoring
 
-Live monitoring views, organized by category (e.g., Prioritas, BHome, OPD).
+Monitoring views, organized by category (e.g., Prioritas, BHome, OPD). Data is read from the poller snapshot (not a live CGI fan-out from the browser request).
 
 Each category shows all hosts that are currently **DOWN** or **UNREACHABLE** from the mapped Nagios servers.
 
@@ -310,7 +324,7 @@ Setup in **Global Settings → Uptime Kuma**:
 - Username and Password
 - Enable the integration
 
-The **Monitoring Intens** submenu shows all your Uptime Kuma monitors with:
+The **Monitoring Intens** submenu (Uptime Kuma list — native Intensive ping is **HOLD**/disabled) shows monitors with:
 - Real-time UP/DOWN status
 - Heartbeat charts
 - 24-hour uptime percentage
@@ -410,8 +424,8 @@ When a host goes DOWN, it enters a **stage workflow** managed entirely by the da
 
 - **Auto-assign**: When a host first goes DOWN, it's automatically set to **New**
 - **Set Stage**: Click the **Stage** button on any row to open the stage selector. Click anywhere on the row to select/deselect for batch operations.
-- **Notes**: Every stage can have an optional note. Notes are saved in `host_stages.json` only — they are NOT sent to Nagios (except for Resolved, where the note is used as the ACK comment)
-- **Non-Resolved stages**: Only update the dashboard's `host_stages.json` — Nagios is NOT touched
+- **Notes**: Every stage can have an optional note. Notes are stored in SQLite (`host_stages.db`) only — they are NOT sent to Nagios (except for Resolved, where the note is used as the ACK comment)
+- **Non-Resolved stages**: Only update `host_stages.db` — Nagios is NOT touched
 - **Resolved**: Sends an ACK command to Nagios (requires a note) and the host disappears from the monitoring list
 - **Host recovers by itself**: The host disappears automatically (Nagios reports UP) — no ACK needed
 - **Batch Set Stage**: Select multiple hosts and change their stage at once with an optional shared note
@@ -434,21 +448,7 @@ If a host comes back UP but you had already set a stage (e.g., "Watchlist"), the
 
 ### Storage
 
-Stages are stored in `config/host_stages.json`:
-
-```json
-{
-  "Testung__Test-ack1": {
-    "stage": "escalated",
-    "updated_at": "2026-05-27T14:15:00",
-    "updated_by": "admin",
-    "note": "Waiting for field engineer",
-    "host_up_since": null
-  }
-}
-```
-
-Key format: `{container_name}__{hostname}`
+Stages are stored in SQLite WAL at `config/host_stages.db` (one row per container + hostname). Writers use per-row UPSERT/DELETE — never rewrite the whole table. A one-off migrator (`migrate_stages_to_db.py`) imported legacy `host_stages.json` (renamed to `host_stages.json.migrated`).
 
 ---
 
@@ -464,7 +464,8 @@ All runtime config files live in `config/` (not versioned):
 | `monitoring_server_mappings.json` | Maps categories → Nagios containers |
 | `user_permissions.json` | Per-user permission sets |
 | `user_passwords.json` | **Encrypted** (`__ENC__` marker) — user LDAP passwords for htpasswd sync |
-| `host_stages.json` | Current stage per DOWN host with notes (thread-safe locking) |
+| `host_stages.db` | Current stage per DOWN host with notes (SQLite WAL, per-row ops) |
+| `nagios_snapshot.db` | Poller CGI snapshot + `container_health` (SQLite WAL) |
 | `nagios_creds_<server>.json` | **Encrypted** (`__ENC__` marker) — per-server Nagios credentials |
 | `secret_key` | Persistent Flask secret key (auto-generated on first run) |
 | `activity_log.txt` | Legacy activity log (pre-rotation, still readable) |
@@ -521,7 +522,7 @@ All form submissions and AJAX POST requests are protected with Flask-WTF CSRF to
 External API access requires an API key passed via `X-API-Key` header or `?api_key=YOUR_KEY` query param. Keys are generated from **Global Settings → API Key** and stored in `global_config.json`.
 
 ### Thread Safety
-Host stage tracking uses `threading.Lock()` with `host_stages_transaction()` context manager for atomic read-modify-write cycles. The `save_host_stages()` function also acquires the lock independently for standalone saves. Docker CLI results are cached in-memory with 15-second TTL to reduce overhead.
+Host stages use SQLite WAL and per-row UPSERT/DELETE (`services/stage_db.py`). Docker CLI name/port lists are cached in-memory (TTL 15s). Flask request handlers must not call live Nagios CGI or `docker stats`.
 
 ### Activity Log Audit
 All `log_activity()` calls have been audited — no passwords, tokens, or credentials are logged.
@@ -532,80 +533,39 @@ All `log_activity()` calls have been audited — no passwords, tokens, or creden
 
 ```
 nagiosDashboard/
-├── app.py                       # App factory + config + register blueprints (~70 lines)
-├── proxy.py                     # Per-Nagios HTTP proxy server
-├── start_proxy.sh               # Helper to launch proxy.py
-├── start_proxy_daemon.py        # Daemonizes proxy.py
-├── migrate_encrypt_creds.py     # Idempotent migration: encrypts plaintext creds JSON
-├── deploy_from_dev.sh           # Production deployment script (SCP from dev server)
-├── full_backup.sh               # Full backup script (app + config + Docker + LDAP)
-├── add_ldap_user.py             # Utility: add user to LDAP manually
-├── clean_mappings.py            # Utility: clean server mappings
+├── app.py                       # App factory + register blueprints + CR scheduler
+├── proxy.py                     # UNUSED leftover — do not spawn; multiplexer is async_proxy.py
+├── start_proxy.sh / start_proxy_daemon.py  # Control nagios-proxy OpenRC / multiplexer
+├── migrate_encrypt_creds.py     # Idempotent: encrypt plaintext creds JSON
+├── migrate_stages_to_db.py      # One-off: host_stages.json → host_stages.db
+├── deploy_from_dev.sh           # Production deployment (SCP from dev)
 ├── requirements.txt
-├── .gitignore
-├── README.md
-├── USER_GUIDE.md                # End-user guide (Bahasa Indonesia)
-├── AGENTS.md                    # AI agent context (architecture, conventions, deployment)
-├── IMPROVEMENT_PLAN.md          # Compact living backlog (open items only)
-├── TRENDS_DUMMY_GUIDE.md        # Demo-only Nagios trends injection
+├── .cursorrules                 # Persistent AI session directives
+├── README.md / USER_GUIDE.md / AGENTS.md
 │
-├── services/                    # Service modules
-│   ├── config.py                # Centralized constants (APP_ROOT auto-detect, LDAP, paths, stages)
-│   ├── encryption.py            # Fernet encrypt/decrypt (session + JSON at-rest)
-│   ├── ldap_service.py          # LDAP connection, auth, log_activity, read_activity_logs
-│   ├── stage_service.py         # Host stage tracking (load/save/transaction)
-│   ├── stage_history.py         # Persistent stage change audit log (JSONL)
-│   ├── uptime_kuma.py           # Socket.IO interactions with Uptime Kuma
-│   ├── nextcloud.py             # WebDAV upload to Nextcloud
-│   ├── active_users.py          # In-memory active session tracker
-│   ├── scheduler.py             # Per-category CR Verification auto-reset scheduler
-│   └── docker_cache.py          # In-memory Docker CLI cache (TTL 15s)
+├── services/
+│   ├── config.py                # APP_ROOT, LDAP, paths, stage codes
+│   ├── nagios_poller.py         # OpenRC nagios-poller — CGI → snapshot SQLite
+│   ├── nagios-poller.initd
+│   ├── poller_db.py             # nagios_snapshot.db helpers
+│   ├── async_proxy.py           # OpenRC nagios-proxy — ONE aiohttp multiplexer
+│   ├── nagios-proxy.initd
+│   ├── proxy_control.py         # start/stop/reload multiplexer
+│   ├── stage_db.py / stage_service.py  # host_stages.db (WAL, per-row UPSERT)
+│   ├── stage_history.py         # Monthly JSONL audit log
+│   ├── scheduler.py             # CR Verification auto-reset
+│   ├── docker_cache.py          # Docker name/port list cache (TTL 15s)
+│   └── …                        # LDAP, encryption, shared_helpers, Uptime Kuma, Nextcloud
 │
-├── utils/                       # Utility modules
-│   ├── permissions.py           # Permission check/load/save
-│   └── port_check.py            # Port availability checking
+├── blueprints/
+│   ├── dashboard.py             # /dashboard/stats ← SELECT snapshot (no docker stats)
+│   ├── monitoring.py            # /monitoring/<cat>/data ← SELECT snapshot
+│   ├── servers.py               # Container CRUD; reload multiplexer on port change
+│   ├── nagios_proxy.py          # Flask iframe helper routes (not the multiplexer)
+│   └── …                        # auth, users, host_manager, settings, api
 │
-├── blueprints/                  # Flask Blueprints (route modules)
-│   ├── auth.py                  # Login, logout, setup, health, active-users, stage-history, activity-logs
-│   ├── dashboard.py             # Dashboard + stats (parallel fetch)
-│   ├── servers.py               # Server CRUD, proxy management, batch ops
-│   ├── users.py                 # User CRUD, permissions
-│   ├── monitoring.py            # Monitoring data, stages, batch set stage, export CSV
-│   ├── host_manager.py          # Host CRUD, backup/restore
-│   ├── monitoring_settings.py   # Category/server mapping, alarm settings, CR auto-reset config
-│   ├── global_settings.py       # Config, backup, logs, API key management
-│   ├── nagios_proxy.py          # Nagios CGI reverse proxy
-│   ├── monitoring_intens.py     # Uptime Kuma monitors page
-│   └── api.py                   # REST API endpoints (hosts, servers, monitoring, stage history)
-│
-├── config/                      # Runtime data (gitignored — not versioned)
-│
-├── create-nagios/               # Docker image build for Nagios containers
-│   ├── Dockerfile
-│   ├── build.sh
-│   ├── nagios.conf
-│   └── cgi.cfg
-│
-├── static/
-│   └── assets/
-│       └── img/                 # Application icons and images
-│
-└── templates/                   # Jinja2 HTML templates
-    ├── base.html                # Layout: navbar, sidebar (with Audit menu), dark mode
-    ├── login.html
-    ├── setup.html               # First-time admin account creation
-    ├── dashboard.html
-    ├── servers.html
-    ├── host_manager.html
-    ├── monitoring.html          # Live monitoring + stage system + notes + export CSV
-    ├── monitoring_intens.html   # Uptime Kuma monitors
-    ├── monitoring_settings.html # Includes CR Auto-Reset per-category config
-    ├── users.html
-    ├── user_permissions.html    # Includes CR View Only toggle
-    ├── global_settings.html     # Includes API Key management
-    ├── active_users.html        # Active users page (admin only)
-    ├── activity_logs.html       # User activity logs (standalone page)
-    └── stage_history.html       # Stage change history with filters
+├── config/                      # gitignored — JSON settings + SQLite DBs
+└── templates/                   # Jinja2 + vanilla JS (no SPA build)
 ```
 
 ---
@@ -645,12 +605,21 @@ The deploy script:
 1. Backs up current files + module directories
 2. Pulls new files from dev server via SCP (SSH ControlMaster for single password prompt)
 3. Cleans `__pycache__`
-4. Installs Python dependencies
-5. Runs creds encryption migration (idempotent)
-6. Restarts proxy daemons for running Nagios containers
-7. Verifies app imports (auto-rollback on failure)
-8. Starts service (auto-rollback on failure)
-9. Health check (`GET /health`)
+4. Stops OpenRC `dashboard-nagios`
+5. Installs Python dependencies
+6. Runs creds encryption migration (idempotent)
+7. Restarts the **single** `nagios-proxy` multiplexer (`start_proxy_daemon.py restart` — not 14× `proxy.py`)
+8. Verifies app imports (auto-rollback on failure)
+8b. Migrates `host_stages.json` → SQLite if needed (`migrate_stages_to_db.py`)
+9. Starts `dashboard-nagios` (auto-rollback on failure)
+10. Health check (`GET /health`)
+
+`nagios-poller` is a separate OpenRC service. After poller code changes, restart it explicitly:
+
+```bash
+rc-service nagios-poller restart
+rc-service nagios-proxy status
+```
 
 ### Rollback
 
@@ -723,17 +692,28 @@ docker logs <container_name> --tail 50
 
 ### Stage not updating
 
-Check that `config/host_stages.json` is writable by the app user:
+Stages live in SQLite WAL (`config/host_stages.db`), not JSON. Check the file is writable and the poller is running:
 
 ```bash
-ls -la config/host_stages.json
+ls -la config/host_stages.db
+rc-service nagios-poller status
 ```
 
-### Monitoring page shows no data
+### Monitoring page or dashboard shows no / stale data
 
-1. Verify the Nagios server is mapped to the category in **Monitoring Settings**
-2. Check that the Nagios container is running: `docker ps`
-3. Verify the proxy is running for that server in the **Servers** page
+1. Confirm `nagios-poller` is started: `rc-service nagios-poller status`
+2. Verify category → server mapping in **Monitoring Settings**
+3. Check that the Nagios container is running: `docker ps`
+4. Incomplete snapshot shows a warning on the dashboard card (poller CGI error), not a fake “all UP”
+
+Flask does **not** fetch live CGI on `/monitoring/.../data` or `/dashboard/stats`. If the poller is down, the UI only shows the last snapshot.
+
+### Native Nagios iframe fails to connect
+
+1. Confirm `nagios-proxy` is started: `rc-service nagios-proxy status`
+2. Ports are `nagios_port + 1000` bound on `0.0.0.0` (one process, many sockets)
+3. Logs: `/tmp/nagios-proxy.log` or `/var/log/nagios-proxy.log`
+4. Do not start `proxy.py` per container — that path is retired
 
 ### Active users not showing
 

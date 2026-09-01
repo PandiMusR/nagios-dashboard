@@ -1,10 +1,10 @@
 # Nagios Dashboard — Modernization Roadmap
 
 **Date:** 2026-08-21  
-**Audience:** execution plan after `TECH_STACK_AUDIT.md`  
-**Status:** planning only — no application code in this document  
+**Audience:** historical execution plan after `TECH_STACK_AUDIT.md`  
+**Status (2026-08-29):** Phases 1–3 are **implemented and deployed to Production**. This file is kept as the original plan. Current architecture: `README.md`, `AGENTS.md`, `.cursorrules`.
 
-This roadmap is ordered by **operational risk**, not by UI attractiveness. Phase 1 and Phase 2 exist because of the Gamas mass-outage: Waitress threads blocked on live CGI, failed fetches looked like “all UP”, and `host_stages.json` could lose writes under overlapping polls. Phase 3 is cleanup after the UI is reading a cheap, honest cache.
+This roadmap was ordered by **operational risk**, not by UI attractiveness. Phase 1 and Phase 2 existed because of the Gamas mass-outage: Waitress threads blocked on live CGI, failed fetches looked like “all UP”, and `host_stages.json` could lose writes under overlapping polls. Phase 3 was the iframe proxy multiplexer after the UI read a cheap, honest cache.
 
 ---
 

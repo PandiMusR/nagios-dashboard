@@ -1,7 +1,9 @@
 # Nagios Dashboard — Architectural & Tech Stack Audit
 
 **Date:** 2026-08-21  
-**Scope:** Dev tree `/root/apps/nagiosDashboard` (Flask 3 + Waitress, Jinja2, vanilla JS).  
+**Status (2026-08-29):** Historical snapshot **before** Phases 1–3. Live CGI in Waitress, `host_stages.json`, and 14× `proxy.py` described below are **retired**. Current architecture: `README.md`, `AGENTS.md`, `.cursorrules`. Intensive Monitoring remains **on HOLD**.
+
+**Scope:** Dev tree `/root/apps/nagiosDashboard` (Flask 3 + Waitress, Jinja2, vanilla JS) as of 2026-08-21.  
 **Constraint:** Internal ops dashboard, two environments (Dev VPS vs Alpine LXC Prod, ~2 GB RAM, no git on Prod, SCP deploy).  
 **Not in this audit:** code changes. Intensive Monitoring is **on HOLD** (`INTENSIVE_MONITORING_PLAN.md`); it is treated as a prototype, not a production subsystem.
 

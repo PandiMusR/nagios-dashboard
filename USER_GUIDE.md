@@ -61,7 +61,7 @@ Panduan lengkap penggunaan Nagios Dashboard untuk tim operasional.
 
 ## Dashboard
 
-Halaman utama yang menampilkan ringkasan semua server Nagios secara real-time.
+Halaman utama yang menampilkan ringkasan semua server Nagios. Angka host/service diambil dari snapshot (diperbarui ~30 detik oleh background poller), bukan dari `docker stats` atau CGI langsung di browser.
 
 ### Yang Ditampilkan
 
@@ -70,23 +70,23 @@ Setiap server menampilkan kartu dengan informasi:
 | Informasi | Keterangan |
 |---|---|
 | **Server Name** | Nama container Nagios |
-| **CPU** | Penggunaan CPU container |
-| **Memory** | Penggunaan RAM container |
 | **Hosts UP** | Jumlah host yang online (hijau) |
 | **Hosts DOWN** | Jumlah host yang mati (merah) |
 | **Hosts UNREACHABLE** | Jumlah host yang tidak terjangkau (kuning) |
 | **Services OK/WARN/CRIT** | Status service checks |
 
+Jika poller gagal mengambil data dari sebuah container, kartu menampilkan peringatan (bukan angka palsu “semua UP”).
+
 ### Fitur
 
-- **Auto-refresh** setiap 30 detik — data selalu terbaru tanpa perlu refresh manual
-- Klik **Open Nagios** untuk membuka panel Nagios asli di tab baru
+- **Auto-refresh** setiap ~30 detik — halaman membaca snapshot, tanpa CGI live
+- Klik **Open Nagios** untuk membuka panel Nagios asli (iframe lewat satu proses proxy bersama, port `1000 + port Nagios`)
 
 ---
 
 ## Monitoring
 
-Halaman utama untuk memantau host yang bermasalah (DOWN/UNREACHable), dikelompokkan berdasarkan kategori (contoh: Prioritas, Bhome, OPD).
+Halaman utama untuk memantau host yang bermasalah (DOWN/UNREACHable), dikelompokkan berdasarkan kategori (contoh: Prioritas, Bhome, OPD). Data dibaca dari snapshot SQLite yang diisi background poller (~30 detik), bukan CGI live dari request browser.
 
 ### Filter & Pencarian
 
@@ -250,7 +250,7 @@ Halaman untuk mengelola container Nagios Docker.
 2. Isi **Port** (contoh: `5001`) atau klik **Auto** untuk port otomatis
 3. Klik **Create Server**
 
-> Port harus unik dan belum digunakan. Proxy otomatis dibuat di port `1000 + port` (contoh: port 5001 → proxy 6001).
+> Port harus unik dan belum digunakan. Iframe Nagios memakai **satu** proses proxy (`nagios-proxy`) di port `1000 + port` (contoh: port 5001 → 6001). Bukan satu proses proxy per container.
 
 ### Mengelola Server
 
@@ -431,7 +431,9 @@ Gunakan **Audit → Activity Logs** di sidebar, atau buka `/activity-logs` (ada 
 
 ## Monitoring Intens (Uptime Kuma)
 
-Halaman untuk melihat status monitor Uptime Kuma secara real-time.
+> Fitur **Intensive Monitoring** (ping native di dashboard) sedang **HOLD** dan dinonaktifkan. Halaman di bawah ini adalah daftar monitor **Uptime Kuma**, bukan Intensive.
+
+Halaman untuk melihat status monitor Uptime Kuma.
 
 ### Informasi Per Monitor
 

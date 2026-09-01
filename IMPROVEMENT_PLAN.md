@@ -1,7 +1,7 @@
 # Nagios Dashboard — Improvement Plan
 
 Living backlog. Historical security/bug work is done (see git history + `AGENTS.md`).  
-**Last updated:** 2026-07-21
+**Last updated:** 2026-08-29
 
 ## Snapshot
 
@@ -11,23 +11,23 @@ Living backlog. Historical security/bug work is done (see git history + `AGENTS.
 | Theme Batch A/B + dark FOWT | Done (prod) |
 | `/monitoring-settings` + `/global-settings` modern UI | Done (prod) |
 | Activity Logs only under Audit | Done |
-| SQLite migration | Not started |
-| Connection pooling Nagios CGI | Open (user decide) |
-| Stage tracking race hardening | Open (user decide) |
+| Phase 1: stages → SQLite WAL (`host_stages.db`) | Done (prod) |
+| Phase 2: `nagios-poller` + CGI snapshot DB | Done (prod) |
+| Phase 3: single `async_proxy.py` multiplexer | Done (prod) |
+| Dashboard stats from snapshot (no `docker stats`) | Done (prod) |
+| Intensive Monitoring | **HOLD** — stripped on Prod deploy |
+| Remaining settings JSON (categories, perms, mappings) | Intentional — not a second SQLite project |
 
 ## Open items (user-decide / backlog)
 
 ### Reliability
 | ID | Item | Notes |
 |---|---|---|
-| R1 | Stage tracking race (beyond current lock) | Optional; file JSON still used |
 | R2 | Pre-save Nagios config validation (`nagios -v`) | Optional safety on host/config edits |
-| R3 | Connection pooling HTTP → Nagios CGI | Performance under many containers |
 
 ### Architecture
 | ID | Item | Notes |
 |---|---|---|
-| A1 | SQLite (or similar) instead of flat JSON | Large migration; not started |
 | A2 | Extract shared `load_json_config()` / host definition builder | DRY; low urgency after shared_helpers |
 | A3 | Docker volume base `/svr/<server>/` hardcoded | Intentional for this deploy topology |
 
@@ -53,6 +53,7 @@ Living backlog. Historical security/bug work is done (see git history + `AGENTS.
 3. Config MD5 PRE must equal POST; UI MD5 local == prod.
 4. Prod has **no git** — compare/deploy via SCP + `root@` + `bash -lc`.
 5. After class-namespace redesigns on dev: **restart Waitress**.
+6. After poller code: `rc-service nagios-poller restart`. After multiplexer/initd: `rc-service nagios-proxy restart`. Never spawn `proxy.py`.
 
 Proven backups: `theme_deploy_20260721_025201`, `ms_ui_deploy_20260721_033712`, `gs_ui_deploy_20260721_034854`.
 
@@ -60,10 +61,13 @@ Proven backups: `theme_deploy_20260721_025201`, `ms_ui_deploy_20260721_033712`, 
 
 | Doc | Role |
 |---|---|
-| `README.md` | User/dev feature overview |
+| `README.md` | User/dev feature overview + current architecture |
 | `USER_GUIDE.md` | Operator guide (ID) |
 | `AGENTS.md` | Agent/architecture context |
+| `.cursorrules` | Persistent AI session constraints |
 | `IMPROVEMENT_PLAN.md` | This backlog |
+| `MODERNIZATION_ROADMAP.md` | Historical Phases 1–3 plan (implemented) |
+| `TECH_STACK_AUDIT.md` | Historical audit (pre-implementation) |
 | `TRENDS_DUMMY_GUIDE.md` | Demo-only Nagios trends injection |
 | `create-nagios/README.md` | Nagios container image build |
 

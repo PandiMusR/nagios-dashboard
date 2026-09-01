@@ -1,8 +1,8 @@
 # Intensive Monitoring — HOLD Plan
 
-**Status: ON HOLD as of 2026-08-21.** Do not deploy this feature to Production until the monitoring visibility bug is resolved and this hold is explicitly lifted.
+**Status: ON HOLD as of 2026-08-21 (still HOLD after architecture Phases 1–3).** Do not deploy this feature to Production until the hold is explicitly lifted.
 
-The feature must stay disabled in `app.py` and the sidebar. Do not start `intensive_worker.py` on Prod. Do not install the OpenRC unit.
+The feature must stay disabled in `app.py` and the sidebar. Do not start `intensive_worker.py` on Prod. Do not install the OpenRC unit. `deploy_from_dev.sh` strips Intensive files (`INTENSIVE_HOLD_EXCLUDE`). Do not restore them.
 
 ---
 
@@ -10,11 +10,11 @@ The feature must stay disabled in `app.py` and the sidebar. Do not start `intens
 
 Native high-frequency ping (10–30s) for priority hosts, with latency/loss history in SQLite, Chart.js UI, and Telegram alerts. Nagios is too heavy for this interval; Uptime Kuma was rejected as an extra app on the 2 GB Prod LXC.
 
-Worker language: **Python asyncio**, standalone process (same pattern as `proxy.py`). Not inside Waitress.
+Worker language: **Python asyncio**, standalone process (same pattern as `nagios-poller` / `async_proxy.py`). Not inside Waitress.
 
 ---
 
-## What is built (Phases 1–3) — tested on Dev
+## What is built (Intensive feature Phases 1–3) — tested on Dev, not Production
 
 ### Phase 1 — Config + SQLite
 

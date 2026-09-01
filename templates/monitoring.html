@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Monitoring - {{ page|title }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/monitoring.css?v=20260901">
+{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="/static/css/monitoring.css?v=20260821">
 
 <div class="page-header">
     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -100,7 +102,7 @@
     <div class="table-header">
         <h2><i class="fas fa-list"></i> Host Status (<span id="filtered_count">0</span>)</h2>
         <button class="btn-batch-ack" onclick="batchStage()"><i class="fas fa-layer-group"></i> Batch Set Stage</button>
-        <button class="btn-copy-hosts" onclick="copySelectedHosts()" title="Copy selected host names"><i class="fas fa-copy"></i> Copy Hosts</button>
+        <button class="btn-copy-hosts" onclick="copySelectedHosts()" title="Copy selected host names and durations"><i class="fas fa-copy"></i> Copy Hosts</button>
     </div>
     <div style="overflow-x: auto;">
         <table class="hosts-table">
@@ -158,18 +160,18 @@
                         <div class="stage-option-desc">Konfirmasi ke PIC sedang berlangsung</div>
                     </div>
                 </label>
-                <label class="stage-option" onclick="selectStage('escalated', this)">
-                    <input type="radio" name="stage_choice" value="escalated">
-                    <div class="stage-option-label">
-                        <div class="stage-option-title">🟠 Escalated / Pending</div>
-                        <div class="stage-option-desc">Menunggu pihak lain (FE, PLN, dll)</div>
-                    </div>
-                </label>
                 <label class="stage-option" onclick="selectStage('watchlist', this)">
                     <input type="radio" name="stage_choice" value="watchlist">
                     <div class="stage-option-label">
                         <div class="stage-option-title">🟣 Watchlist / Flapping</div>
                         <div class="stage-option-desc">Monitor flapping — naik turun tidak stabil</div>
+                    </div>
+                </label>
+                <label class="stage-option" onclick="selectStage('escalated', this)">
+                    <input type="radio" name="stage_choice" value="escalated">
+                    <div class="stage-option-label">
+                        <div class="stage-option-title">🟠 Escalated / Pending</div>
+                        <div class="stage-option-desc">Menunggu pihak lain (FE, PLN, Mitra, User)</div>
                     </div>
                 </label>
                 <label class="stage-option" onclick="selectStage('resolved', this)">
@@ -182,9 +184,18 @@
             </div>
 
             <div id="stage-note-section" style="margin-top: 1rem; margin-bottom: 0;">
+                <div class="comment-history">
+                    <div class="comment-history-header">
+                        <span class="comment-history-title">Riwayat catatan</span>
+                        <span class="comment-history-count" id="comment_history_count"></span>
+                    </div>
+                    <div class="comment-history-list" id="comment_history_list" aria-live="polite">
+                        <div class="comment-history-empty">Memuat riwayat…</div>
+                    </div>
+                </div>
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label for="stage_comment">Catatan <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.8rem;">(opsional, wajib untuk Resolved)</span>:</label>
-                    <textarea id="stage_comment" placeholder="Tuliskan catatan atau keterangan..." style="min-height: 80px; resize: vertical; width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; font-family: inherit;"></textarea>
+                    <label for="stage_comment">Catatan baru <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.8rem;">(opsional, wajib untuk Resolved)</span>:</label>
+                    <textarea id="stage_comment" placeholder="Tulis komentar untuk thread host ini..." style="min-height: 80px; resize: vertical; width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; font-family: inherit;"></textarea>
                 </div>
             </div>
         </div>
@@ -249,8 +260,8 @@
                 </div>
             </div>
             <div class="form-group" style="margin-bottom: 0;">
-                <label for="batch_note">Catatan <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.8rem;">(opsional, wajib untuk Resolved)</span>:</label>
-                <textarea id="batch_note" placeholder="Catatan untuk semua host yang dipilih..." style="min-height: 80px; resize: vertical; width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; font-family: inherit;"></textarea>
+                <label for="batch_note">Catatan baru <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.8rem;">(opsional, wajib untuk Resolved — ditambahkan ke thread tiap host)</span>:</label>
+                <textarea id="batch_note" placeholder="Komentar untuk semua host yang dipilih..." style="min-height: 80px; resize: vertical; width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; font-family: inherit;"></textarea>
             </div>
         </div>
         <div class="modal-footer">
@@ -260,12 +271,13 @@
     </div>
 </div>
 
-<script src="/static/js/monitoring.js?v=20260821"></script>
+<script src="/static/js/monitoring.js?v=20260901"></script>
 <script>
 let refreshInterval;
 let countdownInterval;
 let countdown = 30;
 let configRefreshInterval = 30;
+const VIEW_ONLY_REFRESH_SEC = 5;
 let previousHosts = [];
 let alarmDown = false;
 let alarmUp = false;
@@ -277,8 +289,23 @@ let sortColumn = '';
 let sortDirection = 'asc';
 let isViewOnlyMode = false;
 
+function getActiveRefreshSeconds() {
+    return isViewOnlyMode ? VIEW_ONLY_REFRESH_SEC : configRefreshInterval;
+}
+
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value == null ? '' : String(value);
+    return div.innerHTML;
+}
+
+function restartDataRefresh() {
+    if (refreshInterval) clearInterval(refreshInterval);
+    refreshInterval = setInterval(loadMonitoringData, getActiveRefreshSeconds() * 1000);
+}
+
 function loadMonitoringData() {
-    fetch('/monitoring/{{ page }}/data')
+    fetch('/monitoring/{{ page }}/data?_t=' + Date.now(), { cache: 'no-store' })
         .then(response => response.json())
         .then(data => {
             const errors = data.errors || [];
@@ -293,7 +320,7 @@ function loadMonitoringData() {
             applyFilters();
             document.getElementById('total_down').textContent = data.total_down;
             document.getElementById('last_update').textContent = new Date().toLocaleTimeString('en-US', {hour12: false});
-            countdown = configRefreshInterval;
+            countdown = getActiveRefreshSeconds();
             
             if (isViewOnlyMode) {
                 updateViewOnlyTable();
@@ -448,8 +475,8 @@ function updateTable(hosts) {
         }[host.stage] || '🔴';
 
         const stageTooltip = host.stage_updated_by ? `Updated by ${host.stage_updated_by}` : '';
-        const stageNote = host.stage_note ? `\n📝 ${host.stage_note}` : '';
-        const escapedNote = (host.stage_note || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
+        const latestNote = host.stage_note || '';
+        const noteTitle = latestNote ? escapeHtml(latestNote) : '';
 
         return `
         <tr onclick="toggleRowSelect(this, event)" style="cursor: pointer; transition: background 0.15s;">
@@ -459,13 +486,13 @@ function updateTable(hosts) {
             <td>${host.ip_address}</td>
             <td><span class="status-badge status-${host.status === 'DOWN' ? 'down' : 'unreachable'}"><i class="fas fa-circle"></i> ${host.status}</span></td>
             <td>
-                <span class="stage-badge ${stageClass}" title="${stageTooltip}${stageNote}">${stageIcon} ${host.stage_label}</span>
-                ${host.stage_note ? `<div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${host.stage_note.replace(/"/g, '&quot;')}">📝 ${host.stage_note}</div>` : ''}
+                <span class="stage-badge ${stageClass}" title="${stageTooltip}${latestNote ? '\n📝 ' + noteTitle : ''}">${stageIcon} ${host.stage_label}</span>
+                ${latestNote ? `<div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${noteTitle}">📝 ${escapeHtml(latestNote)}</div>` : ''}
             </td>
             <td>${host.duration_str}</td>
             <td>${host.last_check}</td>
             <td style="font-size: 0.85rem; color: var(--text-secondary);">${host.status_information}</td>
-            <td><button onclick="event.stopPropagation(); showStageModal('${host.host_name}', '${host.container}', '${host.port}', '${host.stage}', '${escapedNote}')" class="btn-stage"><i class="fas fa-layer-group"></i> Stage</button></td>
+            <td><button onclick="event.stopPropagation(); showStageModal('${host.host_name}', '${host.container}', '${host.port}', '${host.stage}')" class="btn-stage"><i class="fas fa-layer-group"></i> Stage</button></td>
         </tr>
     `}).join('');
 }
@@ -490,13 +517,11 @@ function startAutoRefresh() {
             
             loadMonitoringData();
             
-            if (refreshInterval) clearInterval(refreshInterval);
             if (countdownInterval) clearInterval(countdownInterval);
-            
-            refreshInterval = setInterval(loadMonitoringData, config.refresh_interval * 1000);
+            restartDataRefresh();
             countdownInterval = setInterval(() => {
                 countdown--;
-                if (countdown < 0) countdown = configRefreshInterval;
+                if (countdown < 0) countdown = getActiveRefreshSeconds();
                 document.getElementById('refresh_countdown').textContent = countdown;
             }, 1000);
         });
@@ -521,10 +546,23 @@ function copySelectedHosts() {
         return;
     }
 
-    const hostNames = Array.from(checkboxes).map(cb => cb.dataset.host);
-    const text = hostNames.join('\n');
+    const headers = Array.from(document.querySelectorAll('.hosts-table thead th'));
+    const hostIdx = headers.findIndex(th => th.textContent.trim().startsWith('Host'));
+    const durationIdx = headers.findIndex(th => th.textContent.trim().startsWith('Duration'));
 
-    const done = () => showToast('Copy', 'COPIED', `${hostNames.length} host(s)`);
+    const lines = Array.from(checkboxes).map(cb => {
+        const row = cb.closest('tr');
+        const host = (hostIdx >= 0 && row && row.children[hostIdx])
+            ? row.children[hostIdx].textContent.trim()
+            : (cb.dataset.host || '');
+        const duration = (durationIdx >= 0 && row && row.children[durationIdx])
+            ? row.children[durationIdx].textContent.trim()
+            : '';
+        return duration ? `${host} ${duration}` : host;
+    });
+    const text = lines.join('\n');
+
+    const done = () => showToast('Copy', 'COPIED', `${lines.length} host(s)`);
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
@@ -643,24 +681,23 @@ let currentStageHost = null;
 let currentStageContainer = null;
 let currentStagePort = null;
 let currentStageSelection = null;
+let stageInfoRequestId = 0;
 
-function showStageModal(hostName, container, port, currentStage, currentNote) {
+function showStageModal(hostName, container, port, currentStage) {
     currentStageHost = hostName;
     currentStageContainer = container;
     currentStagePort = port;
     currentStageSelection = currentStage || 'new';
 
     document.getElementById('stage_host_display').value = hostName;
-    document.getElementById('stage_comment').value = currentNote || '';
+    document.getElementById('stage_comment').value = '';
 
-    // Reset radio + highlight
-    document.querySelectorAll('.stage-option').forEach(el => {
+    document.querySelectorAll('#stageModal .stage-option').forEach(el => {
         el.classList.remove('selected', 'selected-resolved');
         el.querySelector('input[type="radio"]').checked = false;
     });
 
-    // Pre-select current stage
-    const currentOpt = document.querySelector(`.stage-option input[value="${currentStageSelection}"]`);
+    const currentOpt = document.querySelector(`#stageModal .stage-option input[value="${currentStageSelection}"]`);
     if (currentOpt) {
         currentOpt.checked = true;
         const label = currentOpt.closest('.stage-option');
@@ -668,20 +705,104 @@ function showStageModal(hostName, container, port, currentStage, currentNote) {
     }
 
     document.getElementById('submitStageBtn').textContent = currentStageSelection === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
+    renderCommentHistory(null);
     document.getElementById('stageModal').classList.add('show');
-    document.body.style.overflow = 'hidden';  // lock background scroll
+    document.body.style.overflow = 'hidden';
+    loadStageCommentHistory(container, hostName, currentStageSelection);
+}
+
+function loadStageCommentHistory(container, hostName, fallbackStage) {
+    const reqId = ++stageInfoRequestId;
+    const params = new URLSearchParams({ container: container, host_name: hostName });
+    fetch('/monitoring/stage-info?' + params.toString(), { cache: 'no-store' })
+        .then(r => r.json())
+        .then(data => {
+            if (reqId !== stageInfoRequestId) return;
+            if (data.stage && data.stage !== fallbackStage) {
+                currentStageSelection = data.stage;
+                document.querySelectorAll('#stageModal .stage-option').forEach(el => {
+                    el.classList.remove('selected', 'selected-resolved');
+                    el.querySelector('input[type="radio"]').checked = false;
+                });
+                const opt = document.querySelector(`#stageModal .stage-option input[value="${data.stage}"]`);
+                if (opt) {
+                    opt.checked = true;
+                    opt.closest('.stage-option').classList.add(data.stage === 'resolved' ? 'selected-resolved' : 'selected');
+                }
+                document.getElementById('submitStageBtn').textContent = data.stage === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
+            }
+            renderCommentHistory(data.comments || []);
+        })
+        .catch(() => {
+            if (reqId !== stageInfoRequestId) return;
+            renderCommentHistory(false);
+        });
+}
+
+function formatCommentTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso.replace('T', ' ').slice(0, 16);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function renderCommentHistory(comments) {
+    const list = document.getElementById('comment_history_list');
+    const countEl = document.getElementById('comment_history_count');
+    if (!list) return;
+
+    if (comments === null) {
+        if (countEl) countEl.textContent = '';
+        list.innerHTML = '<div class="comment-history-empty"><i class="fas fa-spinner fa-spin"></i> Memuat riwayat…</div>';
+        return;
+    }
+    if (comments === false) {
+        if (countEl) countEl.textContent = '';
+        list.innerHTML = '<div class="comment-history-empty comment-history-error">Gagal memuat riwayat catatan.</div>';
+        return;
+    }
+    if (!comments.length) {
+        if (countEl) countEl.textContent = '0';
+        list.innerHTML = '<div class="comment-history-empty">Belum ada catatan. Tulis komentar di bawah saat mengganti stage.</div>';
+        return;
+    }
+
+    if (countEl) countEl.textContent = String(comments.length);
+    const stageClass = {
+        'new': 'stage-new',
+        'cs': 'stage-cs',
+        'escalated': 'stage-escalated',
+        'watchlist': 'stage-watchlist',
+        'resolved': 'stage-resolved'
+    };
+    list.innerHTML = comments.map(c => {
+        const badge = stageClass[c.stage] || 'stage-new';
+        const label = c.stage_label || c.stage || '';
+        return `<article class="comment-item" data-stage="${escapeHtml(c.stage || '')}">
+            <div class="comment-item-meta">
+                <span class="comment-item-user">${escapeHtml(c.user || 'unknown')}</span>
+                <span class="comment-item-time">${escapeHtml(formatCommentTime(c.timestamp))}</span>
+                ${label ? `<span class="stage-badge ${badge} comment-item-stage">${escapeHtml(label)}</span>` : ''}
+            </div>
+            <p class="comment-item-text">${escapeHtml(c.text || '')}</p>
+        </article>`;
+    }).join('');
+    list.scrollTop = list.scrollHeight;
 }
 
 function selectStage(stage, labelEl) {
     currentStageSelection = stage;
-    document.querySelectorAll('.stage-option').forEach(el => el.classList.remove('selected', 'selected-resolved'));
+    document.querySelectorAll('#stageModal .stage-option').forEach(el => el.classList.remove('selected', 'selected-resolved'));
     labelEl.classList.add(stage === 'resolved' ? 'selected-resolved' : 'selected');
     document.getElementById('submitStageBtn').textContent = stage === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
 }
 
 function closeStageModal() {
+    stageInfoRequestId += 1;
     document.getElementById('stageModal').classList.remove('show');
-    document.body.style.overflow = '';  // restore scroll
+    document.getElementById('stage_comment').value = '';
+    document.body.style.overflow = '';
 }
 
 function submitStage() {
@@ -923,7 +1044,9 @@ function toggleViewOnly() {
     
     body.appendChild(viewOnlyTable);
     
-    // Update table with current data
+    countdown = VIEW_ONLY_REFRESH_SEC;
+    restartDataRefresh();
+    loadMonitoringData();
     updateViewOnlyTable();
 }
 
@@ -953,6 +1076,9 @@ function exitViewOnly() {
     body.style.background = '';
     html.style.margin = '';
     html.style.padding = '';
+
+    countdown = configRefreshInterval;
+    restartDataRefresh();
 }
 
 function updateViewOnlyTable() {
@@ -985,7 +1111,7 @@ function updateViewOnlyTable() {
             <td style="padding: 14px;">
                 <div>
                     <span style="display: inline-flex; align-items: center; gap: 4px; background: ${stageMeta.bg}; color: ${stageMeta.color}; border: 2px solid ${stageMeta.border}; font-weight: 700; font-size: 13px; padding: 5px 10px; border-radius: 20px; white-space: nowrap;">${stageMeta.icon} ${host.stage_label}</span>
-                    ${host.stage_note ? `<div style="font-size: 0.7rem; color: ${isDark ? 'var(--text-muted)' : 'var(--text-secondary)'}; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${host.stage_note.replace(/"/g, '&quot;')}">📝 ${host.stage_note}</div>` : ''}
+                    ${host.stage_note ? `<div style="font-size: 0.7rem; color: ${isDark ? 'var(--text-muted)' : 'var(--text-secondary)'}; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(host.stage_note)}">📝 ${escapeHtml(host.stage_note)}</div>` : ''}
                 </div>
             </td>
             <td style="padding: 14px; font-weight: 700; font-size: 14px; color: ${isDark ? 'var(--text-muted)' : 'var(--text-secondary)'}; white-space: nowrap;">${host.duration_str}</td>
@@ -1021,5 +1147,4 @@ function testAlarmSound() {
     }, 2000);
 }
 </script>
-<link rel="stylesheet" href="/static/css/monitoring.css?v=20260821">
 {% endblock %}
