@@ -120,6 +120,7 @@ FILES_TO_UPDATE=(
     "preflight_check.sh"
     "README.md"
     "USER_GUIDE.md"
+    "DEVELOPMENT.md"
 )
 
 MODULE_DIRS=(

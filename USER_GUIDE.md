@@ -109,21 +109,23 @@ Setiap host yang DOWN/UNREACHable memiliki **stage** yang menunjukkan status pen
 |---|---|---|
 | 🔴 **New / Unacknowledged** | Merah | Alert baru, belum ada tindakan |
 | 🔵 **CR Verification** | Biru | Tim Customer Relation sedang mengecek |
-| 🟠 **Escalated / Pending** | Oranye | Menunggu pihak lain (FE, PLN, dll) |
+| 🟠 **Escalated / Pending** | Oranye | Menunggu pihak lain (FE, PLN, Mitra, User) |
 | 🟣 **Watchlist / Flapping** | Ungu | Host tidak stabil, naik-turun |
 | ✅ **Resolved** | Hijau | Masalah selesai — ACK ke Nagios |
 
 #### Cara Mengubah Stage
 
 1. Klik tombol **Stage** di baris host yang diinginkan
-2. Pilih stage baru
-3. (Opsional) Tulis **Catatan** — misalnya "FU Dyinggasp", "Menunggu FE"
+2. Pilih stage baru (urutan: New → CR Verification → Watchlist → Escalated → Resolved)
+3. (Opsional) Tulis **Catatan baru** — masuk ke riwayat komentar host, tidak menimpa catatan lama
 4. Klik **Set Stage**
 
 > **Catatan Penting:**
 > - Stage **selain Resolved** hanya mengubah data di dashboard, **tidak** mengirim apapun ke Nagios
 > - Stage **Resolved** mengirim ACK ke Nagios dan host akan hilang dari daftar monitoring
 > - Catatan bersifat **opsional** untuk semua stage, kecuali **Resolved** yang **wajib**
+> - Riwayat komentar dihapus otomatis jika host **UP** / Resolved, agar DOWN berikutnya mulai kosong
+> - CR Auto-Reset menulis komentar `system (auto-reset)` di thread
 
 #### Contoh Penggunaan
 

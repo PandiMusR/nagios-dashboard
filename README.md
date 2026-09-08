@@ -42,7 +42,7 @@ This dashboard sits in front of multiple Nagios instances (each running in a Doc
 - **Centralized login** via LDAP
 - **Monitoring views** across all Nagios servers by category (SQLite snapshot, ~30s poller)
 - **Host management** (add/edit/delete hosts) without touching config files manually
-- **Stage tracking** for down hosts with optional notes per stage
+- **Stage tracking** for down hosts with a per-host comment thread
 - **Batch stage changes** for multiple hosts at once
 - **CR View Only** permission for Customer Relation team access
 - **User & permission management** with fine-grained access control
@@ -251,8 +251,8 @@ Click **View Only** in the top-right of the monitoring header to enter a clean f
 **Export CSV:**
 Click **Export CSV** to download the currently filtered data as a CSV file. The export respects all active filters (Server, Status Info, Stage, Detail text search). What you see is what you get.
 
-**Stage Notes:**
-Every stage can have an optional note. Notes are displayed below the stage badge in the monitoring table. When opening the stage modal for a host with an existing note, it's pre-filled automatically.
+**Stage comments:**
+Each host has a permanent thread for the current incident. Opening **Stage** loads comment history; a new note is appended (user + timestamp + stage). Comments are optional except for **Resolved**. When the host recovers (UP) or is resolved, the thread is deleted so the next DOWN starts clean. CR auto-reset appends a `system (auto-reset)` comment.
 
 **Batch Set Stage:**
 Select multiple hosts via checkboxes, then click **Batch Set Stage** to change their stage at once. An optional note can be applied to all selected hosts. For Resolved stage, ACK is sent to Nagios per host.
@@ -424,7 +424,7 @@ When a host goes DOWN, it enters a **stage workflow** managed entirely by the da
 
 - **Auto-assign**: When a host first goes DOWN, it's automatically set to **New**
 - **Set Stage**: Click the **Stage** button on any row to open the stage selector. Click anywhere on the row to select/deselect for batch operations.
-- **Notes**: Every stage can have an optional note. Notes are stored in SQLite (`host_stages.db`) only — they are NOT sent to Nagios (except for Resolved, where the note is used as the ACK comment)
+- **Notes**: Optional comment appended to the host thread in `host_stages.db` (`stage_comments`). Not sent to Nagios except Resolved (ACK comment). History is wiped when the host recovers or is resolved.
 - **Non-Resolved stages**: Only update `host_stages.db` — Nagios is NOT touched
 - **Resolved**: Sends an ACK command to Nagios (requires a note) and the host disappears from the monitoring list
 - **Host recovers by itself**: The host disappears automatically (Nagios reports UP) — no ACK needed
@@ -541,7 +541,8 @@ nagiosDashboard/
 ├── deploy_from_dev.sh           # Production deployment (SCP from dev)
 ├── requirements.txt
 ├── .cursorrules                 # Persistent AI session directives
-├── README.md / USER_GUIDE.md / AGENTS.md
+├── README.md / USER_GUIDE.md / DEVELOPMENT.md
+│   └── AGENTS.md            # pointer → DEVELOPMENT.md (.cursorrules)
 │
 ├── services/
 │   ├── config.py                # APP_ROOT, LDAP, paths, stage codes
@@ -581,9 +582,10 @@ nagiosDashboard/
 ### Making Changes
 
 1. Edit files on the dev server
-2. Test locally: `python app.py` (runs on port 80 by default)
-3. Commit: `git add -A && git commit -m "type: description"`
-4. Deploy to production: run `deploy_from_dev.sh` from prod server
+2. Test locally: `python app.py` (Dev default port 5000 via `APP_PORT`)
+3. Commit, then deploy from Prod: `./deploy_from_dev.sh`
+
+Developer architecture, backlog, and conventions: **`DEVELOPMENT.md`**. AI session rules: `.cursorrules`.
 
 ### Path Auto-Detection
 

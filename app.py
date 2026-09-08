@@ -57,7 +57,7 @@ from blueprints.global_settings import global_settings_bp
 from blueprints.nagios_proxy import nagios_proxy_bp
 from blueprints.monitoring_intens import monitoring_intens_bp
 from blueprints.api import api_bp
-# HOLD 2026-08-21: Intensive Monitoring paused — do not register until INTENSIVE_MONITORING_PLAN.md HOLD is lifted.
+# HOLD: Intensive Monitoring paused — do not re-enable (see DEVELOPMENT.md).
 # from blueprints.intensive import intensive_bp
 
 app.register_blueprint(auth_bp)
