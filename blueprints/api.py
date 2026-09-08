@@ -459,6 +459,7 @@ def api_rename_host() -> tuple[Response, int]:
             get_host_stage, delete_host_stage, upsert_host_stage, relocate_host_comments,
         )
         existing = get_host_stage(server, old_host_name)
+        relocate_host_comments(server, old_host_name, server, host_name)
         if existing:
             delete_host_stage(server, old_host_name)
             upsert_host_stage(
@@ -470,7 +471,6 @@ def api_rename_host() -> tuple[Response, int]:
                 note=existing.get('note', ''),
                 host_up_since=existing.get('host_up_since'),
             )
-        relocate_host_comments(server, old_host_name, server, host_name)
 
         subprocess.run(['docker', 'restart', server], check=True, capture_output=True, timeout=60)
         log_activity('API: Rename Host', f'Host: {old_host_name} renamed to {host_name} on {server}', username='API')

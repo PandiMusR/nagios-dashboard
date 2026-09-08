@@ -7,7 +7,10 @@ import time
 from datetime import datetime, date
 
 from services.config import GLOBAL_CONFIG_PATH, MONITORING_CONFIG_PATH, MONITORING_SERVER_MAPPINGS_PATH
-from services.stage_service import get_host_stage, list_host_stages, upsert_host_stage, STAGE_CS, STAGE_NEW
+from services.stage_service import (
+    get_host_stage, list_host_stages, upsert_host_stage, append_host_comment,
+    STAGE_CS, STAGE_NEW,
+)
 from services.stage_history import append_stage_history
 
 _config_lock = threading.Lock()
@@ -107,8 +110,7 @@ def _reset_category_hosts(category: str, server_names: list[str], grace_hours: i
     """Reset all CR Verification hosts in a category to New. Returns count.
 
     Only resets hosts whose container (server) is in server_names.
-    Notes are preserved — only the stage is changed.
-    History entries are written after each row update.
+    A system comment is appended to the host thread; stage history is written after each row update.
 
     Args:
         category: Monitoring category name.
@@ -156,6 +158,17 @@ def _reset_category_hosts(category: str, server_names: list[str], grace_hours: i
             note=current.get('note', ''),
             host_up_since=current.get('host_up_since'),
         )
+        try:
+            append_host_comment(
+                container,
+                host_name,
+                'system (auto-reset)',
+                now.isoformat(),
+                STAGE_NEW,
+                'Auto-reset from CR Verification due to timeout',
+            )
+        except Exception as e:
+            print(f'[Auto-Reset] Failed to write comment for {host_name}: {e}')
         history_entries.append((host_name, container, STAGE_CS, STAGE_NEW, 'system (auto-reset)', f'Auto-reset ({category})'))
         count += 1
 

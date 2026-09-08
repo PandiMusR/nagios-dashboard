@@ -217,6 +217,10 @@ def delete_stage(container: str, hostname: str, db_path: str | None = None) -> N
             'DELETE FROM host_stages WHERE container = ? AND hostname = ?',
             (container, hostname),
         )
+        conn.execute(
+            'DELETE FROM stage_comments WHERE container = ? AND hostname = ?',
+            (container, hostname),
+        )
         conn.commit()
 
 
