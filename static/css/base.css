@@ -273,6 +273,14 @@ a { color: var(--accent); }
     font-size: var(--text-lg);
 }
 
+.burger.fas,
+.burger.fa-solid,
+.burger .fa-solid,
+.burger .fas {
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+}
+
 .burger:hover,
 .theme-toggle:hover,
 .btn-logout:hover,
@@ -507,8 +515,9 @@ a { color: var(--accent); }
 .status-unknown { background: var(--st-unknown-bg); color: var(--st-unknown); }
 
 .stage-dot {
-    width: 6px;
-    height: 6px;
+    display: inline-block;
+    width: 8px;
+    height: 8px;
     border-radius: var(--radius-pill);
     background: currentColor;
     flex: 0 0 auto;
@@ -545,9 +554,49 @@ a { color: var(--accent); }
 .btn-primary:hover,
 .btn-modal-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--accent-text); }
 .btn-secondary,
-.btn-modal-secondary { background: var(--surface); border-color: var(--border); color: var(--text); }
+.btn-modal-secondary {
+    --bs-btn-color: var(--text);
+    --bs-btn-bg: var(--surface);
+    --bs-btn-border-color: var(--border-strong);
+    --bs-btn-hover-color: var(--text);
+    --bs-btn-hover-bg: var(--surface-2);
+    --bs-btn-hover-border-color: var(--border-strong);
+    --bs-btn-active-color: var(--text);
+    --bs-btn-active-bg: var(--surface-2);
+    --bs-btn-active-border-color: var(--border-strong);
+    --bs-btn-disabled-color: var(--text-muted);
+    --bs-btn-disabled-bg: var(--surface);
+    --bs-btn-disabled-border-color: var(--border);
+    background: var(--surface);
+    background-color: var(--surface);
+    border-color: var(--border-strong);
+    color: var(--text);
+    opacity: 1;
+}
 .btn-secondary:hover,
-.btn-modal-secondary:hover { background: var(--surface-2); color: var(--text); }
+.btn-secondary:focus,
+.btn-secondary:active,
+.btn-modal-secondary:hover {
+    background: var(--surface-2);
+    background-color: var(--surface-2);
+    border-color: var(--border-strong);
+    color: var(--text);
+    opacity: 1;
+}
+
+.page-header-actions .btn.btn-secondary,
+.page-header-actions .btn.btn-secondary:hover,
+.page-header-actions .btn.btn-secondary:focus,
+.page-header-actions .btn.btn-secondary:active {
+    background-color: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    opacity: 1;
+}
+.page-header-actions .btn.btn-secondary:hover,
+.page-header-actions .btn.btn-secondary:focus {
+    background-color: var(--surface-2);
+}
 .btn-ghost { background: transparent; border-color: transparent; color: var(--accent); }
 .btn-ghost:hover { background: var(--surface-2); }
 .btn-danger { background: var(--st-down-solid); border-color: var(--st-down-solid); color: #ffffff; }

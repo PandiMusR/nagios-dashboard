@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Monitoring - {{ page|title }}{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/monitoring.css?v=20261113-noc2">
+<link rel="stylesheet" href="/static/css/monitoring.css?v=20261113-noc3">
 {% endblock %}
 {% block content %}
 
@@ -1008,10 +1008,16 @@ function toggleViewOnly() {
                 <span>Updated <span id="wall_last_update" class="num">-</span></span>
                 <span>Refresh <span id="wall_countdown" class="num">${countdown}</span>s</span>
             </div>
-            <button type="button" class="wall-exit" onclick="exitViewOnly()" aria-label="Exit wall mode"><i class="fas fa-times"></i></button>
+            <button type="button" class="wall-exit" onclick="exitViewOnly()">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i> Exit
+            </button>
         </div>
         <div class="wall-scroll">
-            <table class="wall-table">
+            <div id="wall-empty" class="wall-empty" hidden>
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                <p>Tidak ada host baru yang belum ditangani</p>
+            </div>
+            <table class="wall-table" id="wall-table">
                 <colgroup>
                     <col class="wall-col-host">
                     <col class="wall-col-ip">
@@ -1031,7 +1037,7 @@ function toggleViewOnly() {
                     </tr>
                 </thead>
                 <tbody id="view-only-tbody">
-                    <tr><td colspan="6" class="wall-empty">Loading...</td></tr>
+                    <tr><td colspan="6" class="wall-loading">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -1047,6 +1053,7 @@ function toggleViewOnly() {
 }
 
 function exitViewOnly() {
+    if (!isViewOnlyMode) return;
     isViewOnlyMode = false;
     document.body.classList.remove('is-wall');
     const viewOnlyTable = document.getElementById('view-only-table');
@@ -1056,6 +1063,13 @@ function exitViewOnly() {
     restartDataRefresh();
 }
 
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && isViewOnlyMode) {
+        event.preventDefault();
+        exitViewOnly();
+    }
+});
+
 function updateViewOnlyTable() {
     const tbody = document.getElementById('view-only-tbody');
     if (!tbody || !allHosts) return;
@@ -1064,13 +1078,19 @@ function updateViewOnlyTable() {
     const downCount = newHosts.filter(h => h.status === 'DOWN').length;
     const downEl = document.getElementById('wall_down_count');
     const unreachEl = document.getElementById('wall_unreach_count');
+    const empty = document.getElementById('wall-empty');
+    const table = document.getElementById('wall-table');
     if (downEl) downEl.textContent = String(downCount);
     if (unreachEl) unreachEl.textContent = String(newHosts.length - downCount);
 
     if (newHosts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="wall-empty">No unassigned hosts</td></tr>';
+        tbody.innerHTML = '';
+        if (table) table.hidden = true;
+        if (empty) empty.hidden = false;
         return;
     }
+    if (table) table.hidden = false;
+    if (empty) empty.hidden = true;
 
     const stageClassFor = stage => ({
         'new': 'stage-new',
