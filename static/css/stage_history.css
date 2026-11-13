@@ -5,6 +5,7 @@
     box-shadow: none;
     padding: var(--space-5);
     margin-bottom: var(--space-5);
+    overflow: visible;
 }
 .section-card h3 {
     margin: 0 0 var(--space-4) 0;

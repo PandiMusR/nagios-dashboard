@@ -76,6 +76,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    justify-self: start;
     gap: 0.4rem;
     width: auto;
     flex: 0 0 auto;
