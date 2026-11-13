@@ -1,47 +1,47 @@
 {% extends "base.html" %}
 {% block title %}Monitoring - {{ page|title }}{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/monitoring.css?v=20260901">
+<link rel="stylesheet" href="/static/css/monitoring.css?v=20261113-noc11">
 {% endblock %}
 {% block content %}
 
 <div class="page-header">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div class="page-header-row">
         <div>
             <h1><i class="fas fa-heartbeat"></i> Monitoring - {{ page|title }}</h1>
         </div>
-        <div style="display: flex; gap: 0.6rem; align-items: center;">
-            <a href="/stage-history" target="_blank" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; opacity: 0.8; transition: opacity 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
+        <div class="page-header-actions">
+            <a class="btn btn-secondary" href="/stage-history" target="_blank">
                 <i class="fas fa-history"></i> History
             </a>
-            <button id="toggle-view" onclick="toggleViewOnly()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
+            <button type="button" id="toggle-view" class="btn btn-secondary" onclick="toggleViewOnly()">
                 <i class="fas fa-table"></i> View Only
             </button>
-            <button onclick="exportCSV()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
+            <button type="button" class="btn btn-secondary" onclick="exportCSV()">
                 <i class="fas fa-download"></i> Export CSV
             </button>
         </div>
     </div>
     <div class="status-stats">
         <div class="stat-item">
-            <i class="fas fa-exclamation-circle" style="font-size: 1.5rem;"></i>
+            <i class="fas fa-exclamation-circle"></i>
             <div>
-                <div style="font-size: 0.8rem; opacity: 0.9;">DOWN / UNREACHABLE</div>
-                <div class="stat-value" id="total_down">0</div>
+                <div class="stat-label">DOWN / UNREACHABLE</div>
+                <div class="stat-value num" id="total_down">0</div>
             </div>
         </div>
         <div class="stat-item">
-            <i class="fas fa-sync" style="font-size: 1.5rem;"></i>
+            <i class="fas fa-sync"></i>
             <div>
-                <div style="font-size: 0.8rem; opacity: 0.9;">Auto-refresh</div>
-                <div class="stat-value"><span id="refresh_countdown">30</span>s</div>
+                <div class="stat-label">Auto-refresh</div>
+                <div class="stat-value"><span id="refresh_countdown" class="num">30</span>s</div>
             </div>
         </div>
         <div class="stat-item">
-            <i class="fas fa-clock" style="font-size: 1.5rem;"></i>
+            <i class="fas fa-clock"></i>
             <div>
-                <div style="font-size: 0.8rem; opacity: 0.9;">Last Update</div>
-                <div class="stat-value" style="font-size: 0.9rem;" id="last_update">-</div>
+                <div class="stat-label">Last Update</div>
+                <div class="stat-value num" id="last_update">-</div>
             </div>
         </div>
     </div>
@@ -51,15 +51,11 @@
 <div id="notificationToast" class="notification-toast"></div>
 
 <!-- Exit View Only Button -->
-<div id="exit-view-only" style="position: fixed; top: 5px; right: 5px; z-index: 99999; display: none;">
-    <button onclick="exitViewOnly()" style="background: rgba(239,68,68,0.9); border: none; color: white; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.7rem; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
-        <i class="fas fa-times" style="font-size: 0.6rem;"></i>
-    </button>
-</div>
+<div id="exit-view-only" hidden></div>
 
 <!-- Filters -->
 <div id="filters-section" class="filters-section">
-    <h3 style="margin: 0 0 1.5rem 0; color: var(--text-primary);">Filters</h3>
+    <h3>Filters</h3>
     <div class="filters-grid">
         <div class="filter-group">
             <label for="filter_server"><i class="fas fa-server"></i> Server</label>
@@ -82,15 +78,15 @@
             <label for="filter_stage"><i class="fas fa-layer-group"></i> Stage</label>
             <select id="filter_stage" onchange="applyFilters()">
                 <option value="">All Stages</option>
-                <option value="new">🔴 New / Unacknowledged</option>
-                <option value="cs">🔵 CR Verification</option>
-                <option value="escalated">🟠 Escalated / Pending</option>
-                <option value="watchlist">🟣 Watchlist / Flapping</option>
+                <option value="new">New / Unacknowledged</option>
+                <option value="cs">CR Verification</option>
+                <option value="escalated">Escalated / Pending</option>
+                <option value="watchlist">Watchlist / Flapping</option>
             </select>
         </div>
         <div class="filter-group">
             <label for="filter_search"><i class="fas fa-search"></i> Detail</label>
-            <input type="text" id="filter_search" placeholder="Search host, IP, detail..." oninput="applyFilters()" style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; width: 100%; box-sizing: border-box;">
+            <input type="text" id="filter_search" placeholder="Search host, IP, detail..." oninput="applyFilters()">
         </div>
     </div>
 </div>
@@ -104,25 +100,25 @@
         <button class="btn-batch-ack" onclick="batchStage()"><i class="fas fa-layer-group"></i> Batch Set Stage</button>
         <button class="btn-copy-hosts" onclick="copySelectedHosts()" title="Copy selected host names and durations"><i class="fas fa-copy"></i> Copy Hosts</button>
     </div>
-    <div style="overflow-x: auto;">
+    <div class="table-wrap">
         <table class="hosts-table">
             <thead>
                 <tr>
-                    <th style="width: 40px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()" style="cursor: pointer;"></th>
-                    <th onclick="sortTable('container')" style="cursor: pointer;">Server <span id="sort_container">?</span></th>
-                    <th onclick="sortTable('host_name')" style="cursor: pointer;">Host <span id="sort_host_name">?</span></th>
-                    <th onclick="sortTable('ip_address')" style="cursor: pointer;">IP Address</th>
-                    <th onclick="sortTable('status')" style="cursor: pointer;">Status <span id="sort_status">?</span></th>
-                    <th onclick="sortTable('stage')" style="cursor: pointer;">Stage <span id="sort_stage">?</span></th>
-                    <th onclick="sortTable('duration_str')" style="cursor: pointer;">Duration <span id="sort_duration_str">?</span></th>
-                    <th onclick="sortTable('last_check')" style="cursor: pointer;">Last Check <span id="sort_last_check">?</span></th>
-                    <th onclick="sortTable('status_information')" style="cursor: pointer;">Detail</th>
-                    <th style="width: 90px;">Action</th>
+                    <th class="col-check"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                    <th onclick="sortTable('container')">Server <span id="sort_container">?</span></th>
+                    <th onclick="sortTable('host_name')">Host <span id="sort_host_name">?</span></th>
+                    <th onclick="sortTable('ip_address')">IP Address</th>
+                    <th onclick="sortTable('status')">Status <span id="sort_status">?</span></th>
+                    <th onclick="sortTable('stage')">Stage <span id="sort_stage">?</span></th>
+                    <th onclick="sortTable('duration_str')">Duration <span id="sort_duration_str">?</span></th>
+                    <th onclick="sortTable('last_check')">Last Check <span id="sort_last_check">?</span></th>
+                    <th onclick="sortTable('status_information')">Detail</th>
+                    <th class="col-action">Action</th>
                 </tr>
             </thead>
             <tbody id="hosts_table">
                 <tr>
-                    <td colspan="10" style="padding: 3rem; text-align: center; color: var(--text-muted);">
+                    <td colspan="10" class="table-message">
                         <i class="fas fa-spinner fa-spin"></i> Loading...
                     </td>
                 </tr>
@@ -136,54 +132,56 @@
     <div class="modal-content">
         <div class="modal-header">
             <h3><i class="fas fa-layer-group"></i> Set Stage</h3>
-            <button class="btn-close" onclick="closeStageModal()">&#x2715;</button>
+            <button type="button" class="modal-close" onclick="closeStageModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
         </div>
-        <div class="modal-body" style="padding: 1.25rem 2rem;">
-            <div class="form-group" style="margin-bottom: 0.75rem;">
+        <div class="modal-body">
+            <div class="form-group field-stack">
                 <label for="stage_host_display">Host:</label>
-                <input type="text" id="stage_host_display" readonly style="background: var(--bg-tertiary); width: 100%; padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                <input type="text" id="stage_host_display" class="readonly-field" readonly>
             </div>
 
-            <label style="font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Stage:</label>
+            <div class="form-group field-stack">
+                <label>Stage:</label>
+            </div>
             <div class="stage-options" id="stage-options-list">
                 <label class="stage-option" onclick="selectStage('new', this)">
                     <input type="radio" name="stage_choice" value="new">
                     <div class="stage-option-label">
-                        <div class="stage-option-title">🔴 New / Unacknowledged</div>
+                        <div class="stage-option-title"><span class="stage-badge stage-new"><i class="stage-dot"></i> New / Unacknowledged</span></div>
                         <div class="stage-option-desc">Alert baru masuk, belum ada tindakan</div>
                     </div>
                 </label>
                 <label class="stage-option" onclick="selectStage('cs', this)">
                     <input type="radio" name="stage_choice" value="cs">
                     <div class="stage-option-label">
-                        <div class="stage-option-title">🔵 CR Verification</div>
+                        <div class="stage-option-title"><span class="stage-badge stage-cs"><i class="stage-dot"></i> CR Verification</span></div>
                         <div class="stage-option-desc">Konfirmasi ke PIC sedang berlangsung</div>
                     </div>
                 </label>
                 <label class="stage-option" onclick="selectStage('watchlist', this)">
                     <input type="radio" name="stage_choice" value="watchlist">
                     <div class="stage-option-label">
-                        <div class="stage-option-title">🟣 Watchlist / Flapping</div>
+                        <div class="stage-option-title"><span class="stage-badge stage-watchlist"><i class="stage-dot"></i> Watchlist / Flapping</span></div>
                         <div class="stage-option-desc">Monitor flapping — naik turun tidak stabil</div>
                     </div>
                 </label>
                 <label class="stage-option" onclick="selectStage('escalated', this)">
                     <input type="radio" name="stage_choice" value="escalated">
                     <div class="stage-option-label">
-                        <div class="stage-option-title">🟠 Escalated / Pending</div>
+                        <div class="stage-option-title"><span class="stage-badge stage-escalated"><i class="stage-dot"></i> Escalated / Pending</span></div>
                         <div class="stage-option-desc">Menunggu pihak lain (FE, PLN, Mitra, User)</div>
                     </div>
                 </label>
                 <label class="stage-option" onclick="selectStage('resolved', this)">
                     <input type="radio" name="stage_choice" value="resolved">
                     <div class="stage-option-label">
-                        <div class="stage-option-title">✅ Resolved / Completed</div>
+                        <div class="stage-option-title"><span class="stage-badge stage-resolved"><i class="stage-dot"></i> Resolved / Completed</span></div>
                         <div class="stage-option-desc">Masalah selesai — akan ACK ke Nagios dan hilang dari list</div>
                     </div>
                 </label>
             </div>
 
-            <div id="stage-note-section" style="margin-top: 1rem; margin-bottom: 0;">
+            <div id="stage-note-section" class="field-stack">
                 <div class="comment-history">
                     <div class="comment-history-header">
                         <span class="comment-history-title">Riwayat catatan</span>
@@ -193,9 +191,9 @@
                         <div class="comment-history-empty">Memuat riwayat…</div>
                     </div>
                 </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="stage_comment">Catatan baru <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.8rem;">(opsional, wajib untuk Resolved)</span>:</label>
-                    <textarea id="stage_comment" placeholder="Tulis komentar untuk thread host ini..." style="min-height: 80px; resize: vertical; width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; font-family: inherit;"></textarea>
+                <div class="form-group field-stack">
+                    <label for="stage_comment">Catatan baru <span class="hint">(opsional, wajib untuk Resolved)</span>:</label>
+                    <textarea id="stage_comment" class="note-field" placeholder="Tulis komentar untuk thread host ini..."></textarea>
                 </div>
             </div>
         </div>
@@ -211,57 +209,57 @@
     <div class="modal-content">
         <div class="modal-header">
             <h3><i class="fas fa-layer-group"></i> Batch Set Stage</h3>
-            <button class="btn-close" onclick="closeBatchStageModal()">&times;</button>
+            <button type="button" class="modal-close" onclick="closeBatchStageModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
         </div>
         <div class="modal-body">
             <input type="hidden" id="batch_hosts">
             <div class="form-group">
                 <label for="batch_host_count">Selected Hosts:</label>
-                <input type="text" id="batch_host_count" readonly style="background: var(--bg-tertiary);">
+                <input type="text" id="batch_host_count" class="readonly-field" readonly>
             </div>
-            <div class="form-group" style="margin-bottom: 0.5rem;">
+            <div class="form-group field-stack">
                 <label>Pilih Stage:</label>
                 <div class="stage-options">
                     <label class="stage-option" onclick="selectBatchStage('new', this)">
                         <input type="radio" name="batch_stage_choice" value="new">
                         <div class="stage-option-label">
-                            <div class="stage-option-title">🔴 New / Unacknowledged</div>
+                            <div class="stage-option-title"><span class="stage-badge stage-new"><i class="stage-dot"></i> New / Unacknowledged</span></div>
                             <div class="stage-option-desc">Alert baru masuk, belum ada tindakan</div>
                         </div>
                     </label>
                     <label class="stage-option" onclick="selectBatchStage('cs', this)">
                         <input type="radio" name="batch_stage_choice" value="cs">
                         <div class="stage-option-label">
-                            <div class="stage-option-title">🔵 CR Verification</div>
+                            <div class="stage-option-title"><span class="stage-badge stage-cs"><i class="stage-dot"></i> CR Verification</span></div>
                             <div class="stage-option-desc">Konfirmasi ke PIC sedang berlangsung</div>
                         </div>
                     </label>
                     <label class="stage-option" onclick="selectBatchStage('escalated', this)">
                         <input type="radio" name="batch_stage_choice" value="escalated">
                         <div class="stage-option-label">
-                            <div class="stage-option-title">🟠 Escalated / Pending</div>
+                            <div class="stage-option-title"><span class="stage-badge stage-escalated"><i class="stage-dot"></i> Escalated / Pending</span></div>
                             <div class="stage-option-desc">Menunggu pihak lain (FE, PLN, dll)</div>
                         </div>
                     </label>
                     <label class="stage-option" onclick="selectBatchStage('watchlist', this)">
                         <input type="radio" name="batch_stage_choice" value="watchlist">
                         <div class="stage-option-label">
-                            <div class="stage-option-title">🟣 Watchlist / Flapping</div>
+                            <div class="stage-option-title"><span class="stage-badge stage-watchlist"><i class="stage-dot"></i> Watchlist / Flapping</span></div>
                             <div class="stage-option-desc">Monitor flapping — naik turun tidak stabil</div>
                         </div>
                     </label>
                     <label class="stage-option" onclick="selectBatchStage('resolved', this)">
                         <input type="radio" name="batch_stage_choice" value="resolved">
                         <div class="stage-option-label">
-                            <div class="stage-option-title">✅ Resolved / Completed</div>
+                            <div class="stage-option-title"><span class="stage-badge stage-resolved"><i class="stage-dot"></i> Resolved / Completed</span></div>
                             <div class="stage-option-desc">Masalah selesai — akan ACK ke Nagios dan hilang dari list</div>
                         </div>
                     </label>
                 </div>
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
-                <label for="batch_note">Catatan baru <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.8rem;">(opsional, wajib untuk Resolved — ditambahkan ke thread tiap host)</span>:</label>
-                <textarea id="batch_note" placeholder="Komentar untuk semua host yang dipilih..." style="min-height: 80px; resize: vertical; width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; font-family: inherit;"></textarea>
+            <div class="form-group field-stack">
+                <label for="batch_note">Catatan baru <span class="hint">(opsional, wajib untuk Resolved — ditambahkan ke thread tiap host)</span>:</label>
+                <textarea id="batch_note" class="note-field" placeholder="Komentar untuk semua host yang dipilih..."></textarea>
             </div>
         </div>
         <div class="modal-footer">
@@ -319,8 +317,9 @@ function loadMonitoringData() {
             updateServerFilter();
             applyFilters();
             document.getElementById('total_down').textContent = data.total_down;
-            document.getElementById('last_update').textContent = new Date().toLocaleTimeString('en-US', {hour12: false});
+            paintLastUpdate(new Date().toLocaleTimeString('en-US', {hour12: false}));
             countdown = getActiveRefreshSeconds();
+            paintCountdown();
             
             if (isViewOnlyMode) {
                 updateViewOnlyTable();
@@ -331,7 +330,7 @@ function loadMonitoringData() {
             showMonitoringFetchErrors(['Failed to load monitoring data']);
             const tbody = document.getElementById('hosts_table');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="10" style="padding: 2rem; text-align: center;"><i class="fas fa-exclamation-triangle" style="color: var(--color-danger); margin-right: 8px;"></i>Gagal memuat data monitoring<button onclick="loadMonitoringData()" style="margin-left: 12px; padding: 4px 12px; border: 1px solid var(--color-danger); background: var(--bg-secondary); color: var(--color-danger); border-radius: 6px; cursor: pointer;">Retry</button></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="table-message"><i class="fas fa-exclamation-triangle"></i> Gagal memuat data monitoring <button type="button" class="btn btn-sm btn-secondary" onclick="loadMonitoringData()">Retry</button></td></tr>';
             }
         });
 }
@@ -436,7 +435,7 @@ function showNotification(hostName, status) {
 function updateTable(hosts) {
     const tbody = document.getElementById('hosts_table');
     if (hosts.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" style="padding: 3rem; text-align: center; color: var(--text-muted);"><i class="fas fa-inbox"></i> No hosts with issues found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="table-message"><i class="fas fa-inbox"></i> No hosts with issues found</td></tr>';
         return;
     }
     
@@ -466,33 +465,26 @@ function updateTable(hosts) {
             'resolved': 'stage-resolved'
         }[host.stage] || 'stage-new';
 
-        const stageIcon = {
-            'new': '🔴',
-            'cs': '🔵',
-            'escalated': '🟠',
-            'watchlist': '🟣',
-            'resolved': '✅'
-        }[host.stage] || '🔴';
-
         const stageTooltip = host.stage_updated_by ? `Updated by ${host.stage_updated_by}` : '';
         const latestNote = host.stage_note || '';
         const noteTitle = latestNote ? escapeHtml(latestNote) : '';
+        const statusClass = host.status === 'DOWN' ? 'down' : 'unreachable';
 
         return `
-        <tr onclick="toggleRowSelect(this, event)" style="cursor: pointer; transition: background 0.15s;">
-            <td><input type="checkbox" class="host-checkbox" data-host="${host.host_name}" data-port="${host.port}" data-container="${host.container}" style="cursor: pointer; pointer-events: none;"></td>
-            <td>${host.container}</td>
-            <td><strong>${host.host_name}</strong></td>
-            <td>${host.ip_address}</td>
-            <td><span class="status-badge status-${host.status === 'DOWN' ? 'down' : 'unreachable'}"><i class="fas fa-circle"></i> ${host.status}</span></td>
+        <tr class="host-row" onclick="toggleRowSelect(this, event)">
+            <td><input type="checkbox" class="host-checkbox" data-host="${host.host_name}" data-port="${host.port}" data-container="${host.container}"></td>
+            <td>${escapeHtml(host.container)}</td>
+            <td><strong>${escapeHtml(host.host_name)}</strong></td>
+            <td class="cell-ip">${escapeHtml(host.ip_address)}</td>
+            <td><span class="status-badge status-${statusClass}"><i class="fas fa-circle"></i> ${escapeHtml(host.status)}</span></td>
             <td>
-                <span class="stage-badge ${stageClass}" title="${stageTooltip}${latestNote ? '\n📝 ' + noteTitle : ''}">${stageIcon} ${host.stage_label}</span>
-                ${latestNote ? `<div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${noteTitle}">📝 ${escapeHtml(latestNote)}</div>` : ''}
+                <span class="stage-badge ${stageClass}" title="${stageTooltip}${noteTitle ? '\n' + noteTitle : ''}"><i class="stage-dot"></i> ${escapeHtml(host.stage_label)}</span>
+                ${latestNote ? `<div class="stage-note" title="${noteTitle}">${escapeHtml(latestNote)}</div>` : ''}
             </td>
-            <td>${host.duration_str}</td>
-            <td>${host.last_check}</td>
-            <td style="font-size: 0.85rem; color: var(--text-secondary);">${host.status_information}</td>
-            <td><button onclick="event.stopPropagation(); showStageModal('${host.host_name}', '${host.container}', '${host.port}', '${host.stage}')" class="btn-stage"><i class="fas fa-layer-group"></i> Stage</button></td>
+            <td class="num">${escapeHtml(host.duration_str)}</td>
+            <td class="num">${escapeHtml(host.last_check)}</td>
+            <td class="cell-detail">${escapeHtml(host.status_information)}</td>
+            <td><button type="button" onclick="event.stopPropagation(); showStageModal('${host.host_name}', '${host.container}', '${host.port}', '${host.stage}')" class="btn btn-sm btn-primary btn-stage"><i class="fas fa-layer-group"></i> Stage</button></td>
         </tr>
     `}).join('');
 }
@@ -522,7 +514,7 @@ function startAutoRefresh() {
             countdownInterval = setInterval(() => {
                 countdown--;
                 if (countdown < 0) countdown = getActiveRefreshSeconds();
-                document.getElementById('refresh_countdown').textContent = countdown;
+                paintCountdown();
             }, 1000);
         });
 }
@@ -618,7 +610,7 @@ function selectBatchStage(stage, labelEl) {
     batchStageSelection = stage;
     document.querySelectorAll('#batchStageModal .stage-option').forEach(el => el.classList.remove('selected', 'selected-resolved'));
     labelEl.classList.add(stage === 'resolved' ? 'selected-resolved' : 'selected');
-    document.getElementById('submitBatchStageBtn').textContent = stage === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
+    document.getElementById('submitBatchStageBtn').textContent = stage === 'resolved' ? 'Resolve & ACK Nagios' : 'Set Stage';
 }
 
 function submitBatchStage() {
@@ -665,7 +657,7 @@ function submitBatchStage() {
     .catch(err => showToast('Batch stage failed: network error', 'error'))
     .finally(() => {
         btn.disabled = false;
-        btn.textContent = batchStageSelection === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
+        btn.textContent = batchStageSelection === 'resolved' ? 'Resolve & ACK Nagios' : 'Set Stage';
     });
 }
 
@@ -704,7 +696,7 @@ function showStageModal(hostName, container, port, currentStage) {
         label.classList.add(currentStageSelection === 'resolved' ? 'selected-resolved' : 'selected');
     }
 
-    document.getElementById('submitStageBtn').textContent = currentStageSelection === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
+    document.getElementById('submitStageBtn').textContent = currentStageSelection === 'resolved' ? 'Resolve & ACK Nagios' : 'Set Stage';
     renderCommentHistory(null);
     document.getElementById('stageModal').classList.add('show');
     document.body.style.overflow = 'hidden';
@@ -729,7 +721,7 @@ function loadStageCommentHistory(container, hostName, fallbackStage) {
                     opt.checked = true;
                     opt.closest('.stage-option').classList.add(data.stage === 'resolved' ? 'selected-resolved' : 'selected');
                 }
-                document.getElementById('submitStageBtn').textContent = data.stage === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
+                document.getElementById('submitStageBtn').textContent = data.stage === 'resolved' ? 'Resolve & ACK Nagios' : 'Set Stage';
             }
             renderCommentHistory(data.comments || []);
         })
@@ -783,7 +775,7 @@ function renderCommentHistory(comments) {
             <div class="comment-item-meta">
                 <span class="comment-item-user">${escapeHtml(c.user || 'unknown')}</span>
                 <span class="comment-item-time">${escapeHtml(formatCommentTime(c.timestamp))}</span>
-                ${label ? `<span class="stage-badge ${badge} comment-item-stage">${escapeHtml(label)}</span>` : ''}
+                ${label ? `<span class="stage-badge ${badge} comment-item-stage"><i class="stage-dot"></i> ${escapeHtml(label)}</span>` : ''}
             </div>
             <p class="comment-item-text">${escapeHtml(c.text || '')}</p>
         </article>`;
@@ -795,7 +787,7 @@ function selectStage(stage, labelEl) {
     currentStageSelection = stage;
     document.querySelectorAll('#stageModal .stage-option').forEach(el => el.classList.remove('selected', 'selected-resolved'));
     labelEl.classList.add(stage === 'resolved' ? 'selected-resolved' : 'selected');
-    document.getElementById('submitStageBtn').textContent = stage === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
+    document.getElementById('submitStageBtn').textContent = stage === 'resolved' ? 'Resolve & ACK Nagios' : 'Set Stage';
 }
 
 function closeStageModal() {
@@ -851,7 +843,7 @@ function submitStage() {
     .catch(err => showToast('Batch stage failed: network error', 'error'))
     .finally(() => {
         btn.disabled = false;
-        btn.textContent = currentStageSelection === 'resolved' ? '✅ Resolve & ACK Nagios' : 'Set Stage';
+        btn.textContent = currentStageSelection === 'resolved' ? 'Resolve & ACK Nagios' : 'Set Stage';
     });
 }
 
@@ -982,140 +974,146 @@ function exportCSV() {
     URL.revokeObjectURL(url);
 }
 
+function paintCountdown() {
+    const label = String(countdown);
+    const main = document.getElementById('refresh_countdown');
+    if (main) main.textContent = label;
+    const wall = document.getElementById('wall_countdown');
+    if (wall) wall.textContent = label;
+}
+
+function paintLastUpdate(value) {
+    const main = document.getElementById('last_update');
+    if (main) main.textContent = value;
+    const wall = document.getElementById('wall_last_update');
+    if (wall) wall.textContent = value;
+}
+
 function toggleViewOnly() {
     isViewOnlyMode = true;
-    const body = document.body;
-    const html = document.documentElement;
-    
-    // Hide all page elements except exit button
-    const allElements = document.querySelectorAll('body > *:not(#exit-view-only)');
-    allElements.forEach(el => el.style.display = 'none');
-    
-    // Create and show exit button
-    let exitBtn = document.getElementById('exit-view-only');
-    if (!exitBtn) {
-        exitBtn = document.createElement('div');
-        exitBtn.id = 'exit-view-only';
-        exitBtn.innerHTML = '<button onclick="exitViewOnly()" style="background: rgba(239,68,68,0.9); border: none; color: white; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.7rem; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"><i class="fas fa-times" style="font-size: 0.6rem;"></i></button>';
-        exitBtn.style.cssText = 'position: fixed; top: 5px; right: 5px; z-index: 99999;';
-        body.appendChild(exitBtn);
-    }
-    exitBtn.style.display = 'block';
-    
-    // Full screen setup
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    body.style.margin = '0';
-    body.style.padding = '0';
-    body.style.overflow = 'auto';
-    body.style.background = isDark ? 'var(--bg-primary)' : 'var(--bg-secondary)';
-    html.style.margin = '0';
-    html.style.padding = '0';
-    
-    // Create minimal table
-    const viewOnlyTable = document.createElement('div');
-    viewOnlyTable.id = 'view-only-table';
-    viewOnlyTable.style.cssText = 'width: 100vw; height: 100vh; overflow: auto; padding: 10px; box-sizing: border-box;';
-    
-    viewOnlyTable.innerHTML = `
-        <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 16px; table-layout: fixed;">
-            <colgroup>
-                <col style="width: 22%;">
-                <col style="width: 14%;">
-                <col style="width: 10%;">
-                <col style="width: 18%;">
-                <col style="width: 14%;">
-                <col style="width: 22%;">
-            </colgroup>
-            <thead>
-                <tr style="background: ${isDark ? 'var(--bg-tertiary)' : 'var(--text-primary)'}; color: white;">
-                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? 'var(--text-secondary)' : 'var(--bg-tertiary)'};">HOST</th>
-                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? 'var(--text-secondary)' : 'var(--bg-tertiary)'};">IP ADDRESS</th>
-                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? 'var(--text-secondary)' : 'var(--bg-tertiary)'};">STATUS</th>
-                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? 'var(--text-secondary)' : 'var(--bg-tertiary)'};">STAGE</th>
-                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? 'var(--text-secondary)' : 'var(--bg-tertiary)'};">DURATION</th>
-                    <th style="padding: 20px; text-align: left; font-weight: 900; font-size: 18px; border: 2px solid ${isDark ? 'var(--text-secondary)' : 'var(--bg-tertiary)'};">DETAIL</th>
-                </tr>
-            </thead>
-            <tbody id="view-only-tbody">
-                <tr><td colspan="6" style="padding: 30px; text-align: center; color: ${isDark ? 'var(--text-muted)' : 'var(--text-secondary)'}; font-size: 18px; font-weight: 600;">Loading...</td></tr>
-            </tbody>
-        </table>
+    document.body.classList.add('is-wall');
+    const previous = document.getElementById('view-only-table');
+    if (previous) previous.remove();
+
+    const wall = document.createElement('div');
+    wall.id = 'view-only-table';
+    wall.className = 'wall';
+    wall.innerHTML = `
+        <div class="wall-bar">
+            <div class="wall-counts">
+                <span class="wall-scope">belum ditangani</span>
+                <span class="wall-count is-down"><span id="wall_down_count" class="num">0</span> DOWN baru</span>
+                <span class="wall-count is-unreachable"><span id="wall_unreach_count" class="num">0</span> UNREACHABLE baru</span>
+            </div>
+            <div class="wall-meta">
+                <span>Updated <span id="wall_last_update" class="num">-</span></span>
+                <span>Refresh <span id="wall_countdown" class="num">${countdown}</span>s</span>
+            </div>
+            <button type="button" class="wall-exit" onclick="exitViewOnly()">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i> Exit
+            </button>
+        </div>
+        <div class="wall-scroll">
+            <div id="wall-empty" class="wall-empty" hidden>
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                <p>Tidak ada host baru yang belum ditangani</p>
+            </div>
+            <table class="wall-table" id="wall-table">
+                <colgroup>
+                    <col class="wall-col-host">
+                    <col class="wall-col-ip">
+                    <col class="wall-col-status">
+                    <col class="wall-col-stage">
+                    <col class="wall-col-duration">
+                    <col class="wall-col-detail">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Host</th>
+                        <th>IP Address</th>
+                        <th>Status</th>
+                        <th>Stage</th>
+                        <th>Duration</th>
+                        <th>Detail</th>
+                    </tr>
+                </thead>
+                <tbody id="view-only-tbody">
+                    <tr><td colspan="6" class="wall-loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
     `;
-    
-    body.appendChild(viewOnlyTable);
-    
+    document.body.appendChild(wall);
+    const last = document.getElementById('last_update');
+    if (last && last.textContent) paintLastUpdate(last.textContent);
     countdown = VIEW_ONLY_REFRESH_SEC;
+    paintCountdown();
     restartDataRefresh();
     loadMonitoringData();
     updateViewOnlyTable();
 }
 
 function exitViewOnly() {
+    if (!isViewOnlyMode) return;
     isViewOnlyMode = false;
-    const body = document.body;
-    const html = document.documentElement;
-    const exitBtn = document.getElementById('exit-view-only');
+    document.body.classList.remove('is-wall');
     const viewOnlyTable = document.getElementById('view-only-table');
-    
-    // Remove view only table
-    if (viewOnlyTable) {
-        viewOnlyTable.remove();
-    }
-    
-    // Show all page elements
-    const allElements = document.querySelectorAll('body > *:not(#exit-view-only)');
-    allElements.forEach(el => el.style.display = '');
-    
-    // Hide exit button
-    exitBtn.style.display = 'none';
-    
-    // Restore body/html
-    body.style.margin = '';
-    body.style.padding = '';
-    body.style.overflow = '';
-    body.style.background = '';
-    html.style.margin = '';
-    html.style.padding = '';
-
+    if (viewOnlyTable) viewOnlyTable.remove();
     countdown = configRefreshInterval;
+    paintCountdown();
     restartDataRefresh();
 }
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && isViewOnlyMode) {
+        event.preventDefault();
+        exitViewOnly();
+    }
+});
 
 function updateViewOnlyTable() {
     const tbody = document.getElementById('view-only-tbody');
     if (!tbody || !allHosts) return;
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    
+
     const newHosts = allHosts.filter(h => !h.stage || h.stage === 'new');
-    
+    const downCount = newHosts.filter(h => h.status === 'DOWN').length;
+    const downEl = document.getElementById('wall_down_count');
+    const unreachEl = document.getElementById('wall_unreach_count');
+    const empty = document.getElementById('wall-empty');
+    const table = document.getElementById('wall-table');
+    if (downEl) downEl.textContent = String(downCount);
+    if (unreachEl) unreachEl.textContent = String(newHosts.length - downCount);
+
     if (newHosts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="padding: 30px; text-align: center; color: var(--text-secondary); font-size: 18px; font-weight: 600;">No unassigned hosts</td></tr>';
+        tbody.innerHTML = '';
+        if (table) table.hidden = true;
+        if (empty) empty.hidden = false;
         return;
     }
-    
+    if (table) table.hidden = false;
+    if (empty) empty.hidden = true;
+
+    const stageClassFor = stage => ({
+        'new': 'stage-new',
+        'cs': 'stage-cs',
+        'escalated': 'stage-escalated',
+        'watchlist': 'stage-watchlist',
+        'resolved': 'stage-resolved'
+    }[stage] || 'stage-new');
+
     tbody.innerHTML = newHosts.map(host => {
-        const statusColor = host.status === 'DOWN' ? 'var(--color-danger-alt)' : 'var(--color-warning-dark)';
-        const statusBg   = host.status === 'DOWN' ? (isDark ? 'var(--alert-error-bg)' : 'var(--alert-error-bg)') : (isDark ? 'var(--alert-warning-bg)' : 'var(--alert-warning-bg)');
-        const stageMeta = {
-            'new':       isDark ? { bg: 'var(--bg-tertiary)', color: 'var(--text-muted)', border: 'var(--border-color)', icon: '🔴' } : { bg: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: 'var(--border-color-alt)', icon: '🔴' },
-            'cs':        isDark ? { bg: 'var(--alert-info-bg)', color: 'var(--alert-info-color)', border: 'var(--color-info)', icon: '🔵' } : { bg: 'var(--alert-info-bg)', color: 'var(--color-info-dark)', border: 'var(--alert-info-color)', icon: '🔵' },
-            'escalated': isDark ? { bg: 'var(--alert-warning-bg)', color: 'var(--alert-warning-color)', border: 'var(--color-warning)', icon: '🟠' } : { bg: 'var(--alert-warning-bg)', color: 'var(--color-orange-dark)', border: 'var(--alert-warning-color)', icon: '🟠' },
-            'watchlist': isDark ? { bg: 'var(--alert-purple-bg)', color: 'var(--color-purple)', border: 'var(--color-purple)', icon: '🟣' } : { bg: 'var(--alert-purple-bg)', color: 'var(--color-purple)', border: 'var(--color-purple-light)', icon: '🟣' },
-            'resolved':  isDark ? { bg: 'var(--alert-success-bg)', color: 'var(--color-success)', border: 'var(--color-success)', icon: '✅' } : { bg: 'var(--alert-success-bg)', color: 'var(--color-success-dark)', border: 'var(--color-success-light)', icon: '✅' },
-        }[host.stage] || (isDark ? { bg: 'var(--bg-tertiary)', color: 'var(--text-muted)', border: 'var(--border-color)', icon: '🔴' } : { bg: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: 'var(--border-color-alt)', icon: '🔴' });
+        const statusClass = host.status === 'DOWN' ? 'down' : 'unreachable';
+        const note = host.stage_note
+            ? `<div class="stage-note">${escapeHtml(host.stage_note)}</div>`
+            : '';
         return `
-        <tr style="border-bottom: 2px solid ${isDark ? 'var(--border-color)' : 'var(--border-color)'}; background: ${isDark ? 'var(--bg-secondary)' : (host.status === 'DOWN' ? 'var(--alert-error-bg)' : 'var(--alert-warning-bg)')};">
-            <td style="padding: 14px; font-weight: 800; font-size: 15px; color: ${isDark ? 'var(--text-primary)' : 'var(--text-primary)'}; word-break: break-word; line-height: 1.3;" title="${host.host_name}">${host.host_name}</td>
-            <td style="padding: 14px; font-weight: 700; font-size: 15px; color: ${isDark ? 'var(--text-muted)' : 'var(--text-secondary)'};">${host.ip_address}</td>
-            <td style="padding: 14px;"><span style="background: ${statusBg}; color: ${isDark ? (host.status === 'DOWN' ? 'var(--alert-error-color)' : 'var(--alert-warning-color)') : statusColor}; font-weight: 900; font-size: 14px; padding: 6px 10px; border-radius: 6px; border: 2px solid ${statusColor}; white-space: nowrap;">${host.status}</span></td>
-            <td style="padding: 14px;">
-                <div>
-                    <span style="display: inline-flex; align-items: center; gap: 4px; background: ${stageMeta.bg}; color: ${stageMeta.color}; border: 2px solid ${stageMeta.border}; font-weight: 700; font-size: 13px; padding: 5px 10px; border-radius: 20px; white-space: nowrap;">${stageMeta.icon} ${host.stage_label}</span>
-                    ${host.stage_note ? `<div style="font-size: 0.7rem; color: ${isDark ? 'var(--text-muted)' : 'var(--text-secondary)'}; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(host.stage_note)}">📝 ${escapeHtml(host.stage_note)}</div>` : ''}
-                </div>
-            </td>
-            <td style="padding: 14px; font-weight: 700; font-size: 14px; color: ${isDark ? 'var(--text-muted)' : 'var(--text-secondary)'}; white-space: nowrap;">${host.duration_str}</td>
-            <td style="padding: 14px; font-weight: 600; font-size: 13px; color: ${isDark ? 'var(--text-muted)' : 'var(--text-secondary)'}; overflow: hidden; text-overflow: ellipsis;" title="${host.status_information}">${host.status_information}</td>
+        <tr class="is-${statusClass}">
+            <td class="wall-host">${escapeHtml(host.host_name)}</td>
+            <td class="cell-ip">${escapeHtml(host.ip_address)}</td>
+            <td><span class="status-badge status-${statusClass}">${escapeHtml(host.status)}</span></td>
+            <td><span class="stage-badge ${stageClassFor(host.stage)}"><i class="stage-dot"></i> ${escapeHtml(host.stage_label || '')}</span>${note}</td>
+            <td class="num">${escapeHtml(host.duration_str || '')}</td>
+            <td class="wall-detail">${escapeHtml(host.status_information || '')}</td>
         </tr>
         `;
     }).join('');

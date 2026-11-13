@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}User Permissions{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="/static/css/user_permissions.css">
+<link rel="stylesheet" href="/static/css/user_permissions.css?v=20261113-noc8">
 
 <div class="page-header">
     <h1><i class="fas fa-user-shield"></i> User Permissions</h1>
@@ -10,14 +10,14 @@
 
 <div class="section-card">
     <h3><i class="fas fa-list"></i> Users List</h3>
-    <div style="overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-color);">
+    <div class="table-scroll">
         <table class="users-table">
             <thead>
                 <tr>
                     <th>Username</th>
                     <th>Role</th>
                     <th>Permissions</th>
-                    <th style="width: 100px;">Action</th>
+                    <th class="col-action">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -30,25 +30,25 @@
                             {{ 'Admin' if user.is_admin else 'User' }}
                         </span>
                     </td>
-                    <td style="font-size: 0.9rem; color: var(--text-secondary);">
+                    <td>
                         {% if user.is_admin %}
-                        <span style="background: var(--alert-success-bg); color: var(--alert-success-color); padding: 0.25rem 0.75rem; border-radius: 6px;">Full Access</span>
+                        <span class="access-pill">Full Access</span>
                         {% else %}
-                        {{ user.permissions|length }} permission(s)
+                        <span class="perm-count">{{ user.permissions|length }} permission(s)</span>
                         {% endif %}
                     </td>
                     <td>
                         {% if not user.is_admin %}
-                        <button onclick="editPermissions('{{ user.uid }}')" class="btn-primary"><i class="fas fa-edit"></i> Edit</button>
+                        <button onclick="editPermissions('{{ user.uid }}')" class="icon-btn" title="Edit permissions" aria-label="Edit permissions"><i class="fas fa-edit" aria-hidden="true"></i></button>
                         {% else %}
-                        <span style="color: var(--text-muted); font-size: 0.85rem;">Full Access</span>
+                        <span class="icon-slot" title="Admin punya full access" aria-label="Admin punya full access"><i class="fas fa-lock" aria-hidden="true"></i></span>
                         {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
                 {% else %}
                 <tr>
-                    <td colspan="4" style="padding: 2rem; text-align: center; color: var(--text-muted);">No users found</td>
+                    <td colspan="4" class="table-message">No users found</td>
                 </tr>
                 {% endif %}
             </tbody>
@@ -59,7 +59,10 @@
 <!-- Edit Permissions Modal -->
 <div id="editModal" class="modal">
     <div class="modal-content">
-        <h3><i class="fas fa-lock"></i> Edit User Permissions</h3>
+        <div class="modal-header">
+            <h3><i class="fas fa-lock"></i> Edit User Permissions</h3>
+            <button type="button" class="modal-close" onclick="closeEditModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
+        </div>
         <form method="POST" action="/user-permissions/update" id="permForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="username" id="edit_username">
@@ -114,7 +117,7 @@
                 </div>
             </div>
 
-            <div class="permissions-section" style="border-bottom: none;">
+            <div class="permissions-section plain">
                 <h4><i class="fas fa-server"></i> Nagios Servers</h4>
                 <div class="permissions-grid" id="nagiosPerms">
                     {% for server in nagios_servers %}
@@ -127,7 +130,7 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" onclick="closeEditModal()" class="btn-primary" style="background: var(--color-gray);"><i class="fas fa-times"></i> Cancel</button>
+                <button type="button" onclick="closeEditModal()" class="btn-secondary"><i class="fas fa-times"></i> Cancel</button>
                 <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Izin</button>
             </div>
         </form>

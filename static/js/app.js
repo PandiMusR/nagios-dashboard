@@ -12,11 +12,7 @@
 
         // Dark mode
         function initDarkMode() {
-            const saved = localStorage.getItem('theme');
-            if (saved === 'dark') {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                updateDarkModeIcon(true);
-            }
+            updateDarkModeIcon(document.documentElement.getAttribute('data-theme') === 'dark');
         }
         function toggleDarkMode() {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -37,6 +33,13 @@
             }
         }
         initDarkMode();
+
+        document.addEventListener('click', function(e) {
+            const close = e.target.closest('.alert .btn-close');
+            if (!close) return;
+            const alert = close.closest('.alert');
+            if (alert) alert.remove();
+        });
 
         window.addEventListener('storage', function(e) {
             if (e.key === 'theme') {

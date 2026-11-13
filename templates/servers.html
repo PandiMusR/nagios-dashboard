@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Server Management{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/servers.css?v=20260822-actions">
+<link rel="stylesheet" href="/static/css/servers.css?v=20261113-noc7">
 {% endblock %}
 {% block content %}
 
@@ -13,24 +13,22 @@
 <!-- Add Server Form -->
 <div class="form-section">
     <h2>Tambah Server Baru</h2>
-    <form id="addServerForm" style="display: grid; gap: 1.5rem;">
+    <form id="addServerForm" class="form-stack">
         <div class="form-grid">
             <div class="form-group">
                 <label for="serverName"><i class="fas fa-tag"></i> Server Name</label>
                 <input type="text" id="serverName" name="name" required placeholder="e.g., nagios-prod-01">
-                <small style="color: var(--text-secondary); margin-top: 0.25rem; display: block;">
-                    Only alphanumeric, hyphens, and underscores allowed
-                </small>
+                <small class="field-hint">Only alphanumeric, hyphens, and underscores allowed</small>
             </div>
             <div class="form-group">
-                <label for="serverPort">
-                    <i class="fas fa-network-wired"></i> Port
-                    <button type="button" class="btn-sm btn-secondary" style="float: right; margin-top: -2px;" onclick="suggestPort()" title="Get recommended available port">
+                <label for="serverPort"><i class="fas fa-network-wired"></i> Port</label>
+                <div class="input-action">
+                    <input type="number" id="serverPort" name="port" required placeholder="e.g., 8080" min="1000" max="65535">
+                    <button type="button" class="btn-secondary" onclick="suggestPort()" title="Get recommended available port">
                         <i class="fas fa-lightbulb"></i> Auto
                     </button>
-                </label>
-                <input type="number" id="serverPort" name="port" required placeholder="e.g., 8080" min="1000" max="65535">
-                <div id="portStatus" style="margin-top: 0.5rem; padding: 0.5rem; border-radius: 6px; display: none; font-size: 0.9rem;"></div>
+                </div>
+                <div id="portStatus" class="port-status" style="display: none;"></div>
             </div>
         </div>
         <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Create Server</button>
@@ -42,13 +40,13 @@
     <div class="table-header">
         <h2><i class="fas fa-list"></i> Server List</h2>
         <div class="batch-actions">
-            <button class="btn-sm btn-success" onclick="batchStart()" title="Start selected servers">
+            <button class="btn-secondary" onclick="batchStart()" title="Start selected servers">
                 <i class="fas fa-play"></i> Start
             </button>
-            <button class="btn-sm btn-warning" onclick="batchRestart()" title="Restart selected servers">
+            <button class="btn-secondary" onclick="batchRestart()" title="Restart selected servers">
                 <i class="fas fa-sync"></i> Restart
             </button>
-            <button class="btn-sm btn-danger" onclick="batchDelete()" title="Delete selected servers">
+            <button class="btn-ghost-danger" onclick="batchDelete()" title="Delete selected servers">
                 <i class="fas fa-trash"></i> Delete
             </button>
         </div>
@@ -57,7 +55,7 @@
     <table class="servers-table">
         <thead>
             <tr>
-                <th style="width: 40px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                <th class="col-check"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
                 <th>Server Name</th>
                 <th>Port</th>
                 <th>Proxy Port</th>
@@ -72,14 +70,12 @@
                 <tr>
                     <td><input type="checkbox" class="server-checkbox" value="{{ server.name }}"></td>
                     <td><span class="server-name">{{ server.name }}</span></td>
-                    <td>{{ server.port }}</td>
-                    <td>{{ server.proxy_port }}</td>
+                    <td class="num">{{ server.port }}</td>
+                    <td class="num">{{ server.proxy_port }}</td>
                     <td><span class="status-badge {% if server.proxy_running %}status-running{% else %}status-stopped{% endif %}">
-                        <i class="fas fa-{% if server.proxy_running %}circle{% else %}times-circle{% endif %}"></i>
                         {% if server.proxy_running %}Running{% else %}Stopped{% endif %}
                     </span></td>
                     <td><span class="status-badge {% if server.container_running %}status-running{% else %}status-stopped{% endif %}">
-                        <i class="fas fa-{% if server.container_running %}circle{% else %}times-circle{% endif %}"></i>
                         {% if server.container_running %}Running{% else %}Stopped{% endif %}
                     </span></td>
                     <td>
@@ -91,41 +87,41 @@
                                         {% if server.container_running %}
                                         <form method="POST" action="/servers/stop/{{ server.name }}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button type="submit" class="btn-sm btn-danger" title="Stop container">
-                                                <i class="fas fa-stop"></i> Stop
+                                            <button type="submit" class="icon-btn is-danger" title="Stop container" aria-label="Stop container">
+                                                <i class="fas fa-stop" aria-hidden="true"></i>
                                             </button>
                                         </form>
                                         {% else %}
                                         <form method="POST" action="/servers/start/{{ server.name }}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button type="submit" class="btn-sm btn-success" title="Start container">
-                                                <i class="fas fa-play"></i> Start
+                                            <button type="submit" class="icon-btn is-up" title="Start container" aria-label="Start container">
+                                                <i class="fas fa-play" aria-hidden="true"></i>
                                             </button>
                                         </form>
                                         {% endif %}
                                         <form method="POST" action="/servers/restart/{{ server.name }}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button type="submit" class="btn-sm btn-warning" title="Restart container">
-                                                <i class="fas fa-sync"></i> Restart
+                                            <button type="submit" class="icon-btn" title="Restart container" aria-label="Restart container">
+                                                <i class="fas fa-sync" aria-hidden="true"></i>
                                             </button>
                                         </form>
                                         <form method="POST" action="/servers/delete/{{ server.name }}" onsubmit="return confirm('Delete {{ server.name }}?');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button type="submit" class="btn-sm btn-danger" title="Delete container">
-                                                <i class="fas fa-trash"></i> Delete
+                                            <button type="submit" class="icon-btn is-danger" title="Delete container" aria-label="Delete container">
+                                                <i class="fas fa-trash" aria-hidden="true"></i>
                                             </button>
                                         </form>
                                     </div>
                                     <span class="action-divider" aria-hidden="true"></span>
                                     <div class="action-cluster">
-                                        <a href="/servers/edit-config/{{ server.name }}" class="btn-sm btn-info" title="Edit configuration">
-                                            <i class="fas fa-edit"></i> Config
+                                        <a href="/servers/edit-config/{{ server.name }}" class="icon-btn" title="Edit configuration" aria-label="Edit configuration">
+                                            <i class="fas fa-edit" aria-hidden="true"></i>
                                         </a>
-                                        <button type="button" class="btn-sm btn-info" onclick="openPluginModal('{{ server.name }}')" title="Manage plugins">
-                                            <i class="fas fa-plug"></i> Plugin
+                                        <button type="button" class="icon-btn" onclick="openPluginModal('{{ server.name }}')" title="Manage plugins" aria-label="Manage plugins">
+                                            <i class="fas fa-plug" aria-hidden="true"></i>
                                         </button>
-                                        <button type="button" class="btn-sm btn-success" onclick="checkConfig('{{ server.name }}')" title="Validate configuration">
-                                            <i class="fas fa-check"></i> Check
+                                        <button type="button" class="icon-btn" onclick="checkConfig('{{ server.name }}')" title="Validate configuration" aria-label="Validate configuration">
+                                            <i class="fas fa-check" aria-hidden="true"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -137,22 +133,22 @@
                                         {% if server.proxy_running %}
                                         <form method="POST" action="/proxy/stop/{{ server.name }}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button type="submit" class="btn-sm btn-danger" title="Stop proxy">
-                                                <i class="fas fa-stop"></i> Stop
+                                            <button type="submit" class="icon-btn is-danger" title="Stop proxy" aria-label="Stop proxy">
+                                                <i class="fas fa-stop" aria-hidden="true"></i>
                                             </button>
                                         </form>
                                         {% else %}
                                         <form method="POST" action="/proxy/start/{{ server.name }}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button type="submit" class="btn-sm btn-success" title="Start proxy">
-                                                <i class="fas fa-play"></i> Start
+                                            <button type="submit" class="icon-btn is-up" title="Start proxy" aria-label="Start proxy">
+                                                <i class="fas fa-play" aria-hidden="true"></i>
                                             </button>
                                         </form>
                                         {% endif %}
                                         <form method="POST" action="/proxy/restart/{{ server.name }}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button type="submit" class="btn-sm btn-warning" title="Restart proxy">
-                                                <i class="fas fa-sync"></i> Restart
+                                            <button type="submit" class="icon-btn" title="Restart proxy" aria-label="Restart proxy">
+                                                <i class="fas fa-sync" aria-hidden="true"></i>
                                             </button>
                                         </form>
                                     </div>
@@ -164,8 +160,8 @@
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">
-                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                    <td colspan="7" class="table-message">
+                        <i class="fas fa-inbox"></i>
                         No servers found
                     </td>
                 </tr>
@@ -176,61 +172,61 @@
 
 <!-- Plugin Modal -->
 <div id="pluginModal" class="modal">
-    <div class="modal-content" style="width: 95%; max-width: 700px;">
+    <div class="modal-content">
         <div class="modal-header">
             <h3><i class="fas fa-plug"></i> Plugin Manager - <span id="pluginServerName"></span></h3>
-            <button class="btn-close" onclick="closePluginModal()">&times;</button>
+            <button type="button" class="modal-close" onclick="closePluginModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
         </div>
         <div class="modal-body">
-            <div style="margin-bottom: 2rem;">
-                <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">Unggah Plugin</h4>
-                <form id="uploadPluginForm" enctype="multipart/form-data" style="display: flex; gap: 1rem;">
+            <div class="modal-section">
+                <h4>Unggah Plugin</h4>
+                <form id="uploadPluginForm" class="upload-row" enctype="multipart/form-data">
                     <input type="hidden" id="uploadServerName" name="server">
-                    <input type="file" name="plugin_file" required style="flex: 1; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px;">
-                    <button type="submit" class="btn-sm btn-success"><i class="fas fa-upload"></i> Upload</button>
+                    <input type="file" name="plugin_file" class="file-input" required>
+                    <button type="submit" class="btn-primary"><i class="fas fa-upload"></i> Upload</button>
                 </form>
             </div>
-            <div>
-                <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">Plugin List</h4>
-                <div id="pluginList" style="background: var(--bg-primary); padding: 1rem; border-radius: 8px; max-height: 300px; overflow-y: auto;">Loading...</div>
+            <div class="modal-section">
+                <h4>Plugin List</h4>
+                <div id="pluginList" class="plugin-list">Loading...</div>
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn-sm" style="background: var(--text-muted); color: white;" onclick="closePluginModal()">Close</button>
+            <button type="button" class="btn-secondary" onclick="closePluginModal()">Close</button>
         </div>
     </div>
 </div>
 
 <!-- Batch Action Modal -->
 <div id="batchModal" class="modal">
-    <div class="modal-content" style="width: 95%; max-width: 500px;">
+    <div class="modal-content">
         <div class="modal-header">
             <h3 id="batchModalTitle">Confirm Action</h3>
-            <button class="btn-close" onclick="closeBatchModal()">&times;</button>
+            <button type="button" class="modal-close" onclick="closeBatchModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
         </div>
         <div class="modal-body">
-            <p id="batchModalMessage" style="margin: 0 0 1.5rem 0; color: var(--text-secondary);"></p>
-            <div id="batchModalServerList" style="background: var(--bg-primary); padding: 1rem; border-radius: 8px; max-height: 250px; overflow-y: auto; margin-bottom: 1.5rem;"></div>
+            <p id="batchModalMessage" class="muted"></p>
+            <div id="batchModalServerList" class="batch-list"></div>
         </div>
         <div class="modal-footer">
-            <button class="btn-sm" style="background: var(--text-muted); color: white;" onclick="closeBatchModal()">Cancel</button>
-            <button id="batchModalConfirm" class="btn-sm btn-success">Confirm</button>
+            <button type="button" class="btn-secondary" onclick="closeBatchModal()">Cancel</button>
+            <button type="button" id="batchModalConfirm" class="btn-primary">Confirm</button>
         </div>
     </div>
 </div>
 
 <!-- Config Check Modal -->
 <div id="configModal" class="modal">
-    <div class="modal-content" style="width: 95%; max-width: 800px;">
+    <div class="modal-content">
         <div class="modal-header">
             <h3><i class="fas fa-check"></i> Configuration Check - <span id="configServerName"></span></h3>
-            <button class="btn-close" onclick="closeConfigModal()">&times;</button>
+            <button type="button" class="modal-close" onclick="closeConfigModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
         </div>
         <div class="modal-body">
-            <pre id="configOutput" style="background: var(--bg-primary); padding: 1.5rem; border-radius: 8px; font-size: 0.85rem; white-space: pre-wrap; font-family: 'Courier New', monospace; margin: 0; max-height: 400px; overflow-y: auto;">Checking...</pre>
+            <pre id="configOutput" class="config-output">Checking...</pre>
         </div>
         <div class="modal-footer">
-            <button class="btn-sm" style="background: var(--text-muted); color: white;" onclick="closeConfigModal()">Close</button>
+            <button type="button" class="btn-secondary" onclick="closeConfigModal()">Close</button>
         </div>
     </div>
 </div>
@@ -244,5 +240,5 @@
     </div>
 </div>
 
-<script src="/static/js/servers.js?v=20260822-actions"></script>
+<script src="/static/js/servers.js?v=20261113-noc5"></script>
 {% endblock %}

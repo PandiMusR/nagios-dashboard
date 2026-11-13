@@ -106,11 +106,11 @@ function showBatchModal(action, servers) {
     const actionConfig = actions[action];
     title.textContent = actionConfig.title;
     message.textContent = actionConfig.message;
-    confirmBtn.style.background = actionConfig.color;
+    confirmBtn.style.background = '';
     confirmBtn.textContent = action.charAt(0).toUpperCase() + action.slice(1);
     
     serverList.innerHTML = servers.map(s => 
-        `<div style="padding: 0.5rem; border-bottom: 1px solid var(--border-color); color: var(--text-secondary);">• ${s}</div>`
+        `<div class="batch-name">${s}</div>`
     ).join('');
     
     modal.classList.add('show');
@@ -265,18 +265,18 @@ function loadPluginList(serverName) {
             const list = document.getElementById('pluginList');
             if (data.plugins && data.plugins.length > 0) {
                 list.innerHTML = data.plugins.map(p => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--bg-secondary); border-radius: 6px; margin-bottom: 0.5rem;">
+                    <div class="plugin-row">
                         <div>
-                            <strong style="color: var(--text-primary);">${p.name}</strong>
-                            <span style="color: var(--text-secondary); font-size: 0.8rem; margin-left: 0.5rem;">${p.size}</span>
+                            <strong class="plugin-name">${p.name}</strong>
+                            <span class="plugin-size">${p.size}</span>
                         </div>
-                        <button onclick="deletePlugin('${serverName}', '${p.name}')" class="btn-sm btn-danger">
-                            <i class="fas fa-trash"></i> Delete
+                        <button onclick="deletePlugin('${serverName}', '${p.name}')" class="icon-btn is-danger" title="Delete plugin" aria-label="Delete plugin">
+                            <i class="fas fa-trash" aria-hidden="true"></i>
                         </button>
                     </div>
                 `).join('');
             } else {
-                list.innerHTML = '<p style="text-align: center; color: var(--text-muted); margin: 0;">No plugins found</p>';
+                list.innerHTML = '<p class="empty-note">No plugins found</p>';
             }
         });
 }

@@ -1,20 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Edit Config - {{ server_name }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/servers.css?v=20261113-noc7">
+{% endblock %}
 {% block content %}
-<div class="card">
-    <h2>Edit Config - {{ server_name }}</h2>
-    <p>Edit localhost.cfg file for {{ server_name }}</p>
+<div class="page-header">
+    <h1><i class="fas fa-file-code"></i> Edit Config</h1>
+    <p>localhost.cfg for {{ server_name }}</p>
 </div>
-<div class="card">
+<div class="cfg-card">
     <form method="POST" action="/servers/edit-config/{{ server_name }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div style="margin-bottom: 15px;">
-            <label style="display: block; margin-bottom: 5px; color: var(--text-primary); font-weight: bold;">localhost.cfg</label>
-            <textarea name="content" required style="width: 100%; min-height: 500px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: monospace; font-size: 14px;">{{ content }}</textarea>
-        </div>
-        <div style="display: flex; gap: 10px;">
-            <button type="submit" style="padding: 10px 20px; background: var(--color-info-dark); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Save &amp; Restart</button>
-            <a href="/servers" style="padding: 10px 20px; background: var(--color-gray); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; text-decoration: none;">Cancel</a>
+        <label class="cfg-label" for="cfgContent">localhost.cfg</label>
+        <textarea id="cfgContent" name="content" class="cfg-editor" required wrap="off">{{ content }}</textarea>
+        <div class="cfg-actions">
+            <button type="submit" class="btn-primary">Save &amp; Restart</button>
+            <a href="/servers" class="btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

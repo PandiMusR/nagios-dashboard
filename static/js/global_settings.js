@@ -1,10 +1,39 @@
+function maskApiKey(key) {
+    if (!key) return 'Not generated';
+    if (key.length <= 4) return '••••';
+    return '••••' + key.slice(-4);
+}
+
+function renderApiKey() {
+    const input = document.getElementById('apiKeyDisplay');
+    const key = input.dataset.key || '';
+    const revealed = input.dataset.revealed === '1';
+    input.value = revealed ? (key || 'Not generated') : maskApiKey(key);
+}
+
+function toggleApiKey() {
+    const input = document.getElementById('apiKeyDisplay');
+    const toggle = document.getElementById('apiKeyToggle');
+    const revealed = input.dataset.revealed !== '1';
+    input.dataset.revealed = revealed ? '1' : '0';
+    renderApiKey();
+    const icon = toggle.querySelector('i');
+    icon.className = revealed ? 'fas fa-eye-slash' : 'fas fa-eye';
+    const label = revealed ? 'Hide API key' : 'Show API key';
+    toggle.title = label;
+    toggle.setAttribute('aria-label', label);
+    toggle.setAttribute('aria-pressed', revealed ? 'true' : 'false');
+}
+
 function generateApiKey() {
     if (!confirm('Generate a new API Key? The old key will stop working immediately.')) return;
     csrfFetch('/global-settings/generate-api-key', { method: 'POST' })
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                document.getElementById('apiKeyDisplay').value = data.api_key;
+                const input = document.getElementById('apiKeyDisplay');
+                input.dataset.key = data.api_key || '';
+                renderApiKey();
                 showToast('New API Key generated', 'success');
             } else {
                 showToast(data.error || 'Operation failed', 'error');
@@ -15,11 +44,20 @@ function generateApiKey() {
 
 function copyApiKey() {
     const input = document.getElementById('apiKeyDisplay');
-    navigator.clipboard.writeText(input.value).then(() => {
+    const key = input.dataset.key || '';
+    if (!key) {
+        showToast('No API key', 'error');
+        return;
+    }
+    navigator.clipboard.writeText(key).then(() => {
         showToast('API Key copied', 'success');
     }).catch(() => {
+        const shown = input.value;
+        const revealed = input.dataset.revealed === '1';
+        input.value = key;
         input.select();
         document.execCommand('copy');
+        input.value = revealed ? key : shown;
         showToast('API Key copied', 'success');
     });
 }
@@ -30,7 +68,7 @@ function loadBackups() {
         .then(data => {
             const list = document.getElementById('backupList');
             if (!data.backups || data.backups.length === 0) {
-                list.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;"><i class="fas fa-inbox"></i> No backups yet</p>';
+                list.innerHTML = '<p class="gs-empty"><i class="fas fa-inbox"></i> No backups yet</p>';
                 return;
             }
             
@@ -48,7 +86,7 @@ function loadBackups() {
             `).join('');
         })
         .catch(err => {
-            document.getElementById('backupList').innerHTML = '<p style="color: var(--color-danger-alt);"><i class="fas fa-exclamation-circle"></i> Gagal memuat backup</p>';
+            document.getElementById('backupList').innerHTML = '<p class="gs-error"><i class="fas fa-exclamation-circle"></i> Gagal memuat backup</p>';
         });
 }
 

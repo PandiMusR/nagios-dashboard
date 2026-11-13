@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Host Manager{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="/static/css/host_manager.css">
+<link rel="stylesheet" href="/static/css/host_manager.css?v=20261113-noc10">
 
 <div class="page-header">
     <h1><i class="fas fa-network-wired"></i> Host Manager</h1>
@@ -10,8 +10,8 @@
 
 <div class="section-card">
     <h3><i class="fas fa-database"></i> Backup & Rollback</h3>
-    <div class="button-group" style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-        <select id="backupServer" style="flex: 1; min-width: 150px; max-width: 250px; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem;">
+    <div class="button-group">
+        <select id="backupServer" class="hm-control backup-select">
             <option value="">Select Server</option>
             {% for server in servers %}
             <option value="{{ server }}">{{ server }}</option>
@@ -20,8 +20,8 @@
         <button onclick="createBackup()" class="btn-primary btn-success" title="Create backup"><i class="fas fa-save"></i> Backup</button>
         <button onclick="loadBackups()" class="btn-primary btn-info" title="Refresh backups"><i class="fas fa-sync-alt"></i> Refresh</button>
     </div>
-    <div id="backupHistory" style="max-height: 300px; overflow-y: auto; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px;">
-        <p style="text-align: center; color: var(--text-muted); margin: 2rem 0; padding: 1rem;">Select a server to view backups</p>
+    <div id="backupHistory" class="backup-history">
+        <p class="empty-note">Select a server to view backups</p>
     </div>
 </div>
 
@@ -30,7 +30,7 @@
     <div class="filter-bar">
         <div class="form-group">
             <label for="serverFilter">Filter Server</label>
-            <select id="serverFilter" onchange="filterByServer()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+            <select id="serverFilter" onchange="filterByServer()">
                 <option value="all">All Servers</option>
                 {% for server in servers %}
                 <option value="{{ server }}">{{ server }}</option>
@@ -39,7 +39,7 @@
         </div>
         <div class="form-group">
             <label for="entriesPerPage">Rows per Page</label>
-            <select id="entriesPerPage" onchange="changeEntriesPerPage()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+            <select id="entriesPerPage" onchange="changeEntriesPerPage()">
                 <option value="10">10</option>
                 <option value="20">20</option>
                 <option value="50">50</option>
@@ -49,15 +49,15 @@
         </div>
         <div class="form-group">
             <label for="searchInput">Search</label>
-            <input type="text" id="searchInput" onkeyup="searchHosts()" placeholder="Host name, IP, parent..." style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem;">
+            <input type="text" id="searchInput" onkeyup="searchHosts()" placeholder="Host name, IP, parent...">
         </div>
         <div class="filter-bar-button-group">
             <button onclick="refreshAllHostStatus()" class="btn-primary btn-info" title="Refresh host status"><i class="fas fa-sync-alt"></i> <span class="btn-text">Refresh</span></button>
-            <button onclick="openBatchModal()" class="btn-primary btn-success" title="Add multiple hosts"><i class="fas fa-list"></i> <span class="btn-text">Batch Add</span></button>
+            <button onclick="openBatchModal()" class="btn-secondary" title="Add multiple hosts"><i class="fas fa-list"></i> <span class="btn-text">Batch Add</span></button>
             <button onclick="openAddModal()" class="btn-primary" title="Add a host"><i class="fas fa-plus"></i> <span class="btn-text">Tambah Host</span></button>
         </div>
     </div>
-    <div style="overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-color);">
+    <div class="table-scroll">
         <table id="hostsTable" class="hosts-table">
             <thead>
                 <tr>
@@ -67,11 +67,11 @@
                     <th>Alias</th>
                     <th>Address</th>
                     <th>Status</th>
-                    <th style="width: 160px;">Action</th>
+                    <th class="col-action">Action</th>
                 </tr>
             </thead>
             <tbody id="hostsTableBody">
-                <tr><td colspan="7" style="padding: 2rem; text-align: center; color: var(--text-muted);"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Loading hosts...</td></tr>
+                <tr><td colspan="7" class="table-message"><i class="fas fa-spinner fa-spin"></i> Loading hosts...</td></tr>
             </tbody>
         </table>
     </div>
@@ -80,12 +80,15 @@
 <!-- Add Modal -->
 <div id="addModal" class="modal">
     <div class="modal-content">
-        <h3><i class="fas fa-plus-circle"></i> Add New Host</h3>
+        <div class="modal-header">
+            <h3><i class="fas fa-plus-circle"></i> Add New Host</h3>
+            <button type="button" class="modal-close" onclick="closeAddModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
+        </div>
         <form id="addForm" method="POST" action="/host-manager/add" onsubmit="return validateAddForm()">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label for="addServer">Server</label>
-                <select name="server" id="addServer" required onchange="onAddServerChange()" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                <select name="server" id="addServer" required onchange="onAddServerChange()">
                     {% for server in servers %}
                     <option value="{{ server }}">{{ server }}</option>
                     {% endfor %}
@@ -93,56 +96,56 @@
             </div>
             <div class="form-group">
                 <label for="editHostName">Host Name</label>
-                <div style="display: flex; gap: 0.5rem;">
-                    <input type="text" name="host_name" id="addHostName" required placeholder="e.g. 81411-130112252037001-Ria Sirait" style="flex: 1; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                <div class="input-row">
+                    <input type="text" name="host_name" id="addHostName" required placeholder="e.g. 81411-130112252037001-Ria Sirait">
                     <button type="button" onclick="generateHostname()" class="btn-primary btn-info"><i class="fas fa-magic"></i></button>
                 </div>
-                <small style="color: var(--text-secondary); font-size: 0.8rem;">Format: NID-CID-NamaClient</small>
+                <small class="field-hint">Format: NID-CID-NamaClient</small>
             </div>
             <div class="form-group">
                 <label for="addAlias">Alias (optional)</label>
-                <input type="text" name="alias" id="addAlias" placeholder="e.g. Web Server 1" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
-                <small style="color: var(--text-secondary); font-size: 0.8rem;">A friendly name/description for the host</small>
+                <input type="text" name="alias" id="addAlias" placeholder="e.g. Web Server 1">
+                <small class="field-hint">A friendly name/description for the host</small>
             </div>
             <div class="form-group">
                 <label for="editAddress">IP Address</label>
-                <input type="text" name="address" required placeholder="e.g. 192.168.1.100" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                <input type="text" name="address" required placeholder="e.g. 192.168.1.100">
             </div>
             <div class="form-group">
                 <label for="addParentsSearch">Parent (optional)</label>
-                <input type="text" id="addParentsSearch" placeholder="Search parent..." style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 0.5rem;" oninput="filterAddParents()">
-                <select name="parents" id="addParents" size="4" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                <input type="text" id="addParentsSearch" class="search-gap" placeholder="Search parent..." oninput="filterAddParents()">
+                <select name="parents" id="addParents" size="4">
                     <option value="">-- No Parent --</option>
                 </select>
             </div>
             <div class="form-group">
-                <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 0.5rem;">
-                    <input type="checkbox" name="uptime_kuma_enabled" id="uptimeKumaEnabled" style="margin-right: 0.5rem; width: 18px; height: 18px;">
+                <label class="check-row">
+                    <input type="checkbox" name="uptime_kuma_enabled" id="uptimeKumaEnabled">
                     <span>Monitor in Uptime Kuma</span>
                 </label>
-                <small style="color: var(--text-secondary); font-size: 0.8rem;"><i class="fas fa-info-circle"></i> Automatically add this host as a monitor in Uptime Kuma</small>
+                <small class="field-hint"><i class="fas fa-info-circle"></i> Automatically add this host as a monitor in Uptime Kuma</small>
             </div>
             <div class="form-group">
-                <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 0.5rem;">
-                    <input type="checkbox" name="service_enabled" id="serviceEnabled" onchange="toggleServiceFields()" style="margin-right: 0.5rem; width: 18px; height: 18px;">
+                <label class="check-row">
+                    <input type="checkbox" name="service_enabled" id="serviceEnabled" onchange="toggleServiceFields()">
                     <span>Add Service/Plugin</span>
                 </label>
-                <div id="serviceFields" style="display: none; padding-left: 1.5rem; margin-top: 0.75rem;">
+                <div id="serviceFields" class="service-fields">
                     <div class="form-group">
                         <label for="servicePlugin">Plugin</label>
-                        <select name="service_plugin" id="servicePlugin" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                        <select name="service_plugin" id="servicePlugin">
                             <option value="">-- Select Plugin --</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="serviceArgs">Arguments (optional)</label>
-                        <input type="text" name="service_args" id="serviceArgs" placeholder="e.g. 41805" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
-                        <small style="color: var(--text-secondary); font-size: 0.8rem;">Arguments to pass to the plugin</small>
+                        <input type="text" name="service_args" id="serviceArgs" placeholder="e.g. 41805">
+                        <small class="field-hint">Arguments to pass to the plugin</small>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" onclick="closeAddModal()" class="btn-primary" style="background: var(--color-gray);"><i class="fas fa-times"></i> Cancel</button>
+                <button type="button" onclick="closeAddModal()" class="btn-primary btn-cancel"><i class="fas fa-times"></i> Cancel</button>
                 <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Tambah Host</button>
             </div>
         </form>
@@ -151,20 +154,23 @@
 
 <!-- Batch Add Modal -->
 <div id="batchModal" class="modal">
-    <div class="modal-content" style="max-width: 1000px;">
-        <h3><i class="fas fa-list-ul"></i> Batch Tambah Hosts</h3>
+    <div class="modal-content modal-wide">
+        <div class="modal-header">
+            <h3><i class="fas fa-list-ul"></i> Batch Tambah Hosts</h3>
+            <button type="button" class="modal-close" onclick="closeBatchModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
+        </div>
         <form method="POST" action="/host-manager/batch-add">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: var(--bg-primary); border-radius: 10px; border: 1px solid var(--border-color);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h4 style="margin: 0; color: var(--text-primary); font-weight: 600;">Hosts</h4>
+            <div class="batch-panel">
+                <div class="batch-head">
+                    <h4>Hosts</h4>
                     <button type="button" onclick="addBatchRow()" class="btn-primary btn-success"><i class="fas fa-plus"></i> Tambah Baris</button>
                 </div>
-                <div id="batchHostsContainer" style="max-height: 500px; overflow-y: auto; display: grid; gap: 0.75rem;">
+                <div id="batchHostsContainer" class="batch-scroll">
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" onclick="closeBatchModal()" class="btn-primary" style="background: var(--color-gray);"><i class="fas fa-times"></i> Cancel</button>
+                <button type="button" onclick="closeBatchModal()" class="btn-primary btn-cancel"><i class="fas fa-times"></i> Cancel</button>
                 <button type="submit" class="btn-primary btn-success"><i class="fas fa-save"></i> Add All Hosts</button>
             </div>
         </form>
@@ -174,59 +180,62 @@
 <!-- Edit Modal -->
 <div id="editModal" class="modal">
     <div class="modal-content">
-        <h3><i class="fas fa-edit"></i> Edit Host</h3>
+        <div class="modal-header">
+            <h3><i class="fas fa-edit"></i> Edit Host</h3>
+            <button type="button" class="modal-close" onclick="closeEditModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
+        </div>
         <form method="POST" action="/host-manager/edit" onsubmit="return validateEditForm()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="server" id="editServer">
             <input type="hidden" name="old_host_name" id="editOldHostName">
             <div class="form-group">
                 <label>Host Name</label>
-                <input type="text" name="host_name" id="editHostName" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                <input type="text" name="host_name" id="editHostName" required>
             </div>
             <div class="form-group">
                 <label for="editAlias">Alias (optional)</label>
-                <input type="text" name="alias" id="editAlias" placeholder="e.g. Web Server 1" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
-                <small style="color: var(--text-secondary); font-size: 0.8rem;">A friendly name/description for the host</small>
+                <input type="text" name="alias" id="editAlias" placeholder="e.g. Web Server 1">
+                <small class="field-hint">A friendly name/description for the host</small>
             </div>
             <div class="form-group">
                 <label>IP Address</label>
-                <input type="text" name="address" id="editAddress" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                <input type="text" name="address" id="editAddress" required>
             </div>
             <div class="form-group">
                 <label for="editParentsSearch">Parent (optional)</label>
-                <input type="text" id="editParentsSearch" placeholder="Search parent..." style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 0.5rem;" oninput="filterEditParents()">
-                <select name="parents" id="editParents" size="4" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                <input type="text" id="editParentsSearch" class="search-gap" placeholder="Search parent..." oninput="filterEditParents()">
+                <select name="parents" id="editParents" size="4">
                     <option value="">-- No Parent --</option>
                 </select>
             </div>
             <div class="form-group">
-                <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 0.5rem;">
-                    <input type="checkbox" name="uptime_kuma_enabled" id="editUptimeKumaEnabled" style="margin-right: 0.5rem; width: 18px; height: 18px;">
+                <label class="check-row">
+                    <input type="checkbox" name="uptime_kuma_enabled" id="editUptimeKumaEnabled">
                     <span>Monitor in Uptime Kuma</span>
                 </label>
-                <small style="color: var(--text-secondary); font-size: 0.8rem;"><i class="fas fa-info-circle"></i> Automatically add/update this host in Uptime Kuma</small>
+                <small class="field-hint"><i class="fas fa-info-circle"></i> Automatically add/update this host in Uptime Kuma</small>
             </div>
             <div class="form-group">
-                <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 0.5rem;">
-                    <input type="checkbox" name="service_enabled" id="editServiceEnabled" onchange="toggleEditServiceFields()" style="margin-right: 0.5rem; width: 18px; height: 18px;">
+                <label class="check-row">
+                    <input type="checkbox" name="service_enabled" id="editServiceEnabled" onchange="toggleEditServiceFields()">
                     <span>Add Service/Plugin</span>
                 </label>
-                <div id="editServiceFields" style="display: none; padding-left: 1.5rem; margin-top: 0.75rem;">
+                <div id="editServiceFields" class="service-fields">
                     <div class="form-group">
                         <label for="editServicePlugin">Plugin</label>
-                        <select name="service_plugin" id="editServicePlugin" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                        <select name="service_plugin" id="editServicePlugin">
                             <option value="">-- Select Plugin --</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="editServiceArgs">Arguments (optional)</label>
-                        <input type="text" name="service_args" id="editServiceArgs" placeholder="e.g. 41805" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
-                        <small style="color: var(--text-secondary); font-size: 0.8rem;">Arguments to pass to the plugin</small>
+                        <input type="text" name="service_args" id="editServiceArgs" placeholder="e.g. 41805">
+                        <small class="field-hint">Arguments to pass to the plugin</small>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" onclick="closeEditModal()" class="btn-primary" style="background: var(--color-gray);"><i class="fas fa-times"></i> Cancel</button>
+                <button type="button" onclick="closeEditModal()" class="btn-primary btn-cancel"><i class="fas fa-times"></i> Cancel</button>
                 <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Changes</button>
             </div>
         </form>
@@ -236,14 +245,44 @@
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="modal">
     <div class="modal-content">
-        <h3 style="color: var(--color-danger-alt);"><i class="fas fa-exclamation-triangle"></i> Konfirmasi Hapus</h3>
-        <p style="color: var(--text-secondary);">The following <strong id="deleteTotalCount">0</strong> host(s) will be deleted:</p>
-        <div id="deleteHostList" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;"></div>
+        <div class="modal-header">
+            <h3 class="delete-title"><i class="fas fa-exclamation-triangle"></i> Konfirmasi Hapus</h3>
+            <button type="button" class="modal-close" onclick="closeDeleteModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
+        </div>
+        <p class="muted">The following <strong id="deleteTotalCount">0</strong> host(s) will be deleted:</p>
+        <div id="deleteHostList" class="delete-list"></div>
         <div class="modal-footer">
-            <button type="button" onclick="closeDeleteModal()" class="btn-primary" style="background: var(--color-gray);"><i class="fas fa-times"></i> Cancel</button>
+            <button type="button" onclick="closeDeleteModal()" class="btn-primary btn-cancel"><i class="fas fa-times"></i> Cancel</button>
             <button type="button" id="confirmDeleteBtn" class="btn-primary btn-danger"><i class="fas fa-trash"></i> Delete All</button>
         </div>
     </div>
+</div>
+
+<div id="downHistoryDrawer" class="down-drawer" aria-hidden="true">
+    <div class="down-drawer-backdrop" onclick="closeDownHistory()"></div>
+    <aside class="down-drawer-panel" role="dialog" aria-labelledby="downHistoryTitle">
+        <div class="down-drawer-head">
+            <div>
+                <h3 id="downHistoryTitle">History down</h3>
+                <p id="downHistorySubtitle"></p>
+            </div>
+            <button type="button" class="down-drawer-close" onclick="closeDownHistory()" aria-label="Tutup">&times;</button>
+        </div>
+        <form id="downHistoryFilter" class="down-drawer-filter">
+            <label>Dari
+                <input type="date" id="downStart">
+            </label>
+            <label>Sampai
+                <input type="date" id="downEnd">
+            </label>
+            <button type="submit" class="btn-primary"><i class="fas fa-search"></i> Terapkan</button>
+        </form>
+        <p class="down-drawer-note">Diambil dari Stage History. Catatan log tidak diubah.</p>
+        <div id="downHistorySummary" class="down-summary"></div>
+        <div id="downHistoryChart" class="down-trend" hidden></div>
+        <div id="downHistoryList" class="down-list"></div>
+        <a id="downHistoryAudit" class="down-audit-link" href="/stage-history" target="_blank" rel="noopener">Buka di Stage History</a>
+    </aside>
 </div>
 
 <script>
@@ -288,19 +327,19 @@ function loadBackups() {
     .then(data => {
         const div = document.getElementById('backupHistory');
         if (data.backups.length === 0) {
-            div.innerHTML = '<p style="text-align: center; color: var(--text-muted); margin: 0; padding: 2rem;">No backups</p>';
+            div.innerHTML = '<p class="empty-note">No backups</p>';
             return;
         }
         div.innerHTML = data.backups.map((b, i) => `
             <div class="backup-item">
                 <div>
                     <strong>${b.name}</strong>
-                    ${i < 3 ? `<span style="background: var(--color-success); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">Point ${i + 1}</span>` : ''}
+                    ${i < 3 ? `<span class="point-badge">Point ${i + 1}</span>` : ''}
                     <small>${b.date}</small>
                 </div>
-                <div style="display: flex; gap: 0.5rem;">
-                    <button onclick="restoreBackup('${server}', '${b.name}')" class="btn-sm" style="background: var(--color-warning);"><i class="fas fa-redo"></i></button>
-                    <button onclick="deleteBackup('${server}', '${b.name}')" class="btn-sm" style="background: var(--color-danger-alt);"><i class="fas fa-trash"></i></button>
+                <div class="backup-actions">
+                    <button onclick="restoreBackup('${server}', '${b.name}')" class="btn-sm btn-restore"><i class="fas fa-redo"></i></button>
+                    <button onclick="deleteBackup('${server}', '${b.name}')" class="btn-sm btn-danger"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         `).join('');
@@ -341,48 +380,48 @@ function addBatchRow() {
     
     const row = document.createElement('div');
     row.id = rowId;
-    row.style.cssText = 'padding: 1rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;';
+    row.className = 'batch-row';
     
     const serverOptions = {{ servers|tojson }}.map(s => `<option value="${s}">${s}</option>`).join('');
     
     row.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr 2fr 1.5fr 0.8fr auto; gap: 0.75rem; align-items: center;">
-            <select name="batch_servers[]" onchange="updateBatchRowData('${rowId}')" style="padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem;">
+        <div class="batch-grid">
+            <select name="batch_servers[]" class="hm-control" onchange="updateBatchRowData('${rowId}')">
                 ${serverOptions}
             </select>
-            <input type="text" name="batch_hostnames[]" placeholder="NID-CID-Name" required style="padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem;">
-            <input type="text" name="batch_addresses[]" placeholder="IP Address" required style="padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem;">
-            <select name="batch_parents[]" style="padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; width: 100%;">
+            <input type="text" name="batch_hostnames[]" class="hm-control" placeholder="NID-CID-Name" required>
+            <input type="text" name="batch_addresses[]" class="hm-control" placeholder="IP Address" required>
+            <select name="batch_parents[]" class="hm-control">
                 <option value="">-</option>
             </select>
-            <button type="button" onclick="toggleBatchRowDetails('${rowId}')" class="btn-sm" style="background: var(--color-info); padding: 0.5rem; margin-right: 0;"><i class="fas fa-chevron-down"></i></button>
+            <button type="button" onclick="toggleBatchRowDetails('${rowId}')" class="btn-sm btn-edit"><i class="fas fa-chevron-down"></i></button>
         </div>
-        <div id="${rowId}-details" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">Alias (optional)</label>
-                <input type="text" name="batch_alias[]" placeholder="Friendly name" style="width: 100%; padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem;">
+        <div id="${rowId}-details" class="batch-details" style="display: none;">
+            <div class="stack-gap">
+                <label class="batch-label">Alias (optional)</label>
+                <input type="text" name="batch_alias[]" class="hm-control" placeholder="Friendly name">
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <label style="display: flex; align-items: center; cursor: pointer;">
-                    <input type="checkbox" name="batch_uptime_kuma[]" style="margin-right: 0.5rem; width: 18px; height: 18px;">
-                    <span style="font-size: 0.95rem;"><i class="fas fa-heartbeat"></i> Uptime Kuma</span>
+            <div class="batch-pair">
+                <label class="check-row">
+                    <input type="checkbox" name="batch_uptime_kuma[]">
+                    <span><i class="fas fa-heartbeat"></i> Uptime Kuma</span>
                 </label>
-                <label style="display: flex; align-items: center; cursor: pointer;" onchange="toggleBatchServiceFields('${rowId}')">
-                    <input type="checkbox" name="batch_service_enabled[]" style="margin-right: 0.5rem; width: 18px; height: 18px;">
-                    <span style="font-size: 0.95rem;"><i class="fas fa-cog"></i> Add Service/Plugin</span>
+                <label class="check-row" onchange="toggleBatchServiceFields('${rowId}')">
+                    <input type="checkbox" name="batch_service_enabled[]">
+                    <span><i class="fas fa-cog"></i> Add Service/Plugin</span>
                 </label>
             </div>
-            <div id="${rowId}-service" style="display: none; margin-top: 1rem; padding: 0.75rem; background: var(--bg-primary); border-radius: 6px;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">Plugin</label>
-                <select name="batch_service_plugin[]" style="width: 100%; padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; margin-bottom: 0.75rem;">
+            <div id="${rowId}-service" class="batch-service">
+                <label class="batch-label">Plugin</label>
+                <select name="batch_service_plugin[]" class="hm-control stack-gap">
                     <option value="">-- Select Plugin --</option>
                 </select>
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">Arguments (optional)</label>
-                <input type="text" name="batch_service_args[]" placeholder="e.g. 41805" style="width: 100%; padding: 0.625rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem;">
+                <label class="batch-label">Arguments (optional)</label>
+                <input type="text" name="batch_service_args[]" class="hm-control" placeholder="e.g. 41805">
             </div>
         </div>
-        <div style="text-align: right; margin-top: 0.75rem;">
-            <button type="button" onclick="removeBatchRow('${rowId}')" class="btn-sm" style="background: var(--color-danger-alt); padding: 0.5rem;"><i class="fas fa-trash"></i> Delete</button>
+        <div class="row-end">
+            <button type="button" onclick="removeBatchRow('${rowId}')" class="btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</button>
         </div>
     `;
     
@@ -565,7 +604,7 @@ function renderTable() {
     });
     
     if (filteredHosts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="padding: 2rem; text-align: center; color: var(--text-muted);">No hosts found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="table-message">No hosts found</td></tr>';
         return;
     }
     
@@ -574,26 +613,28 @@ function renderTable() {
     const displayHosts = filteredHosts.slice(start, end);
     
     tbody.innerHTML = displayHosts.map(host => {
-        let statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: var(--text-muted); color: white; white-space: nowrap;">Unknown</span>';
+        let statusBadge = '<span class="hm-status is-unknown">Unknown</span>';
         if (host.status === 'up') {
-            statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: var(--color-success); color: white; white-space: nowrap;">UP</span>';
+            statusBadge = '<span class="hm-status is-up">UP</span>';
         } else if (host.status === 'down') {
-            statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: var(--color-danger-alt); color: white; white-space: nowrap;">DOWN</span>';
+            statusBadge = '<span class="hm-status is-down">DOWN</span>';
         } else if (host.status === 'unreachable') {
-            statusBadge = '<span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: var(--color-warning); color: white; white-space: nowrap;">UNREACHABLE</span>';
+            statusBadge = '<span class="hm-status is-unreachable">UNREACHABLE</span>';
         }
         
         return `
         <tr>
-            <td title="${host.server}" style="overflow: hidden; text-overflow: ellipsis;">${host.server}</td>
-            <td title="${host.parents || 'No parent'}" style="overflow: hidden; text-overflow: ellipsis;">${host.parents || '-'}</td>
-            <td title="${host.host_name}" style="overflow: hidden; text-overflow: ellipsis;"><strong>${host.host_name}</strong></td>
-            <td title="${host.alias || 'No alias'}" style="overflow: hidden; text-overflow: ellipsis;">${host.alias || '-'}</td>
-            <td title="${host.address}" style="overflow: hidden; text-overflow: ellipsis;">${host.address}</td>
-            <td style="text-align: center;">${statusBadge}</td>
-            <td style="padding: 0.5rem; text-align: center;">
-                <button onclick="editHost('${host.server}', '${host.host_name}', '${host.address}', '${host.parents || ''}', '${host.alias || ''}')" class="btn-sm" style="background: var(--color-info); padding: 0.35rem 0.6rem; font-size: 0.75rem; margin-right: 0.3rem; white-space: nowrap;" title="Edit host"><i class="fas fa-edit"></i> Edit</button>
-                <button onclick="confirmDelete('${host.server}', '${host.host_name}')" class="btn-sm" style="background: var(--color-danger-alt); padding: 0.35rem 0.6rem; font-size: 0.75rem; margin-right: 0; white-space: nowrap;" title="Delete host"><i class="fas fa-trash"></i> Delete</button>
+            <td class="cell-clip" title="${host.server}">${host.server}</td>
+            <td class="cell-clip" title="${host.parents || 'No parent'}">${host.parents || '-'}</td>
+            <td class="cell-clip" title="${escHtml(host.host_name)}"><button type="button" class="host-down-link" data-server="${escHtml(host.server)}" data-host="${escHtml(host.host_name)}">${escHtml(host.host_name)}</button></td>
+            <td class="cell-clip" title="${host.alias || 'No alias'}">${host.alias || '-'}</td>
+            <td class="cell-clip" title="${host.address}">${host.address}</td>
+            <td>${statusBadge}</td>
+            <td class="cell-actions">
+                <div class="row-actions">
+                    <button onclick="editHost('${host.server}', '${host.host_name}', '${host.address}', '${host.parents || ''}', '${host.alias || ''}')" class="icon-btn" title="Edit host" aria-label="Edit host"><i class="fas fa-edit" aria-hidden="true"></i></button>
+                    <button onclick="confirmDelete('${host.server}', '${host.host_name}')" class="icon-btn is-danger" title="Delete host" aria-label="Delete host"><i class="fas fa-trash" aria-hidden="true"></i></button>
+                </div>
             </td>
         </tr>
     `}).join('');
@@ -750,10 +791,10 @@ function confirmDelete(server, hostName) {
     const totalCount = document.getElementById('deleteTotalCount');
     const confirmBtn = document.getElementById('confirmDeleteBtn');
     
-    let listHTML = '<div style="padding: 0.75rem; background: var(--alert-error-bg); border-left: 4px solid var(--color-danger-alt); border-radius: 6px; margin-bottom: 0.75rem;"><strong style="color: var(--alert-error-color);">' + hostName + '</strong> <small style="color: var(--alert-error-color);">(Parent)</small></div>';
+    let listHTML = '<div class="delete-parent"><strong>' + hostName + '</strong> <small>(Parent)</small></div>';
     
     if (descendants.length > 0) {
-        listHTML += descendants.map(d => '<div style="padding: 0.75rem; background: var(--alert-warning-bg); border-left: 4px solid var(--color-warning); border-radius: 6px; margin-bottom: 0.5rem;"><small style="color: var(--alert-warning-color);">' + d + '</small></div>').join('');
+        listHTML += descendants.map(d => '<div class="delete-child"><small>' + d + '</small></div>').join('');
     }
     
     hostList.innerHTML = listHTML;
@@ -838,6 +879,388 @@ document.getElementById('editModal').addEventListener('click', function(e) {
 
 document.getElementById('deleteModal').addEventListener('click', function(e) {
     if (e.target === this) closeDeleteModal();
+});
+
+function escHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, function(ch) {
+        return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch];
+    });
+}
+
+let downHistoryHost = '';
+let downHistoryServer = '';
+
+function fmtTs(ts) {
+    if (!ts) return '—';
+    return String(ts).slice(0, 19).replace('T', ' ');
+}
+
+function fmtDuration(seconds) {
+    if (seconds == null) return '—';
+    const s = Math.max(0, Math.floor(seconds));
+    const days = Math.floor(s / 86400);
+    const hours = Math.floor((s % 86400) / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    if (days) return days + ' hari ' + hours + ' jam';
+    if (hours) return hours + ' jam ' + mins + ' menit';
+    if (mins) return mins + ' menit';
+    return s + ' detik';
+}
+
+function stageLabel(labels, key) {
+    return (labels && labels[key]) || key || '—';
+}
+
+const TREND_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+function parseTs(ts) {
+    if (!ts) return null;
+    const date = new Date(String(ts).replace(' ', 'T'));
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function fmtTrendWhen(date) {
+    if (!date) return '—';
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const mins = String(date.getMinutes()).padStart(2, '0');
+    return day + ' ' + TREND_MONTHS[date.getMonth()] + ' ' + date.getFullYear() + ' ' + hours + ':' + mins;
+}
+
+function fmtTrendDay(date) {
+    return String(date.getDate()).padStart(2, '0') + ' ' + TREND_MONTHS[date.getMonth()];
+}
+
+function fmtTrendDuration(seconds) {
+    const s = Math.max(0, Math.floor(seconds));
+    const days = Math.floor(s / 86400);
+    const hours = Math.floor((s % 86400) / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const parts = [];
+    if (days) parts.push(days + ' hari');
+    if (hours) parts.push(hours + ' jam');
+    if (mins || !parts.length) parts.push(mins + ' menit');
+    return parts.join(' ');
+}
+
+function trendTicks(start, end) {
+    const days = (end - start) / 86400000;
+    let step = 1;
+    if (days > 50) step = 7;
+    else if (days > 21) step = 3;
+    else if (days > 12) step = 2;
+    const ticks = [];
+    const cursor = new Date(start);
+    cursor.setHours(0, 0, 0, 0);
+    if (cursor < start) cursor.setDate(cursor.getDate() + 1);
+    while (cursor < end) {
+        const ratio = (cursor - start) / (end - start);
+        if (ratio > 0.02 && ratio < 0.96) ticks.push({ date: new Date(cursor), ratio: ratio });
+        cursor.setDate(cursor.getDate() + step);
+    }
+    return ticks;
+}
+
+function renderStateChart(data) {
+    const root = document.getElementById('downHistoryChart');
+    const start = parseTs(data.window_start);
+    const end = parseTs(data.as_of);
+    if (!root || !start || !end || end <= start) {
+        if (root) root.hidden = true;
+        return;
+    }
+    const totalMs = end - start;
+    const spans = data.spans || [];
+    const segments = [];
+    spans.forEach((span, index) => {
+        const from = parseTs(span.down_at);
+        if (!from) return;
+        let to = null;
+        let kind = 'down';
+        if (span.still_down) {
+            to = end;
+        } else if (span.up_at) {
+            to = parseTs(span.up_at);
+        } else if (span.missing_recovery) {
+            kind = 'unknown';
+            const next = spans[index + 1] && parseTs(spans[index + 1].down_at);
+            to = next || end;
+        }
+        if (!to) return;
+        const left = Math.max(from.getTime(), start.getTime());
+        const right = Math.min(to.getTime(), end.getTime());
+        if (right <= left) return;
+        segments.push({ left: left, right: right, kind: kind, span: span });
+    });
+
+    let downMs = 0;
+    let unknownMs = 0;
+    segments.forEach(seg => {
+        const width = seg.right - seg.left;
+        if (seg.kind === 'unknown') unknownMs += width;
+        else downMs += width;
+    });
+    const upMs = Math.max(0, totalMs - downMs - unknownMs);
+    const pct = ms => (ms / totalMs * 100).toFixed(3) + '%';
+
+    root.hidden = false;
+    root.textContent = '';
+    const card = document.createElement('div');
+    card.className = 'down-trend-card';
+
+    const kicker = document.createElement('p');
+    kicker.className = 'down-trend-kicker';
+    kicker.textContent = 'Riwayat keadaan';
+    const range = document.createElement('p');
+    range.className = 'down-trend-range';
+    range.textContent = fmtTrendWhen(start) + ' – ' + fmtTrendWhen(end);
+    const dur = document.createElement('p');
+    dur.className = 'down-trend-dur';
+    dur.textContent = 'Durasi ' + fmtTrendDuration(totalMs / 1000);
+    card.appendChild(kicker);
+    card.appendChild(range);
+    card.appendChild(dur);
+
+    const body = document.createElement('div');
+    body.className = 'down-trend-body';
+    const plot = document.createElement('div');
+    const bar = document.createElement('div');
+    bar.className = 'down-trend-bar';
+    bar.setAttribute('role', 'img');
+    bar.setAttribute('aria-label', 'Up ' + pct(upMs) + ', down ' + pct(downMs));
+
+    const ticks = trendTicks(start, end);
+    ticks.forEach(tick => {
+        const grid = document.createElement('span');
+        grid.className = 'down-trend-grid';
+        grid.style.left = (tick.ratio * 100) + '%';
+        bar.appendChild(grid);
+    });
+    segments.forEach(seg => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'down-trend-seg' + (seg.kind === 'unknown' ? ' is-unknown' : '');
+        button.style.left = ((seg.left - start.getTime()) / totalMs * 100) + '%';
+        button.style.width = ((seg.right - seg.left) / totalMs * 100) + '%';
+        const endLabel = seg.span.still_down ? 'masih down' : (seg.span.up_at ? 'Up ' + fmtTs(seg.span.up_at) : 'pulih tidak tercatat');
+        button.title = 'Down ' + fmtTs(seg.span.down_at) + ' – ' + endLabel;
+        button.setAttribute('aria-label', button.title);
+        button.addEventListener('click', function() {
+            const row = document.querySelector('#downHistoryList [data-down-at="' + seg.span.down_at + '"]');
+            if (!row) return;
+            row.open = true;
+            row.scrollIntoView({ block: 'nearest' });
+        });
+        bar.appendChild(button);
+    });
+
+    const axis = document.createElement('div');
+    axis.className = 'down-trend-axis';
+    ticks.forEach(tick => {
+        const label = document.createElement('span');
+        label.className = 'down-trend-tick';
+        label.style.left = (tick.ratio * 100) + '%';
+        label.textContent = fmtTrendDay(tick.date);
+        axis.appendChild(label);
+    });
+    plot.appendChild(bar);
+    plot.appendChild(axis);
+
+    const stats = document.createElement('dl');
+    stats.className = 'down-trend-stats';
+    const rows = [
+        ['is-up', 'Up', upMs],
+        ['is-down', 'Down', downMs]
+    ];
+    if (unknownMs >= 1000) rows.push(['is-unknown', 'Tidak tercatat', unknownMs]);
+    rows.forEach(row => {
+        const item = document.createElement('div');
+        item.className = row[0];
+        const term = document.createElement('dt');
+        term.textContent = row[1];
+        const percent = document.createElement('dd');
+        percent.textContent = pct(row[2]);
+        const amount = document.createElement('dd');
+        amount.textContent = fmtTrendDuration(row[2] / 1000);
+        item.appendChild(term);
+        item.appendChild(percent);
+        item.appendChild(amount);
+        stats.appendChild(item);
+    });
+
+    body.appendChild(plot);
+    body.appendChild(stats);
+    card.appendChild(body);
+    root.appendChild(card);
+}
+
+function openDownHistory(server, host) {
+    downHistoryServer = server;
+    downHistoryHost = host;
+    document.getElementById('downStart').value = '';
+    document.getElementById('downEnd').value = '';
+    document.getElementById('downHistorySubtitle').textContent = server + ' · ' + host;
+    const drawer = document.getElementById('downHistoryDrawer');
+    drawer.classList.add('show');
+    drawer.setAttribute('aria-hidden', 'false');
+    loadDownHistory();
+}
+
+function closeDownHistory() {
+    const drawer = document.getElementById('downHistoryDrawer');
+    drawer.classList.remove('show');
+    drawer.setAttribute('aria-hidden', 'true');
+}
+
+function loadDownHistory() {
+    const summary = document.getElementById('downHistorySummary');
+    const list = document.getElementById('downHistoryList');
+    summary.textContent = '';
+    list.textContent = 'Memuat…';
+    const chart = document.getElementById('downHistoryChart');
+    if (chart) {
+        chart.hidden = true;
+        chart.textContent = '';
+    }
+    const params = new URLSearchParams({
+        host: downHistoryHost,
+        container: downHistoryServer
+    });
+    const start = document.getElementById('downStart').value;
+    const end = document.getElementById('downEnd').value;
+    if (start) params.set('start_date', start);
+    if (end) params.set('end_date', end);
+    fetch('/host-manager/down-history?' + params.toString())
+        .then(r => r.json().then(data => ({ok: r.ok, data})))
+        .then(({ok, data}) => {
+            if (!ok) {
+                list.textContent = data.error || 'Gagal memuat history down';
+                const chart = document.getElementById('downHistoryChart');
+                if (chart) chart.hidden = true;
+                return;
+            }
+            renderDownHistory(data);
+        })
+        .catch(() => {
+            list.textContent = 'Gagal memuat history down';
+            const chart = document.getElementById('downHistoryChart');
+            if (chart) chart.hidden = true;
+        });
+}
+
+function renderDownHistory(data) {
+    document.getElementById('downStart').value = data.start_date || '';
+    document.getElementById('downEnd').value = data.end_date || '';
+    const audit = document.getElementById('downHistoryAudit');
+    audit.href = data.stage_history_url || '/stage-history';
+
+    const summary = document.getElementById('downHistorySummary');
+    summary.textContent = '';
+    const s = data.summary || {};
+    const bits = [
+        (s.episodes || 0) + ' episode',
+        'total ' + fmtDuration(s.total_downtime_seconds || 0),
+        s.still_down ? 'sedang down' : 'tidak sedang down',
+        s.last_down_at ? 'terakhir ' + fmtTs(s.last_down_at) : 'belum ada down di rentang ini'
+    ];
+    bits.forEach(text => {
+        const chip = document.createElement('span');
+        chip.textContent = text;
+        summary.appendChild(chip);
+    });
+    if (data.clamped) {
+        const note = document.createElement('span');
+        note.textContent = 'rentang dibatasi 3 bulan';
+        summary.appendChild(note);
+    }
+    if (data.truncated) {
+        const note = document.createElement('span');
+        note.textContent = 'menampilkan ' + (s.shown || 0) + ' episode terbaru';
+        summary.appendChild(note);
+    }
+
+    renderStateChart(data);
+
+    const list = document.getElementById('downHistoryList');
+    list.textContent = '';
+    const episodes = data.episodes || [];
+    if (!episodes.length) {
+        const empty = document.createElement('p');
+        empty.className = 'down-empty';
+        empty.textContent = 'Tidak ada down (up → New) pada rentang ini.';
+        list.appendChild(empty);
+        return;
+    }
+    const labels = data.stage_labels || {};
+    episodes.forEach(ep => list.appendChild(renderEpisode(ep, labels)));
+}
+
+function renderEpisode(ep, labels) {
+    const details = document.createElement('details');
+    details.className = 'down-episode';
+    details.dataset.downAt = ep.down_at || '';
+    const summary = document.createElement('summary');
+    const title = document.createElement('span');
+    title.className = 'down-episode-when';
+    let endText = 'Masih down';
+    if (ep.missing_recovery) endText = 'Pulih tidak tercatat';
+    else if (ep.up_at) endText = 'Up ' + fmtTs(ep.up_at);
+    const downLine = document.createElement('span');
+    downLine.textContent = 'Down ' + fmtTs(ep.down_at);
+    const upLine = document.createElement('span');
+    upLine.textContent = endText;
+    title.appendChild(downLine);
+    title.appendChild(upLine);
+    const dur = document.createElement('span');
+    dur.className = 'down-episode-dur';
+    dur.textContent = ep.still_down ? fmtDuration(ep.duration_seconds) + ' (berjalan)' : fmtDuration(ep.duration_seconds);
+    summary.appendChild(title);
+    summary.appendChild(dur);
+    details.appendChild(summary);
+
+    const trail = document.createElement('div');
+    trail.className = 'down-trail';
+    (ep.trail || []).forEach(row => {
+        const line = document.createElement('div');
+        line.className = 'down-trail-row';
+        const when = document.createElement('span');
+        when.textContent = fmtTs(row.ts);
+        const change = document.createElement('strong');
+        change.textContent = stageLabel(labels, row.from) + ' → ' + stageLabel(labels, row.to);
+        const who = document.createElement('span');
+        who.textContent = row.user || '';
+        const note = document.createElement('span');
+        note.textContent = row.note || '';
+        line.appendChild(when);
+        line.appendChild(change);
+        line.appendChild(who);
+        line.appendChild(note);
+        trail.appendChild(line);
+    });
+    if (ep.trail_truncated) {
+        const more = document.createElement('p');
+        more.className = 'down-empty';
+        more.textContent = 'Jejak stage dipotong. Selengkapnya ada di Stage History.';
+        trail.appendChild(more);
+    }
+    details.appendChild(trail);
+    return details;
+}
+
+document.getElementById('hostsTableBody').addEventListener('click', function(e) {
+    const btn = e.target.closest('.host-down-link');
+    if (!btn) return;
+    openDownHistory(btn.dataset.server, btn.dataset.host);
+});
+
+document.getElementById('downHistoryFilter').addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (!downHistoryHost) return;
+    loadDownHistory();
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDownHistory();
 });
 
 renderTable();

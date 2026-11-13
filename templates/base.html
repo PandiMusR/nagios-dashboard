@@ -18,32 +18,33 @@
             } catch (e) {}
         })();
     </script>
-    <noscript><style>html{background:#ffffff;color:#1e293b}</style></noscript>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <noscript><style>html{background:#eef1f4;color:#1c2430}</style></noscript>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/base.css?v=20261113-noc10">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <nav class="navbar" role="navigation" aria-label="Navigasi utama">
-        <div class="d-flex align-items-center gap-3">
-            <i class="fas fa-bars burger" onclick="toggleSidebar()" role="button" aria-label="Toggle sidebar" aria-expanded="false" tabindex="0"></i>
+        <div class="nav-group">
+            <button type="button" class="burger" onclick="toggleSidebar()" aria-label="Toggle sidebar" aria-expanded="false">
+                <i class="fa-solid fa-bars" aria-hidden="true"></i>
+            </button>
             <a class="navbar-brand" href="/dashboard">
-                <img src="/static/assets/img/icon.png" alt="Nagios" style="height: 32px; width: auto; margin-right: 8px;">
+                <img src="/static/assets/img/icon.png" alt="Nagios">
                 Nagios Dashboard
             </a>
         </div>
-        <div class="d-flex align-items-center gap-3">
-            <button onclick="toggleDarkMode()" id="darkModeBtn" aria-label="Mode Gelap/Terang" title="Mode Gelap/Terang" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 12px; border-radius: 50px; cursor: pointer; font-size: 1rem; transition: all 0.3s;">
+        <div class="nav-group">
+            <button type="button" onclick="toggleDarkMode()" id="darkModeBtn" class="theme-toggle" aria-label="Mode Gelap/Terang" title="Mode Gelap/Terang">
                 <i class="fas fa-moon"></i>
             </button>
             <div class="user-badge" onclick="openChangePasswordModal()" role="button" tabindex="0" aria-label="Ubah password" title="Klik untuk ubah password">
-                <i class="fas fa-user-circle fs-5"></i>
-                <span>{{ username }}</span>
+                <i class="fas fa-user-circle"></i>
+                <span>{{ username or session.get('username') }}</span>
                 {% if session.get('role') == 'admin' %}<span class="admin-tag">ADMIN</span>{% endif %}
             </div>
-            <button class="btn btn-logout" onclick="logout()" aria-label="Logout"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            <button type="button" class="btn-logout" onclick="logout()" aria-label="Logout"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></button>
         </div>
     </nav>
     
@@ -120,10 +121,10 @@
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'error' else 'info-circle' }} me-2"></i>
+                        <div class="alert alert-{{ category }}" role="alert">
+                            <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'error' else 'info-circle' }}"></i>
                             {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            <button type="button" class="btn-close" aria-label="Tutup"></button>
                         </div>
                     {% endfor %}
                 {% endif %}
@@ -132,48 +133,46 @@
         </div>
     </div>
 
-    <div id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none;"></div>
+    <div id="toastContainer" class="toast-wrap"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=20261113-noc9"></script>
     <!-- Change Password Modal -->
     <div class="modal-password" id="changePasswordModal" role="dialog" aria-label="Ubah Password" aria-hidden="true">
         <div class="modal-password-content">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="mb-0"><i class="fas fa-lock me-2"></i>Ubah Password</h4>
-                <button type="button" class="btn-close" onclick="closeChangePasswordModal()"></button>
+            <div class="modal-header">
+                <h4><i class="fas fa-lock"></i> Ubah Password</h4>
+                <button type="button" class="modal-close" onclick="closeChangePasswordModal()" aria-label="Tutup">&times;</button>
             </div>
             
             <form id="changePasswordForm" onsubmit="event.preventDefault(); submitChangePassword();">
-                <div class="password-alert" style="display: none;"></div>
+                <div class="password-alert"></div>
                 
                 <div class="password-form-group">
-                    <label for="oldPassword"><i class="fas fa-key me-2"></i>Password Lama</label>
+                    <label for="oldPassword"><i class="fas fa-key"></i>Password Lama</label>
                     <input type="password" id="oldPassword" name="old_password" class="form-control" placeholder="Masukkan password lama" required>
                 </div>
                 
                 <div class="password-form-group">
-                    <label for="newPassword"><i class="fas fa-key me-2"></i>Password Baru</label>
+                    <label for="newPassword"><i class="fas fa-key"></i>Password Baru</label>
                     <input type="password" id="newPassword" name="new_password" class="form-control" placeholder="Masukkan password baru (min 8 karakter)" required>
                 </div>
                 
                 <div class="password-form-group">
-                    <label for="confirmPassword"><i class="fas fa-key me-2"></i>Konfirmasi Password</label>
+                    <label for="confirmPassword"><i class="fas fa-key"></i>Konfirmasi Password</label>
                     <input type="password" id="confirmPassword" name="confirm_password" class="form-control" placeholder="Konfirmasi password baru" required>
                 </div>
                 
-                <div class="d-flex gap-2 mt-5">
-                    <button type="submit" class="btn btn-modal-primary flex-grow-1">
-                        <i class="fas fa-check me-2"></i>Ubah Password
+                <div class="password-form-footer">
+                    <button type="submit" class="btn-modal-primary">
+                        <i class="fas fa-check"></i> Ubah Password
                     </button>
-                    <button type="button" class="btn btn-modal-secondary flex-grow-1" onclick="closeChangePasswordModal()">
-                        <i class="fas fa-times me-2"></i>Batal
+                    <button type="button" class="btn-modal-secondary" onclick="closeChangePasswordModal()">
+                        <i class="fas fa-times"></i> Batal
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <link rel="stylesheet" href="/static/css/base.css">
 </body>
 </html>

@@ -1,29 +1,29 @@
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/dashboard.css?v=20260822-dash2">
+<link rel="stylesheet" href="/static/css/dashboard.css?v=20261113-noc4">
 {% endblock %}
 {% block content %}
 
 <div class="page-header">
-    <h1><i class="fas fa-tachometer-alt" style="margin-right: 0.5rem;"></i>Monitoring Dashboard</h1>
+    <h1><i class="fas fa-tachometer-alt"></i> Monitoring Dashboard</h1>
     <p>Monitor all Nagios servers in real-time</p>
-    <div>
+    <div class="page-header-actions">
         <span class="stat-badge">
             <span class="loading-spinner"></span>
-            Auto-refresh: <span id="refresh_countdown" style="font-weight: 700;">30</span>s
+            Auto-refresh: <span id="refresh_countdown" class="num">30</span>s
         </span>
-        <span class="stat-badge">Update terakhir: <span id="last_update" style="font-weight: 700;">-</span></span>
+        <span class="stat-badge">Update terakhir: <span id="last_update" class="num">-</span></span>
     </div>
 </div>
 
 <div id="fetchErrorsBanner" class="monitoring-fetch-alert" hidden role="alert"></div>
 
 <div class="servers-grid" id="servers_container">
-    <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
-        <div style="font-size: 1rem; margin-bottom: 0.5rem;"><span class="loading-spinner"></span> Memuat server...</div>
+    <div class="dashboard-empty">
+        <div><span class="loading-spinner"></span> Memuat server...</div>
     </div>
 </div>
 
-<script src="/static/js/dashboard.js?v=20260822-dash2"></script>
+<script src="/static/js/dashboard.js?v=20261113-noc4"></script>
 {% endblock %}

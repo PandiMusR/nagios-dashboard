@@ -4,7 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Active Users — Nagios Dashboard</title>
-    <link rel="stylesheet" href="/static/css/active_users.css">
+    <script>
+        (function() {
+            try {
+                var theme = localStorage.getItem('theme');
+                if (theme === 'dark' || (!theme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (e) {}
+        })();
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/base.css?v=20261113-noc10">
+    <link rel="stylesheet" href="/static/css/active_users.css?v=20261113-noc9">
 </head>
 <body>
     <a href="/dashboard" class="back-link">&larr; Back to Dashboard</a>
@@ -36,9 +49,9 @@
                 <td><strong>{{ user.username }}</strong></td>
                 <td><span class="role-badge role-{{ user.role }}">{{ user.role }}</span></td>
                 <td>{{ user.ip }}</td>
-                <td>{{ user.login_at }}</td>
-                <td>{{ user.last_active }}</td>
-                <td class="{{ 'idle-low' if user.idle_seconds < 60 else ('idle-mid' if user.idle_seconds < 180 else 'idle-high') }}">{{ user.idle_str }}</td>
+                <td class="ts">{{ user.login_at }}</td>
+                <td class="ts">{{ user.last_active }}</td>
+                <td class="ts {{ 'idle-low' if user.idle_seconds < 60 else ('idle-mid' if user.idle_seconds < 180 else 'idle-high') }}">{{ user.idle_str }}</td>
             </tr>
             {% endfor %}
         </tbody>

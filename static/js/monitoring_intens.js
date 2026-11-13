@@ -23,7 +23,7 @@ async function loadMonitors() {
                 <div class="empty-state">
                     <i class="fas fa-exclamation-circle"></i>
                     <p>Invalid response from server</p>
-                    <small style="color: var(--text-muted);">${escapeHtml(text.substring(0, 100))}</small>
+                    <small class="empty-note">${escapeHtml(text.substring(0, 100))}</small>
                 </div>
             `;
             return;
@@ -44,7 +44,7 @@ async function loadMonitors() {
                 <div class="empty-state">
                     <i class="fas fa-inbox"></i>
                     <p>Tidak ada monitor ditemukan. Add hosts with "Monitor in Uptime Kuma" enabled in Host Manager.</p>
-                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 1rem;">Note: Uptime Kuma integration requires proper configuration in Global Settings.</p>
+                    <p class="empty-note">Note: Uptime Kuma integration requires proper configuration in Global Settings.</p>
                 </div>
             `;
             return;
@@ -85,8 +85,8 @@ async function loadMonitors() {
                     </div>
 
                     ${heartbeats.length > 0 ? `
-                    <div style="margin-bottom: 1rem;">
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 700;">Recent Status (Last 48 hours)</div>
+                    <div class="monitor-block">
+                        <div class="section-kicker">Recent Status (Last 48 hours)</div>
                         <div class="heartbeat-chart">
                             ${heartbeats.map(hb => `
                                 <div class="heartbeat-bar ${getHeartbeatClass(hb.status)}" title="${hb.msg || ''} - ${new Date(hb.time).toLocaleString()}"></div>
@@ -96,7 +96,7 @@ async function loadMonitors() {
                     ` : ''}
 
                     <div class="uptime-section">
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem; text-transform: uppercase; font-weight: 700;">Uptime Trend</div>
+                        <div class="section-kicker">Uptime Trend</div>
                         <div class="uptime-bars">
                             <div class="uptime-item">
                                 <div class="uptime-label">24h</div>
@@ -112,8 +112,8 @@ async function loadMonitors() {
                     <div class="ping-value"><i class="fas fa-tachometer-alt"></i> Avg Ping: ${monitor.avgPing.toFixed(0)}ms</div>
                     ` : ''}
 
-                    <div style="margin-top: 1rem; display: flex; gap: 0.75rem;">
-                        <button onclick="removeMonitor(${monitor.id})" class="btn-primary btn-danger" style="font-size: 0.85rem;">
+                    <div class="monitor-actions">
+                        <button onclick="removeMonitor(${monitor.id})" class="btn-ghost-danger">
                             <i class="fas fa-trash"></i> Remove Monitor
                         </button>
                     </div>

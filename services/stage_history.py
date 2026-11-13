@@ -146,3 +146,48 @@ def read_stage_history(
             continue
 
     return results
+
+
+def iter_stage_history(
+    host: str,
+    container: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+):
+    """Yield stage history for one host, oldest first.
+
+    Reads the monthly JSONL files only. Does not write or rewrite them.
+    """
+    import glob as glob_mod
+
+    start_dt = _parse_date_bound(start_date)
+    end_dt = _parse_date_bound(end_date, end_of_day=True)
+    pattern = f'{HISTORY_DIR}/stage_history_*.jsonl'
+    files = sorted(glob_mod.glob(pattern))
+
+    for filepath in files:
+        if not _file_in_date_range(filepath, start_dt, end_dt):
+            continue
+        try:
+            with open(filepath, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entry = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if entry.get('host') != host or entry.get('container') != container:
+                        continue
+                    if start_dt or end_dt:
+                        entry_dt = _entry_datetime(entry)
+                        if entry_dt is None:
+                            continue
+                        if start_dt and entry_dt < start_dt:
+                            continue
+                        if end_dt and entry_dt > end_dt:
+                            continue
+                    yield entry
+        except OSError:
+            continue

@@ -27,7 +27,7 @@ function showDashboardFetchErrors(errors) {
     const list = document.createElement('ul');
     errors.forEach(function (msg) {
         const li = document.createElement('li');
-        li.textContent = msg;
+        li.textContent = humanizeFetchError(msg);
         list.appendChild(li);
     });
 
@@ -48,8 +48,45 @@ function loadDashboardStats() {
         .catch(error => {
             console.error('Error:', error);
             showDashboardFetchErrors(['Failed to load dashboard stats']);
-            document.getElementById('servers_container').innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--color-danger-alt);"><i class="fas fa-exclamation-circle"></i> Gagal memuat server</div>';
+            document.getElementById('servers_container').innerHTML = '<div class="dashboard-empty is-error"><i class="fas fa-exclamation-circle"></i> Gagal memuat server</div>';
         });
+}
+
+function staleAgeSeconds(message) {
+    const match = String(message).match(/last success\s+(\d+)s ago/i);
+    return match ? Number(match[1]) : null;
+}
+
+function formatAgeAgo(seconds) {
+    const total = Math.max(0, Math.floor(Number(seconds) || 0));
+    if (total < 60) return 'kurang dari 1 menit lalu';
+    const minutes = Math.floor(total / 60);
+    if (minutes < 60) return minutes + ' menit lalu';
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + ' jam lalu';
+    return Math.floor(hours / 24) + ' hari lalu';
+}
+
+function formatAgeShort(seconds) {
+    const total = Math.max(0, Math.floor(Number(seconds) || 0));
+    if (total < 60) return '< 1 menit';
+    const minutes = Math.floor(total / 60);
+    if (minutes < 60) return minutes + ' menit';
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + ' jam';
+    return Math.floor(hours / 24) + ' hari';
+}
+
+function humanizeFetchError(message) {
+    const age = staleAgeSeconds(message);
+    if (age == null) return String(message);
+    return String(message).replace(/last success\s+\d+s ago/i, formatAgeAgo(age));
+}
+
+function stalePill(message) {
+    const age = staleAgeSeconds(message);
+    const label = age == null ? 'Stale' : ('Stale · ' + formatAgeShort(age));
+    return `<span class="stale-pill" title="${escapeHtml(String(message))}"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> ${escapeHtml(label)}</span>`;
 }
 
 function statusBadge(value, label, kind) {
@@ -65,9 +102,9 @@ function updateDashboard(servers, incomplete) {
 
     if (!servers || servers.length === 0) {
         if (incomplete) {
-            container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--color-warning);"><i class="fas fa-exclamation-triangle"></i> Snapshot data is incomplete. Host counts are not available.</div>';
+            container.innerHTML = '<div class="dashboard-empty is-warn"><i class="fas fa-exclamation-triangle"></i> Snapshot data is incomplete. Host counts are not available.</div>';
         } else {
-            container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);"><i class="fas fa-inbox"></i> No servers found</div>';
+            container.innerHTML = '<div class="dashboard-empty"><i class="fas fa-inbox"></i> No servers found</div>';
         }
         return;
     }
@@ -75,36 +112,34 @@ function updateDashboard(servers, incomplete) {
     container.innerHTML = servers.map(server => {
         const hosts = server.hosts || {up: 0, down: 0, unreachable: 0, total: 0};
         const services = server.services || {ok: 0, warning: 0, critical: 0, unknown: 0, total: 0};
-        const hasDown = hosts.down > 0 || hosts.unreachable > 0;
         const hasError = Boolean(server.fetch_error);
         let stateClass = 'is-ok';
-        if (hasDown) {
+        if (hosts.down > 0) {
             stateClass = 'is-down';
+        } else if (hosts.unreachable > 0) {
+            stateClass = 'is-unreachable';
         } else if (hasError) {
             stateClass = 'is-stale';
         }
         const portMeta = server.port
             ? `<div class="server-meta">Port ${escapeHtml(String(server.port))}</div>`
             : '';
-        const errorNote = server.fetch_error
-            ? `<div class="snapshot-error-note"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(String(server.fetch_error))}</div>`
-            : '';
+        const errorPill = server.fetch_error ? stalePill(server.fetch_error) : '';
         return `
         <div class="server-card ${stateClass}">
             <div class="server-header">
                 <div class="server-identity">
-                    <div class="server-name"><i class="fas fa-server"></i><span class="server-name-text" title="${escapeHtml(server.name)}">${escapeHtml(server.name)}</span></div>
+                    <div class="server-name"><i class="fas fa-server"></i><span class="server-name-text" title="${escapeHtml(server.name)}">${escapeHtml(server.name)}</span>${errorPill}</div>
                     ${portMeta}
                 </div>
                 <a href="/nagios/${encodeURIComponent(server.name)}" target="_blank" class="btn-open"><i class="fas fa-external-link-alt"></i> Open</a>
             </div>
-            ${errorNote}
             <div class="status-section">
                 <div class="status-title">Hosts <span>${hosts.total}</span></div>
                 <div class="status-grid status-grid-hosts">
                     ${statusBadge(hosts.up, 'UP', 'status-up')}
                     ${statusBadge(hosts.down, 'DOWN', 'status-down')}
-                    ${statusBadge(hosts.unreachable, 'UNREACH', 'status-warning')}
+                    ${statusBadge(hosts.unreachable, 'UNREACH', 'status-unreachable')}
                 </div>
             </div>
             <div class="status-section">

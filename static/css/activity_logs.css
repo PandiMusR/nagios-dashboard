@@ -1,106 +1,96 @@
 .section-card {
-        background: var(--bg-secondary);
-        border-radius: 16px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--bg-tertiary);
-    }
-    .section-card h3 {
-        margin: 0 0 1.5rem 0;
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-    .btn-primary {
-        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-        color: white;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-size: 0.9rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-primary); }
-    .btn-danger {
-        background: linear-gradient(135deg, var(--color-danger) 0%, var(--color-danger-alt) 100%);
-        color: white;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-size: 0.9rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .btn-danger:hover { transform: translateY(-2px); box-shadow: var(--shadow-danger); }
-    .activity-log-container {
-        max-height: 600px;
-        overflow-y: auto;
-        background: var(--bg-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1rem;
-        font-size: 0.85rem;
-        font-family: 'Monaco', 'Menlo', monospace;
-        white-space: pre-wrap;
-        color: var(--text-secondary);
-        line-height: 1.6;
-    }
-    .activity-log-container::-webkit-scrollbar { width: 6px; }
-    .activity-log-container::-webkit-scrollbar-thumb { background: var(--border-color-alt); border-radius: 10px; }
-    .log-toolbar {
-        display: flex;
-        gap: 0.75rem;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        flex-wrap: wrap;
-    }
-    .log-toolbar .form-group {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .log-toolbar label {
-        font-weight: 600;
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        white-space: nowrap;
-    }
-    .log-toolbar select {
-        padding: 0.5rem 0.75rem;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        font-size: 0.85rem;
-        font-family: inherit;
-        background: var(--bg-secondary);
-        cursor: pointer;
-    }
-    .log-toolbar select:focus {
-        outline: none;
-        border-color: var(--color-primary);
-        box-shadow: var(--shadow-focus);
-    }
-    .empty-state { text-align: center; padding: 3rem; color: var(--text-muted); }
-    .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
-    .log-stats {
-        display: flex;
-        gap: 1.5rem;
-        margin-bottom: 1rem;
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-    }
-    .log-stats span { display: flex; align-items: center; gap: 0.4rem; }
-    .log-stats i { font-size: 0.8rem; }
-    [data-theme="dark"] .activity-log-container { background: var(--bg-primary) !important; color: var(--text-primary) !important; border-color: var(--border-color) !important; }
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: none;
+    padding: var(--space-5);
+    margin-bottom: var(--space-5);
+}
+.section-card h3 {
+    margin: 0 0 var(--space-4) 0;
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+.log-toolbar { margin-bottom: var(--space-4); }
+.log-form { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+.log-toolbar .form-group { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
+.log-toolbar label {
+    font-weight: 600;
+    font-size: var(--text-sm);
+    color: var(--text);
+    white-space: nowrap;
+}
+.log-toolbar select {
+    padding: 8px 36px 8px 12px;
+    background-color: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px 8px;
+}
+.log-toolbar select:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+}
+.btn-primary,
+.btn-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: auto;
+    padding: 0.45rem 0.85rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+    font-size: var(--text-sm);
+    cursor: pointer;
+}
+.btn-primary {
+    background: var(--accent-fill);
+    color: var(--accent-text);
+    border: 1px solid var(--accent-fill);
+}
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--accent-text); }
+.btn-danger {
+    background: transparent;
+    color: var(--st-down);
+    border: 1px solid transparent;
+}
+.btn-danger:hover,
+.btn-danger:focus-visible {
+    background: var(--st-down-solid);
+    border-color: var(--st-down-solid);
+    color: #ffffff;
+}
+.activity-log-container {
+    max-height: 60vh;
+    overflow: auto;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-4);
+    font-size: var(--text-sm);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    white-space: pre;
+    color: var(--text);
+    line-height: 1.55;
+}
+.empty-state { text-align: center; padding: var(--space-6); color: var(--text-muted); }
+.empty-state i { font-size: 32px; margin-bottom: var(--space-3); display: block; }
+.log-stats {
+    display: flex;
+    gap: var(--space-4);
+    margin-bottom: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+}
+.log-stats span { display: flex; align-items: center; gap: 0.4rem; }

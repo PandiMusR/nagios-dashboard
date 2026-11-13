@@ -94,6 +94,7 @@ FILES_TO_UPDATE=(
     "static/css/dashboard.css"
     "templates/edit_config.html"
     "templates/host_manager.html"
+    "static/css/host_manager.css"
     "templates/login.html"
     "templates/monitoring.html"
     "static/js/monitoring.js"
