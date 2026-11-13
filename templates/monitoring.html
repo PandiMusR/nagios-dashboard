@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Monitoring - {{ page|title }}{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/monitoring.css?v=20261113-noc12">
+<link rel="stylesheet" href="/static/css/monitoring.css?v=20261113-noc13">
 {% endblock %}
 {% block content %}
 
@@ -1070,6 +1070,13 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
+function wallDuration(raw) {
+    const value = raw || '';
+    const match = value.match(/^(\d+)\s+days?,\s+(\d+:\d{2}:\d{2})$/);
+    if (!match) return value;
+    return match[1] + 'd ' + match[2];
+}
+
 function updateViewOnlyTable() {
     const tbody = document.getElementById('view-only-tbody');
     if (!tbody || !allHosts) return;
@@ -1108,11 +1115,11 @@ function updateViewOnlyTable() {
         return `
         <tr class="is-${statusClass}">
             <td class="wall-host">${escapeHtml(host.host_name)}</td>
-            <td class="cell-ip">${escapeHtml(host.ip_address)}</td>
+            <td class="cell-ip"><span class="wall-ip">${escapeHtml(host.ip_address)}</span></td>
             <td><span class="status-badge status-${statusClass}">${escapeHtml(host.status)}</span></td>
             <td><span class="stage-badge ${stageClassFor(host.stage)}"><i class="stage-dot"></i> ${escapeHtml(host.stage_label || '')}</span>${note}</td>
-            <td class="num">${escapeHtml(host.duration_str || '')}</td>
-            <td class="wall-detail">${escapeHtml(host.status_information || '')}</td>
+            <td class="num"><span class="wall-duration">${escapeHtml(wallDuration(host.duration_str))}</span></td>
+            <td class="wall-detail"><div class="wall-detail-text">${escapeHtml(host.status_information || '')}</div></td>
         </tr>
         `;
     }).join('');
