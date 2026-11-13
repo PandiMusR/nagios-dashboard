@@ -6,8 +6,9 @@ from ldap3 import MODIFY_ADD
 
 from services.config import LDAP_BASE_DN
 from services.ldap_service import get_ldap_admin_connection
+from services.permissions import is_admin
 from services.shared_helpers import get_nagios_servers, get_monitoring_categories
-from utils.permissions import load_user_permissions, get_default_permissions, save_user_permissions, save_user_password, get_user_password, check_permission
+from utils.permissions import load_user_permissions, save_user_permissions, save_user_password, get_user_password, check_permission
 
 users_bp = Blueprint('users', __name__)
 
@@ -25,14 +26,21 @@ def users() -> str | Response:
     user_list = []
     try:
         conn = get_ldap_admin_connection()
+        conn.search('ou=groups,dc=bnet,dc=id', '(cn=nagiosadmins)', attributes=['member'])
+        admin_members = []
+        if conn.entries:
+            admin_members = [str(m) for m in conn.entries[0].member.values] if hasattr(conn.entries[0], 'member') else []
+
         conn.search('ou=users,dc=bnet,dc=id', '(objectClass=inetOrgPerson)', attributes=['uid', 'cn', 'sn'])
 
         for entry in conn.entries:
+            uid = str(entry.uid)
             user_list.append({
-                'uid': str(entry.uid),
+                'uid': uid,
                 'cn': str(entry.cn),
                 'sn': str(entry.sn),
-                'dn': entry.entry_dn
+                'dn': entry.entry_dn,
+                'is_admin': is_admin(uid, load_user_permissions(uid), admin_members),
             })
         conn.unbind()
     except Exception as e:
@@ -64,27 +72,11 @@ def user_permissions() -> str | Response:
 
         for entry in conn.entries:
             uid = str(entry.uid)
-            user_dn = f'uid={uid},ou=users,dc=bnet,dc=id'
-            in_nagiosadmins = user_dn in admin_members
-
             perms = load_user_permissions(uid)
-
-            if not perms or perms == get_default_permissions():
-                is_admin = in_nagiosadmins
-            else:
-                is_admin = all([
-                    perms.get('dashboard'),
-                    perms.get('servers'),
-                    perms.get('users'),
-                    perms.get('host_manager'),
-                    perms.get('monitoring_settings'),
-                    perms.get('global_settings'),
-                    perms.get('user_permissions')
-                ])
 
             user_list.append({
                 'uid': uid,
-                'is_admin': is_admin,
+                'is_admin': is_admin(uid, perms, admin_members),
                 'permissions': perms
             })
         conn.unbind()
