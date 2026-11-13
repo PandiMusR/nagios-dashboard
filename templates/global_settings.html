@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Global Settings{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/global_settings.css?v=20260721g1">
+<link rel="stylesheet" href="/static/css/global_settings.css?v=20261113-noc9">
 {% endblock %}
 {% block content %}
 <div class="gs-page">
@@ -115,7 +115,7 @@
                 <div class="gs-panel-title"><i class="fas fa-download"></i> Create backup</div>
                 <form method="POST" action="/global-settings/backup">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="gs-field mb-0">
+                    <div class="gs-field field-flush">
                         <label for="backup_name">Backup name</label>
                         <div class="gs-input-group">
                             <span class="gs-input-icon" aria-hidden="true"><i class="fas fa-tag"></i></span>
@@ -132,7 +132,7 @@
                 <div class="gs-panel-title"><i class="fas fa-upload"></i> Upload backup</div>
                 <form method="POST" action="/global-settings/upload-backup" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="gs-field mb-0">
+                    <div class="gs-field field-flush">
                         <label for="backup_file">Backup file</label>
                         <input type="file" id="backup_file" name="backup_file" accept=".tar.gz" required>
                         <p class="gs-hint">Only <code>.tar.gz</code> archives</p>
@@ -184,14 +184,14 @@
             </div>
 
             <div class="gs-field-grid">
-                <div class="gs-field mb-0">
+                <div class="gs-field field-flush">
                     <label for="uptime_kuma_username">Username</label>
                     <div class="gs-input-group">
                         <span class="gs-input-icon" aria-hidden="true"><i class="fas fa-user"></i></span>
                         <input type="text" id="uptime_kuma_username" name="uptime_kuma_username" value="{{ global_config.get('uptime_kuma_username', '') }}" placeholder="admin">
                     </div>
                 </div>
-                <div class="gs-field mb-0">
+                <div class="gs-field field-flush">
                     <label for="uptime_kuma_password">Password</label>
                     <div class="gs-input-group">
                         <span class="gs-input-icon" aria-hidden="true"><i class="fas fa-lock"></i></span>
@@ -226,7 +226,7 @@
         </div>
 
         <div class="gs-api-row">
-            <div class="gs-field mb-0 gs-field-grow">
+            <div class="gs-field field-flush gs-field-grow">
                 <label for="apiKeyDisplay">Current API key</label>
                 <div class="gs-input-group">
                     <span class="gs-input-icon" aria-hidden="true"><i class="fas fa-fingerprint"></i></span>
@@ -258,5 +258,5 @@
     </section>
 </div>
 
-<script src="/static/js/global_settings.js"></script>
+<script src="/static/js/global_settings.js?v=20261113-noc9"></script>
 {% endblock %}

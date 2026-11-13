@@ -47,10 +47,10 @@
 .ms-stat {
     min-width: 88px;
     padding: 0.7rem 0.85rem;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.14);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(8px);
+    border-radius: var(--radius);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
     text-align: center;
 }
 .ms-stat-value {
@@ -71,18 +71,17 @@
 /* Sticky tabs */
 .ms-tabs {
     position: sticky;
-    top: 84px;
+    top: var(--nav-height);
     z-index: 25;
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
     margin-bottom: 1.15rem;
     padding: 0.45rem;
-    border-radius: 14px;
-    background: color-mix(in srgb, var(--bg-secondary) 94%, transparent);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
-    backdrop-filter: blur(12px);
+    border-radius: var(--radius);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: none;
 }
 .ms-tab {
     display: inline-flex;
@@ -193,9 +192,10 @@
 .ms-field select:focus,
 .ms-input-group input:focus,
 .ms-input-group select:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: var(--shadow-focus);
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+    box-shadow: none;
 }
 .ms-field input[readonly] {
     background: var(--bg-tertiary);
@@ -275,7 +275,7 @@
     grid-template-columns: 1fr 1fr;
     gap: 0.8rem;
 }
-.mb-0 { margin-bottom: 0 !important; }
+.field-flush { margin-bottom: 0 !important; }
 .ms-inline { display: inline; }
 .ms-inline-form { max-width: 560px; }
 
@@ -296,16 +296,17 @@
     transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
     white-space: nowrap;
 }
-.ms-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.ms-btn:hover:not(:disabled) { transform: none; }
 .ms-btn:disabled {
     opacity: 0.55;
     cursor: not-allowed;
     transform: none !important;
 }
 .ms-btn-primary {
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-    color: #fff;
-    box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 28%, transparent);
+    background: var(--accent-fill);
+    border-color: var(--accent-fill);
+    color: var(--accent-text);
+    box-shadow: none;
 }
 .ms-btn-primary:hover:not(:disabled) {
     box-shadow: var(--shadow-primary);
@@ -398,8 +399,8 @@
 }
 .ms-cat-card:hover {
     border-color: color-mix(in srgb, var(--color-primary) 35%, var(--border-color));
-    box-shadow: var(--shadow-sm);
-    transform: translateY(-1px);
+    box-shadow: none;
+    transform: none;
 }
 .ms-cat-top {
     display: flex;
@@ -764,10 +765,11 @@
     position: fixed;
     inset: 0;
     background: var(--modal-overlay);
-    z-index: 1000;
-    align-items: center;
+    z-index: 2000;
+    align-items: flex-start;
     justify-content: center;
-    padding: 1rem;
+    padding: calc(var(--nav-height) + 16px) 16px 16px;
+    overflow: auto;
 }
 .ms-modal-card {
     width: min(100%, 480px);
@@ -813,7 +815,7 @@
     }
 }
 @media (max-width: 768px) {
-    .ms-tabs { top: 74px; }
+    .ms-tabs { top: var(--nav-height); }
     .ms-tab span { display: none; }
     .ms-tab {
         flex: 1 1 auto;

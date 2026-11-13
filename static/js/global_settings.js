@@ -30,7 +30,7 @@ function loadBackups() {
         .then(data => {
             const list = document.getElementById('backupList');
             if (!data.backups || data.backups.length === 0) {
-                list.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;"><i class="fas fa-inbox"></i> No backups yet</p>';
+                list.innerHTML = '<p class="gs-empty"><i class="fas fa-inbox"></i> No backups yet</p>';
                 return;
             }
             
@@ -48,7 +48,7 @@ function loadBackups() {
             `).join('');
         })
         .catch(err => {
-            document.getElementById('backupList').innerHTML = '<p style="color: var(--color-danger-alt);"><i class="fas fa-exclamation-circle"></i> Gagal memuat backup</p>';
+            document.getElementById('backupList').innerHTML = '<p class="gs-error"><i class="fas fa-exclamation-circle"></i> Gagal memuat backup</p>';
         });
 }
 
