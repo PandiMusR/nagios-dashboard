@@ -112,8 +112,8 @@ async function loadMonitors() {
                     <div class="ping-value"><i class="fas fa-tachometer-alt"></i> Avg Ping: ${monitor.avgPing.toFixed(0)}ms</div>
                     ` : ''}
 
-                    <div style="margin-top: 1rem; display: flex; gap: 0.75rem;">
-                        <button onclick="removeMonitor(${monitor.id})" class="btn-primary btn-danger" style="font-size: 0.85rem;">
+                    <div class="monitor-actions">
+                        <button onclick="removeMonitor(${monitor.id})" class="btn-ghost-danger">
                             <i class="fas fa-trash"></i> Remove Monitor
                         </button>
                     </div>
