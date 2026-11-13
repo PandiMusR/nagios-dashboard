@@ -40,11 +40,13 @@
         font-size: 0.9rem;
     }
     .filter-group select {
-        padding: 0.75rem;
-        border: 1px solid var(--border-color);
+        padding: 0.75rem 2rem 0.75rem 0.75rem;
+        background-color: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border);
         border-radius: 8px;
         font-size: 0.9rem;
-        transition: all 0.2s;
+        transition: border-color 0.15s ease;
     }
     .filter-group select:focus {
         outline: none;
@@ -86,21 +88,17 @@
         box-shadow: var(--shadow-primary);
     }
     .btn-copy-hosts {
-        background: var(--bg-tertiary);
-        color: var(--text-primary);
-        border: 1px solid var(--border-color);
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border);
         padding: 0.75rem 1.5rem;
-        border-radius: 8px;
+        border-radius: var(--radius);
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s;
     }
     .btn-copy-hosts:hover {
-        background: var(--bg-primary);
-        border-color: var(--color-primary);
-        color: var(--color-primary);
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-primary);
+        background: var(--surface-2);
+        color: var(--text);
     }
     .hosts-table {
         width: 100%;
