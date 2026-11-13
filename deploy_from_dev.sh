@@ -384,7 +384,14 @@ echo ""
 # STEP 8: Verify new app.py can import before starting service
 # -----------------------------------------------------------------------------
 log "Verifying app module imports..."
-if python3 -c "import sys; sys.path.insert(0, '$PROD_PATH'); from app import app; print(f'OK: {len(app.blueprints)} blueprints, {len(app.url_map._rules)} routes')" 2>&1; then
+# OpenRC sources /etc/conf.d/$SERVICE_NAME for the service. The check must
+# use that same environment. Stay in a subshell and do not trace it.
+if (
+    set -a
+    . "/etc/conf.d/$SERVICE_NAME"
+    set +a
+    cd "$PROD_PATH" && python3 -c "import sys; sys.path.insert(0, '$PROD_PATH'); from app import app; print(f'OK: {len(app.blueprints)} blueprints, {len(app.url_map._rules)} routes')"
+) 2>&1; then
     ok "App module verification passed"
 else
     warn "App module verification failed — rolling back app.py, modules, templates, and static..."
@@ -397,6 +404,11 @@ else
             cp -r "$BACKUP_DIR_MOD" "$PROD_PATH/$DIR"
         fi
     done
+    if rc-service "$SERVICE_NAME" start; then
+        warn "Service restarted on restored code"
+    else
+        warn "Restored code but failed to restart $SERVICE_NAME"
+    fi
     fail "App verification failed. Rolled back to backup. Aborting deploy."
 fi
 echo ""
