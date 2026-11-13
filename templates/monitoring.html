@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Monitoring - {{ page|title }}{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/monitoring.css?v=20261113-noc13">
+<link rel="stylesheet" href="/static/css/monitoring.css?v=20261113-noc14">
 {% endblock %}
 {% block content %}
 
@@ -1083,12 +1083,19 @@ function updateViewOnlyTable() {
 
     const newHosts = allHosts.filter(h => !h.stage || h.stage === 'new');
     const downCount = newHosts.filter(h => h.status === 'DOWN').length;
+    const unreachCount = newHosts.length - downCount;
     const downEl = document.getElementById('wall_down_count');
     const unreachEl = document.getElementById('wall_unreach_count');
     const empty = document.getElementById('wall-empty');
     const table = document.getElementById('wall-table');
-    if (downEl) downEl.textContent = String(downCount);
-    if (unreachEl) unreachEl.textContent = String(newHosts.length - downCount);
+    if (downEl) {
+        downEl.textContent = String(downCount);
+        downEl.parentElement.classList.toggle('is-zero', downCount === 0);
+    }
+    if (unreachEl) {
+        unreachEl.textContent = String(unreachCount);
+        unreachEl.parentElement.classList.toggle('is-zero', unreachCount === 0);
+    }
 
     if (newHosts.length === 0) {
         tbody.innerHTML = '';

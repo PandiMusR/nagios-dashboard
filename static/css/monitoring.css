@@ -607,8 +607,10 @@ body.is-wall > *:not(#view-only-table) { display: none; }
     letter-spacing: 0.04em;
 }
 .wall-count .num { font-size: var(--text-2xl); font-variant-numeric: tabular-nums; }
-.wall-count.is-down { background: var(--st-down-bg); color: var(--st-down); }
-.wall-count.is-unreachable { background: var(--st-unreachable-bg); color: var(--st-unreachable); }
+.wall-count.is-down:not(.is-zero) { background: #e03131; color: #ffffff; }
+.wall-count.is-unreachable:not(.is-zero) { background: #f08c00; color: #1a1a1a; }
+.wall-count.is-down.is-zero,
+.wall-count.is-unreachable.is-zero { background: var(--surface-2); color: var(--text-muted); }
 .wall-meta {
     margin-left: auto;
     display: flex;
@@ -704,17 +706,24 @@ body.is-wall > *:not(#view-only-table) { display: none; }
     padding: 4px 12px;
 }
 .wall-table .status-down {
-    color: var(--st-down);
-    border-color: var(--st-down);
-    background: transparent;
+    color: #ffffff;
+    border-color: #e03131;
+    background: #e03131;
 }
 .wall-table .status-unreachable {
-    color: var(--st-unreachable);
-    border-color: var(--st-unreachable);
-    background: transparent;
+    color: #1a1a1a;
+    border-color: #f08c00;
+    background: #f08c00;
 }
-.wall-table tr.is-down td { background: var(--st-down-bg); color: var(--text); }
-.wall-table tr.is-down td:first-child { box-shadow: inset 4px 0 0 var(--st-down-solid); }
+.wall-table tr.is-down td { background: #f8c9c6; color: #1c2430; }
+.wall-table tr.is-down td:first-child { box-shadow: inset 8px 0 0 #e03131; }
+.wall-table tr.is-down .wall-ip,
+.wall-table tr.is-down .wall-detail-text,
+.wall-table tr.is-down .stage-note { color: #3d4a5c; }
+[data-theme="dark"] .wall-table tr.is-down td { background: #5c1f1c; color: #e7eef6; }
+[data-theme="dark"] .wall-table tr.is-down .wall-ip,
+[data-theme="dark"] .wall-table tr.is-down .wall-detail-text,
+[data-theme="dark"] .wall-table tr.is-down .stage-note { color: #a3b3c6; }
 .wall-table tr.is-unreachable td { background: var(--st-unreachable-bg); }
 .wall-table tr.is-unreachable td:first-child { box-shadow: inset 4px 0 0 var(--st-unreachable-solid); }
 .wall-host {
