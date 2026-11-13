@@ -386,6 +386,7 @@ Generate API key in **Global Settings → API Key**.
 |---|---|---|
 | `/api/hosts/add` | POST | Add a host to a Nagios server |
 | `/api/hosts/batch-add` | POST | Add multiple hosts at once |
+| `/api/hosts/change-ip` | POST | Replace exact Bhome addresses (`10.10.0.1` does not match `10.10.0.11`) |
 | `/api/hosts/delete` | DELETE | Delete a host |
 | `/api/hosts` | GET | List hosts on a server |
 | `/api/servers` | GET | List all running servers |
@@ -402,6 +403,12 @@ curl -X POST http://server/api/hosts/add \
 
 # Query stage history
 curl -H "X-API-Key: YOUR_KEY" "http://server/api/stage-history?host=switch-1&limit=50"
+
+# Preview a Bhome IP change. Only an address that is exactly 10.10.0.1 is listed.
+curl -X POST http://server/api/hosts/change-ip \
+  -H "X-API-Key: YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"server":"Bhome","dry_run":true,"changes":[{"old_ip":"10.10.0.1","new_ip":"10.11.0.1"}]}'
 ```
 
 ---
