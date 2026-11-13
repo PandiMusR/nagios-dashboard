@@ -27,7 +27,7 @@ function showDashboardFetchErrors(errors) {
     const list = document.createElement('ul');
     errors.forEach(function (msg) {
         const li = document.createElement('li');
-        li.textContent = msg;
+        li.textContent = humanizeFetchError(msg);
         list.appendChild(li);
     });
 
@@ -50,6 +50,43 @@ function loadDashboardStats() {
             showDashboardFetchErrors(['Failed to load dashboard stats']);
             document.getElementById('servers_container').innerHTML = '<div class="dashboard-empty is-error"><i class="fas fa-exclamation-circle"></i> Gagal memuat server</div>';
         });
+}
+
+function staleAgeSeconds(message) {
+    const match = String(message).match(/last success\s+(\d+)s ago/i);
+    return match ? Number(match[1]) : null;
+}
+
+function formatAgeAgo(seconds) {
+    const total = Math.max(0, Math.floor(Number(seconds) || 0));
+    if (total < 60) return 'kurang dari 1 menit lalu';
+    const minutes = Math.floor(total / 60);
+    if (minutes < 60) return minutes + ' menit lalu';
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + ' jam lalu';
+    return Math.floor(hours / 24) + ' hari lalu';
+}
+
+function formatAgeShort(seconds) {
+    const total = Math.max(0, Math.floor(Number(seconds) || 0));
+    if (total < 60) return '< 1 menit';
+    const minutes = Math.floor(total / 60);
+    if (minutes < 60) return minutes + ' menit';
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + ' jam';
+    return Math.floor(hours / 24) + ' hari';
+}
+
+function humanizeFetchError(message) {
+    const age = staleAgeSeconds(message);
+    if (age == null) return String(message);
+    return String(message).replace(/last success\s+\d+s ago/i, formatAgeAgo(age));
+}
+
+function stalePill(message) {
+    const age = staleAgeSeconds(message);
+    const label = age == null ? 'Stale' : ('Stale · ' + formatAgeShort(age));
+    return `<span class="stale-pill" title="${escapeHtml(String(message))}"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> ${escapeHtml(label)}</span>`;
 }
 
 function statusBadge(value, label, kind) {
@@ -87,19 +124,16 @@ function updateDashboard(servers, incomplete) {
         const portMeta = server.port
             ? `<div class="server-meta">Port ${escapeHtml(String(server.port))}</div>`
             : '';
-        const errorNote = server.fetch_error
-            ? `<div class="snapshot-error-note"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(String(server.fetch_error))}</div>`
-            : '';
+        const errorPill = server.fetch_error ? stalePill(server.fetch_error) : '';
         return `
         <div class="server-card ${stateClass}">
             <div class="server-header">
                 <div class="server-identity">
-                    <div class="server-name"><i class="fas fa-server"></i><span class="server-name-text" title="${escapeHtml(server.name)}">${escapeHtml(server.name)}</span></div>
+                    <div class="server-name"><i class="fas fa-server"></i><span class="server-name-text" title="${escapeHtml(server.name)}">${escapeHtml(server.name)}</span>${errorPill}</div>
                     ${portMeta}
                 </div>
                 <a href="/nagios/${encodeURIComponent(server.name)}" target="_blank" class="btn-open"><i class="fas fa-external-link-alt"></i> Open</a>
             </div>
-            ${errorNote}
             <div class="status-section">
                 <div class="status-title">Hosts <span>${hosts.total}</span></div>
                 <div class="status-grid status-grid-hosts">

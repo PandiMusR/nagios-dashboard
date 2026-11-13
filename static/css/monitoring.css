@@ -589,10 +589,12 @@ body.is-wall > *:not(#view-only-table) { display: none; }
 }
 .wall-counts { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .wall-scope {
-    font-size: var(--text-sm);
+    align-self: center;
+    font-size: var(--text-lg);
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
+    line-height: 1;
     color: var(--text-muted);
 }
 .wall-count {
