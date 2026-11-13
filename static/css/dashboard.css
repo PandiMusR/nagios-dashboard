@@ -1,11 +1,14 @@
-.stat-badge {
-        display: inline-block;
-        background: rgba(255,255,255,0.2);
-        padding: 0.5rem 1.25rem;
-        border-radius: 50px;
-        margin-right: 1rem;
-        margin-top: 1rem;
-        font-size: 0.85rem;
+.page-header h1 i { margin-right: 0.5rem; }
+    .stat-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius-pill);
+        font-size: var(--text-sm);
         font-weight: 600;
     }
     .servers-grid {
@@ -19,16 +22,12 @@
         display: flex;
         flex-direction: column;
         gap: 1.1rem;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 20px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
         padding: 1.35rem 1.4rem 1.45rem;
-        box-shadow:
-            0 1px 2px rgba(15, 23, 42, 0.04),
-            0 10px 28px rgba(15, 23, 42, 0.07);
+        box-shadow: none;
         overflow: hidden;
-        transition: transform 0.22s ease, box-shadow 0.22s ease;
-        animation: slideUp 0.4s ease;
     }
     .server-card::before {
         content: '';
@@ -36,31 +35,12 @@
         left: 0;
         top: 0;
         bottom: 0;
-        width: 5px;
-        background: var(--color-success);
+        width: 3px;
+        background: var(--st-up-solid);
     }
-    .server-card.is-down::before {
-        background: var(--color-danger);
-    }
-    .server-card.is-stale::before {
-        background: var(--color-warning);
-    }
-    .server-card:hover {
-        transform: translateY(-3px);
-        box-shadow:
-            0 2px 6px rgba(15, 23, 42, 0.06),
-            0 16px 36px rgba(15, 23, 42, 0.10);
-    }
-    @keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
+    .server-card.is-down::before { background: var(--st-down-solid); }
+    .server-card.is-unreachable::before { background: var(--st-unreachable-solid); }
+    .server-card.is-stale::before { background: var(--st-warning-solid); }
     .server-header {
         display: flex;
         justify-content: space-between;
@@ -110,24 +90,23 @@
     }
     .btn-open {
         flex-shrink: 0;
-        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-        color: white;
-        border: none;
+        background: var(--accent-fill);
+        color: var(--accent-text);
+        border: 1px solid var(--accent-fill);
         padding: 0.45rem 0.95rem;
-        border-radius: 999px;
-        font-size: 0.78rem;
+        border-radius: var(--radius);
+        font-size: var(--text-sm);
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
         gap: 0.4rem;
     }
     .btn-open:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-primary);
-        color: white;
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+        color: var(--accent-text);
     }
     .status-section {
         display: flex;
@@ -159,7 +138,7 @@
         flex: 1 1 0;
         min-width: 0;
         padding: 0.85rem 0.4rem 0.7rem;
-        border-radius: 14px;
+        border-radius: var(--radius);
         text-align: center;
         font-weight: 600;
         min-height: 4.5rem;
@@ -179,15 +158,12 @@
         font-size: 0.65rem;
         font-weight: 700;
         letter-spacing: 0.06em;
-        opacity: 0.78;
     }
-    .status-badge.is-zero {
-        opacity: 0.55;
-    }
-    .status-up { background: var(--alert-success-bg); color: var(--alert-success-color); }
-    .status-down { background: var(--alert-error-bg); color: var(--alert-error-color); }
-    .status-warning { background: var(--alert-warning-bg); color: var(--alert-warning-color); }
-    .status-unknown { background: var(--bg-tertiary); color: var(--text-secondary); }
+    .status-up { background: var(--st-up-bg); color: var(--st-up); }
+    .status-down { background: var(--st-down-bg); color: var(--st-down); }
+    .status-unreachable { background: var(--st-unreachable-bg); color: var(--st-unreachable); }
+    .status-warning { background: var(--st-warning-bg); color: var(--st-warning); }
+    .status-unknown { background: var(--st-unknown-bg); color: var(--st-unknown); }
     .loading-spinner {
         display: inline-block;
         width: 16px;
@@ -205,7 +181,7 @@
         background: var(--alert-warning-bg);
         color: var(--alert-warning-color);
         border: 1px solid var(--color-warning);
-        border-radius: 16px;
+        border-radius: var(--radius);
         padding: 1rem 1.25rem;
         margin: 0 0 1.5rem 0;
         font-weight: 600;
@@ -214,7 +190,7 @@
         display: none !important;
     }
     .monitoring-fetch-alert-title::before {
-        content: "⚠️ ";
+        content: none;
     }
     .monitoring-fetch-alert ul {
         margin: 0.5rem 0 0 1.25rem;
@@ -231,29 +207,17 @@
         font-weight: 600;
         line-height: 1.35;
     }
-    [data-theme="dark"] .server-card {
-        box-shadow:
-            0 1px 2px rgba(0, 0, 0, 0.28),
-            0 12px 32px rgba(0, 0, 0, 0.28);
+    .dashboard-empty {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: var(--space-7) var(--space-4);
+        color: var(--text-muted);
+        font-weight: 600;
     }
-    [data-theme="dark"] .server-card:hover {
-        box-shadow:
-            0 2px 8px rgba(0, 0, 0, 0.32),
-            0 18px 40px rgba(0, 0, 0, 0.38);
-    }
+    .dashboard-empty.is-error { color: var(--st-down); }
+    .dashboard-empty.is-warn { color: var(--st-warning); }
     @media (max-width: 768px) {
         .servers-grid {
             grid-template-columns: 1fr;
-        }
-        .page-header {
-            padding: 1.5rem;
-        }
-    }
-    @media (prefers-reduced-motion: reduce) {
-        .server-card,
-        .server-card:hover,
-        .btn-open:hover {
-            animation: none;
-            transform: none;
         }
     }
