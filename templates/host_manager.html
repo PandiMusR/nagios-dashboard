@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Host Manager{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="/static/css/host_manager.css?v=20261113-noc4">
+<link rel="stylesheet" href="/static/css/host_manager.css?v=20261113-noc5">
 
 <div class="page-header">
     <h1><i class="fas fa-network-wired"></i> Host Manager</h1>
@@ -53,7 +53,7 @@
         </div>
         <div class="filter-bar-button-group">
             <button onclick="refreshAllHostStatus()" class="btn-primary btn-info" title="Refresh host status"><i class="fas fa-sync-alt"></i> <span class="btn-text">Refresh</span></button>
-            <button onclick="openBatchModal()" class="btn-primary btn-success" title="Add multiple hosts"><i class="fas fa-list"></i> <span class="btn-text">Batch Add</span></button>
+            <button onclick="openBatchModal()" class="btn-secondary" title="Add multiple hosts"><i class="fas fa-list"></i> <span class="btn-text">Batch Add</span></button>
             <button onclick="openAddModal()" class="btn-primary" title="Add a host"><i class="fas fa-plus"></i> <span class="btn-text">Tambah Host</span></button>
         </div>
     </div>
@@ -617,10 +617,12 @@ function renderTable() {
             <td class="cell-clip" title="${escHtml(host.host_name)}"><button type="button" class="host-down-link" data-server="${escHtml(host.server)}" data-host="${escHtml(host.host_name)}">${escHtml(host.host_name)}</button></td>
             <td class="cell-clip" title="${host.alias || 'No alias'}">${host.alias || '-'}</td>
             <td class="cell-clip" title="${host.address}">${host.address}</td>
-            <td class="cell-center">${statusBadge}</td>
-            <td class="cell-center">
-                <button onclick="editHost('${host.server}', '${host.host_name}', '${host.address}', '${host.parents || ''}', '${host.alias || ''}')" class="btn-sm btn-edit" title="Edit host"><i class="fas fa-edit"></i> Edit</button>
-                <button onclick="confirmDelete('${host.server}', '${host.host_name}')" class="btn-sm btn-danger" title="Delete host"><i class="fas fa-trash"></i> Delete</button>
+            <td>${statusBadge}</td>
+            <td class="cell-actions">
+                <div class="row-actions">
+                    <button onclick="editHost('${host.server}', '${host.host_name}', '${host.address}', '${host.parents || ''}', '${host.alias || ''}')" class="icon-btn" title="Edit host" aria-label="Edit host"><i class="fas fa-edit" aria-hidden="true"></i></button>
+                    <button onclick="confirmDelete('${host.server}', '${host.host_name}')" class="icon-btn is-danger" title="Delete host" aria-label="Delete host"><i class="fas fa-trash" aria-hidden="true"></i></button>
+                </div>
             </td>
         </tr>
     `}).join('');
