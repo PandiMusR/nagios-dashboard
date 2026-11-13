@@ -34,6 +34,13 @@
         }
         initDarkMode();
 
+        document.addEventListener('click', function(e) {
+            const close = e.target.closest('.alert .btn-close');
+            if (!close) return;
+            const alert = close.closest('.alert');
+            if (alert) alert.remove();
+        });
+
         window.addEventListener('storage', function(e) {
             if (e.key === 'theme') {
                 if (e.newValue === 'dark') {

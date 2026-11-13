@@ -814,6 +814,7 @@ body .modal-footer {
     font-weight: 600;
     font-size: var(--text-sm);
 }
+.password-form-group label i { margin-right: var(--space-2); }
 
 .password-form-group input,
 .password-form-group .form-control {
