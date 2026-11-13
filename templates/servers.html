@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Server Management{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/servers.css?v=20261113-noc6">
+<link rel="stylesheet" href="/static/css/servers.css?v=20261113-noc7">
 {% endblock %}
 {% block content %}
 
@@ -21,13 +21,13 @@
                 <small class="field-hint">Only alphanumeric, hyphens, and underscores allowed</small>
             </div>
             <div class="form-group">
-                <div class="label-row">
-                    <label for="serverPort"><i class="fas fa-network-wired"></i> Port</label>
+                <label for="serverPort"><i class="fas fa-network-wired"></i> Port</label>
+                <div class="input-action">
+                    <input type="number" id="serverPort" name="port" required placeholder="e.g., 8080" min="1000" max="65535">
                     <button type="button" class="btn-secondary" onclick="suggestPort()" title="Get recommended available port">
                         <i class="fas fa-lightbulb"></i> Auto
                     </button>
                 </div>
-                <input type="number" id="serverPort" name="port" required placeholder="e.g., 8080" min="1000" max="65535">
                 <div id="portStatus" class="port-status" style="display: none;"></div>
             </div>
         </div>

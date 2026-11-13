@@ -332,7 +332,7 @@ a { color: var(--accent); }
     position: fixed;
     left: 0;
     top: var(--nav-height);
-    bottom: 0;
+    height: calc(100vh - var(--nav-height));
     overflow-y: auto;
     overflow-x: hidden;
     transition: width 0.2s ease;

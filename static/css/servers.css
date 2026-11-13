@@ -31,14 +31,7 @@
     color: var(--text);
     margin-bottom: var(--space-2);
 }
-.label-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2);
-    margin-bottom: var(--space-2);
-}
-.label-row label { margin-bottom: 0; }
+.input-action { display: flex; align-items: stretch; }
 .field-hint { color: var(--text-muted); margin-top: 4px; display: block; font-size: var(--text-xs); }
 .form-group input,
 .form-group select,
@@ -63,6 +56,21 @@
     outline: 2px solid var(--accent);
     outline-offset: 1px;
     border-color: var(--accent);
+}
+.form-group .input-action input {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.input-action .btn-secondary {
+    align-self: stretch;
+    height: auto;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: 0;
+    padding: 0 0.85rem;
 }
 .port-status {
     margin-top: var(--space-2);

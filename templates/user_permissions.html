@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}User Permissions{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="/static/css/user_permissions.css?v=20261113-noc6">
+<link rel="stylesheet" href="/static/css/user_permissions.css?v=20261113-noc8">
 
 <div class="page-header">
     <h1><i class="fas fa-user-shield"></i> User Permissions</h1>
@@ -41,7 +41,7 @@
                         {% if not user.is_admin %}
                         <button onclick="editPermissions('{{ user.uid }}')" class="icon-btn" title="Edit permissions" aria-label="Edit permissions"><i class="fas fa-edit" aria-hidden="true"></i></button>
                         {% else %}
-                        <span class="muted">Full Access</span>
+                        <span class="icon-slot" title="Admin punya full access" aria-label="Admin punya full access"><i class="fas fa-lock" aria-hidden="true"></i></span>
                         {% endif %}
                     </td>
                 </tr>

@@ -37,7 +37,8 @@
     font-size: var(--text-sm);
 }
 .users-table tbody tr:hover td { background: var(--surface-2); }
-.col-action { width: 72px; }
+.col-action,
+.users-table td:last-child { width: 72px; white-space: nowrap; }
 .perm-count { color: var(--text-muted); }
 .role-badge,
 .access-pill {
@@ -76,6 +77,14 @@
     background: var(--surface-2);
     border-color: var(--accent);
     color: var(--accent);
+}
+.icon-slot {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
 }
 .muted { color: var(--text-muted); font-size: var(--text-sm); }
 .table-message { padding: var(--space-5); text-align: center; color: var(--text-muted); }
