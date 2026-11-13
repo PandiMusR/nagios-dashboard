@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Host Manager{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="/static/css/host_manager.css">
+<link rel="stylesheet" href="/static/css/host_manager.css?v=20261104-trend2">
 
 <div class="page-header">
     <h1><i class="fas fa-network-wired"></i> Host Manager</h1>
@@ -244,6 +244,33 @@
             <button type="button" id="confirmDeleteBtn" class="btn-primary btn-danger"><i class="fas fa-trash"></i> Delete All</button>
         </div>
     </div>
+</div>
+
+<div id="downHistoryDrawer" class="down-drawer" aria-hidden="true">
+    <div class="down-drawer-backdrop" onclick="closeDownHistory()"></div>
+    <aside class="down-drawer-panel" role="dialog" aria-labelledby="downHistoryTitle">
+        <div class="down-drawer-head">
+            <div>
+                <h3 id="downHistoryTitle">History down</h3>
+                <p id="downHistorySubtitle"></p>
+            </div>
+            <button type="button" class="down-drawer-close" onclick="closeDownHistory()" aria-label="Tutup">&times;</button>
+        </div>
+        <form id="downHistoryFilter" class="down-drawer-filter">
+            <label>Dari
+                <input type="date" id="downStart">
+            </label>
+            <label>Sampai
+                <input type="date" id="downEnd">
+            </label>
+            <button type="submit" class="btn-primary"><i class="fas fa-search"></i> Terapkan</button>
+        </form>
+        <p class="down-drawer-note">Diambil dari Stage History. Catatan log tidak diubah.</p>
+        <div id="downHistorySummary" class="down-summary"></div>
+        <div id="downHistoryChart" class="down-trend" hidden></div>
+        <div id="downHistoryList" class="down-list"></div>
+        <a id="downHistoryAudit" class="down-audit-link" href="/stage-history" target="_blank" rel="noopener">Buka di Stage History</a>
+    </aside>
 </div>
 
 <script>
@@ -587,7 +614,7 @@ function renderTable() {
         <tr>
             <td title="${host.server}" style="overflow: hidden; text-overflow: ellipsis;">${host.server}</td>
             <td title="${host.parents || 'No parent'}" style="overflow: hidden; text-overflow: ellipsis;">${host.parents || '-'}</td>
-            <td title="${host.host_name}" style="overflow: hidden; text-overflow: ellipsis;"><strong>${host.host_name}</strong></td>
+            <td title="${escHtml(host.host_name)}" style="overflow: hidden; text-overflow: ellipsis;"><button type="button" class="host-down-link" data-server="${escHtml(host.server)}" data-host="${escHtml(host.host_name)}">${escHtml(host.host_name)}</button></td>
             <td title="${host.alias || 'No alias'}" style="overflow: hidden; text-overflow: ellipsis;">${host.alias || '-'}</td>
             <td title="${host.address}" style="overflow: hidden; text-overflow: ellipsis;">${host.address}</td>
             <td style="text-align: center;">${statusBadge}</td>
@@ -838,6 +865,388 @@ document.getElementById('editModal').addEventListener('click', function(e) {
 
 document.getElementById('deleteModal').addEventListener('click', function(e) {
     if (e.target === this) closeDeleteModal();
+});
+
+function escHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, function(ch) {
+        return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch];
+    });
+}
+
+let downHistoryHost = '';
+let downHistoryServer = '';
+
+function fmtTs(ts) {
+    if (!ts) return '—';
+    return String(ts).slice(0, 19).replace('T', ' ');
+}
+
+function fmtDuration(seconds) {
+    if (seconds == null) return '—';
+    const s = Math.max(0, Math.floor(seconds));
+    const days = Math.floor(s / 86400);
+    const hours = Math.floor((s % 86400) / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    if (days) return days + ' hari ' + hours + ' jam';
+    if (hours) return hours + ' jam ' + mins + ' menit';
+    if (mins) return mins + ' menit';
+    return s + ' detik';
+}
+
+function stageLabel(labels, key) {
+    return (labels && labels[key]) || key || '—';
+}
+
+const TREND_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+function parseTs(ts) {
+    if (!ts) return null;
+    const date = new Date(String(ts).replace(' ', 'T'));
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function fmtTrendWhen(date) {
+    if (!date) return '—';
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const mins = String(date.getMinutes()).padStart(2, '0');
+    return day + ' ' + TREND_MONTHS[date.getMonth()] + ' ' + date.getFullYear() + ' ' + hours + ':' + mins;
+}
+
+function fmtTrendDay(date) {
+    return String(date.getDate()).padStart(2, '0') + ' ' + TREND_MONTHS[date.getMonth()];
+}
+
+function fmtTrendDuration(seconds) {
+    const s = Math.max(0, Math.floor(seconds));
+    const days = Math.floor(s / 86400);
+    const hours = Math.floor((s % 86400) / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const parts = [];
+    if (days) parts.push(days + ' hari');
+    if (hours) parts.push(hours + ' jam');
+    if (mins || !parts.length) parts.push(mins + ' menit');
+    return parts.join(' ');
+}
+
+function trendTicks(start, end) {
+    const days = (end - start) / 86400000;
+    let step = 1;
+    if (days > 50) step = 7;
+    else if (days > 21) step = 3;
+    else if (days > 12) step = 2;
+    const ticks = [];
+    const cursor = new Date(start);
+    cursor.setHours(0, 0, 0, 0);
+    if (cursor < start) cursor.setDate(cursor.getDate() + 1);
+    while (cursor < end) {
+        const ratio = (cursor - start) / (end - start);
+        if (ratio > 0.02 && ratio < 0.96) ticks.push({ date: new Date(cursor), ratio: ratio });
+        cursor.setDate(cursor.getDate() + step);
+    }
+    return ticks;
+}
+
+function renderStateChart(data) {
+    const root = document.getElementById('downHistoryChart');
+    const start = parseTs(data.window_start);
+    const end = parseTs(data.as_of);
+    if (!root || !start || !end || end <= start) {
+        if (root) root.hidden = true;
+        return;
+    }
+    const totalMs = end - start;
+    const spans = data.spans || [];
+    const segments = [];
+    spans.forEach((span, index) => {
+        const from = parseTs(span.down_at);
+        if (!from) return;
+        let to = null;
+        let kind = 'down';
+        if (span.still_down) {
+            to = end;
+        } else if (span.up_at) {
+            to = parseTs(span.up_at);
+        } else if (span.missing_recovery) {
+            kind = 'unknown';
+            const next = spans[index + 1] && parseTs(spans[index + 1].down_at);
+            to = next || end;
+        }
+        if (!to) return;
+        const left = Math.max(from.getTime(), start.getTime());
+        const right = Math.min(to.getTime(), end.getTime());
+        if (right <= left) return;
+        segments.push({ left: left, right: right, kind: kind, span: span });
+    });
+
+    let downMs = 0;
+    let unknownMs = 0;
+    segments.forEach(seg => {
+        const width = seg.right - seg.left;
+        if (seg.kind === 'unknown') unknownMs += width;
+        else downMs += width;
+    });
+    const upMs = Math.max(0, totalMs - downMs - unknownMs);
+    const pct = ms => (ms / totalMs * 100).toFixed(3) + '%';
+
+    root.hidden = false;
+    root.textContent = '';
+    const card = document.createElement('div');
+    card.className = 'down-trend-card';
+
+    const kicker = document.createElement('p');
+    kicker.className = 'down-trend-kicker';
+    kicker.textContent = 'Riwayat keadaan';
+    const range = document.createElement('p');
+    range.className = 'down-trend-range';
+    range.textContent = fmtTrendWhen(start) + ' – ' + fmtTrendWhen(end);
+    const dur = document.createElement('p');
+    dur.className = 'down-trend-dur';
+    dur.textContent = 'Durasi ' + fmtTrendDuration(totalMs / 1000);
+    card.appendChild(kicker);
+    card.appendChild(range);
+    card.appendChild(dur);
+
+    const body = document.createElement('div');
+    body.className = 'down-trend-body';
+    const plot = document.createElement('div');
+    const bar = document.createElement('div');
+    bar.className = 'down-trend-bar';
+    bar.setAttribute('role', 'img');
+    bar.setAttribute('aria-label', 'Up ' + pct(upMs) + ', down ' + pct(downMs));
+
+    const ticks = trendTicks(start, end);
+    ticks.forEach(tick => {
+        const grid = document.createElement('span');
+        grid.className = 'down-trend-grid';
+        grid.style.left = (tick.ratio * 100) + '%';
+        bar.appendChild(grid);
+    });
+    segments.forEach(seg => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'down-trend-seg' + (seg.kind === 'unknown' ? ' is-unknown' : '');
+        button.style.left = ((seg.left - start.getTime()) / totalMs * 100) + '%';
+        button.style.width = ((seg.right - seg.left) / totalMs * 100) + '%';
+        const endLabel = seg.span.still_down ? 'masih down' : (seg.span.up_at ? 'Up ' + fmtTs(seg.span.up_at) : 'pulih tidak tercatat');
+        button.title = 'Down ' + fmtTs(seg.span.down_at) + ' – ' + endLabel;
+        button.setAttribute('aria-label', button.title);
+        button.addEventListener('click', function() {
+            const row = document.querySelector('#downHistoryList [data-down-at="' + seg.span.down_at + '"]');
+            if (!row) return;
+            row.open = true;
+            row.scrollIntoView({ block: 'nearest' });
+        });
+        bar.appendChild(button);
+    });
+
+    const axis = document.createElement('div');
+    axis.className = 'down-trend-axis';
+    ticks.forEach(tick => {
+        const label = document.createElement('span');
+        label.className = 'down-trend-tick';
+        label.style.left = (tick.ratio * 100) + '%';
+        label.textContent = fmtTrendDay(tick.date);
+        axis.appendChild(label);
+    });
+    plot.appendChild(bar);
+    plot.appendChild(axis);
+
+    const stats = document.createElement('dl');
+    stats.className = 'down-trend-stats';
+    const rows = [
+        ['is-up', 'Up', upMs],
+        ['is-down', 'Down', downMs]
+    ];
+    if (unknownMs >= 1000) rows.push(['is-unknown', 'Tidak tercatat', unknownMs]);
+    rows.forEach(row => {
+        const item = document.createElement('div');
+        item.className = row[0];
+        const term = document.createElement('dt');
+        term.textContent = row[1];
+        const percent = document.createElement('dd');
+        percent.textContent = pct(row[2]);
+        const amount = document.createElement('dd');
+        amount.textContent = fmtTrendDuration(row[2] / 1000);
+        item.appendChild(term);
+        item.appendChild(percent);
+        item.appendChild(amount);
+        stats.appendChild(item);
+    });
+
+    body.appendChild(plot);
+    body.appendChild(stats);
+    card.appendChild(body);
+    root.appendChild(card);
+}
+
+function openDownHistory(server, host) {
+    downHistoryServer = server;
+    downHistoryHost = host;
+    document.getElementById('downStart').value = '';
+    document.getElementById('downEnd').value = '';
+    document.getElementById('downHistorySubtitle').textContent = server + ' · ' + host;
+    const drawer = document.getElementById('downHistoryDrawer');
+    drawer.classList.add('show');
+    drawer.setAttribute('aria-hidden', 'false');
+    loadDownHistory();
+}
+
+function closeDownHistory() {
+    const drawer = document.getElementById('downHistoryDrawer');
+    drawer.classList.remove('show');
+    drawer.setAttribute('aria-hidden', 'true');
+}
+
+function loadDownHistory() {
+    const summary = document.getElementById('downHistorySummary');
+    const list = document.getElementById('downHistoryList');
+    summary.textContent = '';
+    list.textContent = 'Memuat…';
+    const chart = document.getElementById('downHistoryChart');
+    if (chart) {
+        chart.hidden = true;
+        chart.textContent = '';
+    }
+    const params = new URLSearchParams({
+        host: downHistoryHost,
+        container: downHistoryServer
+    });
+    const start = document.getElementById('downStart').value;
+    const end = document.getElementById('downEnd').value;
+    if (start) params.set('start_date', start);
+    if (end) params.set('end_date', end);
+    fetch('/host-manager/down-history?' + params.toString())
+        .then(r => r.json().then(data => ({ok: r.ok, data})))
+        .then(({ok, data}) => {
+            if (!ok) {
+                list.textContent = data.error || 'Gagal memuat history down';
+                const chart = document.getElementById('downHistoryChart');
+                if (chart) chart.hidden = true;
+                return;
+            }
+            renderDownHistory(data);
+        })
+        .catch(() => {
+            list.textContent = 'Gagal memuat history down';
+            const chart = document.getElementById('downHistoryChart');
+            if (chart) chart.hidden = true;
+        });
+}
+
+function renderDownHistory(data) {
+    document.getElementById('downStart').value = data.start_date || '';
+    document.getElementById('downEnd').value = data.end_date || '';
+    const audit = document.getElementById('downHistoryAudit');
+    audit.href = data.stage_history_url || '/stage-history';
+
+    const summary = document.getElementById('downHistorySummary');
+    summary.textContent = '';
+    const s = data.summary || {};
+    const bits = [
+        (s.episodes || 0) + ' episode',
+        'total ' + fmtDuration(s.total_downtime_seconds || 0),
+        s.still_down ? 'sedang down' : 'tidak sedang down',
+        s.last_down_at ? 'terakhir ' + fmtTs(s.last_down_at) : 'belum ada down di rentang ini'
+    ];
+    bits.forEach(text => {
+        const chip = document.createElement('span');
+        chip.textContent = text;
+        summary.appendChild(chip);
+    });
+    if (data.clamped) {
+        const note = document.createElement('span');
+        note.textContent = 'rentang dibatasi 3 bulan';
+        summary.appendChild(note);
+    }
+    if (data.truncated) {
+        const note = document.createElement('span');
+        note.textContent = 'menampilkan ' + (s.shown || 0) + ' episode terbaru';
+        summary.appendChild(note);
+    }
+
+    renderStateChart(data);
+
+    const list = document.getElementById('downHistoryList');
+    list.textContent = '';
+    const episodes = data.episodes || [];
+    if (!episodes.length) {
+        const empty = document.createElement('p');
+        empty.className = 'down-empty';
+        empty.textContent = 'Tidak ada down (up → New) pada rentang ini.';
+        list.appendChild(empty);
+        return;
+    }
+    const labels = data.stage_labels || {};
+    episodes.forEach(ep => list.appendChild(renderEpisode(ep, labels)));
+}
+
+function renderEpisode(ep, labels) {
+    const details = document.createElement('details');
+    details.className = 'down-episode';
+    details.dataset.downAt = ep.down_at || '';
+    const summary = document.createElement('summary');
+    const title = document.createElement('span');
+    title.className = 'down-episode-when';
+    let endText = 'Masih down';
+    if (ep.missing_recovery) endText = 'Pulih tidak tercatat';
+    else if (ep.up_at) endText = 'Up ' + fmtTs(ep.up_at);
+    const downLine = document.createElement('span');
+    downLine.textContent = 'Down ' + fmtTs(ep.down_at);
+    const upLine = document.createElement('span');
+    upLine.textContent = endText;
+    title.appendChild(downLine);
+    title.appendChild(upLine);
+    const dur = document.createElement('span');
+    dur.className = 'down-episode-dur';
+    dur.textContent = ep.still_down ? fmtDuration(ep.duration_seconds) + ' (berjalan)' : fmtDuration(ep.duration_seconds);
+    summary.appendChild(title);
+    summary.appendChild(dur);
+    details.appendChild(summary);
+
+    const trail = document.createElement('div');
+    trail.className = 'down-trail';
+    (ep.trail || []).forEach(row => {
+        const line = document.createElement('div');
+        line.className = 'down-trail-row';
+        const when = document.createElement('span');
+        when.textContent = fmtTs(row.ts);
+        const change = document.createElement('strong');
+        change.textContent = stageLabel(labels, row.from) + ' → ' + stageLabel(labels, row.to);
+        const who = document.createElement('span');
+        who.textContent = row.user || '';
+        const note = document.createElement('span');
+        note.textContent = row.note || '';
+        line.appendChild(when);
+        line.appendChild(change);
+        line.appendChild(who);
+        line.appendChild(note);
+        trail.appendChild(line);
+    });
+    if (ep.trail_truncated) {
+        const more = document.createElement('p');
+        more.className = 'down-empty';
+        more.textContent = 'Jejak stage dipotong. Selengkapnya ada di Stage History.';
+        trail.appendChild(more);
+    }
+    details.appendChild(trail);
+    return details;
+}
+
+document.getElementById('hostsTableBody').addEventListener('click', function(e) {
+    const btn = e.target.closest('.host-down-link');
+    if (!btn) return;
+    openDownHistory(btn.dataset.server, btn.dataset.host);
+});
+
+document.getElementById('downHistoryFilter').addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (!downHistoryHost) return;
+    loadDownHistory();
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDownHistory();
 });
 
 renderTable();

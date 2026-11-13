@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import base64
 from datetime import datetime
+from urllib.parse import urlencode
 
 from flask import Blueprint, render_template, request, redirect, session, jsonify, flash, Response
 import os, json, subprocess, re, requests, threading
 
-from services.config import CONFIG_DIR
+from services.config import CONFIG_DIR, STAGE_LABELS
+from services.down_history import build_down_episodes
 from services.encryption import decrypt_session_value, load_encrypted_json
 from services.ldap_service import log_activity
 from services.uptime_kuma import add_host_to_uptime_kuma, get_uptime_kuma_config
@@ -224,6 +226,44 @@ def get_host_status_endpoint(server: str) -> Response | tuple[Response, int]:
         import traceback
         traceback.print_exc()
         return jsonify({'hosts': {}, 'error': str(e)})
+
+
+@host_manager_bp.route('/host-manager/down-history')
+def host_down_history() -> Response | tuple[Response, int]:
+    """GET /host-manager/down-history — down episodes from existing stage history."""
+    if 'username' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    if not check_permission('host_manager'):
+        return jsonify({'error': 'Access denied'}), 403
+
+    host = (request.args.get('host') or '').strip()
+    container = (request.args.get('container') or '').strip()
+    if not host or not container or len(host) > 300 or len(container) > 120:
+        return jsonify({'error': 'Host dan server wajib diisi'}), 400
+
+    all_servers = get_nagios_servers()
+    if session.get('role') == 'admin':
+        allowed = set(all_servers)
+    else:
+        user_perms = session.get('permissions', {}) or {}
+        allowed = {server for server in all_servers if user_perms.get(f'nagios_{server}')}
+    if container not in allowed:
+        return jsonify({'error': 'Access denied'}), 403
+
+    start_date = (request.args.get('start_date') or '').strip() or None
+    end_date = (request.args.get('end_date') or '').strip() or None
+    payload = build_down_episodes(host, container, start_date, end_date)
+    labels = dict(STAGE_LABELS)
+    labels['up'] = 'Up'
+    payload['stage_labels'] = labels
+    payload['stage_history_url'] = '/stage-history?' + urlencode({
+        'host': host,
+        'container': container,
+        'start_date': payload['start_date'],
+        'end_date': payload['end_date'],
+        'limit': '500',
+    })
+    return jsonify(payload)
 
 
 @host_manager_bp.route('/host-manager')
