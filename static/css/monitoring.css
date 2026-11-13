@@ -587,7 +587,14 @@ body.is-wall > *:not(#view-only-table) { display: none; }
     background: var(--surface);
     border-bottom: 1px solid var(--border);
 }
-.wall-counts { display: flex; gap: var(--space-3); }
+.wall-counts { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.wall-scope {
+    font-size: var(--text-sm);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
 .wall-count {
     display: inline-flex;
     align-items: baseline;
