@@ -191,16 +191,32 @@
     --color-success-light: var(--st-up-bg);
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
 
 html { font-size: 16px; }
 
 body {
+    margin: 0;
     font-family: var(--font);
     font-size: var(--text-md);
     background: var(--bg);
     color: var(--text);
     overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6, p { margin: 0; }
+img { max-width: 100%; height: auto; }
+button, input, select, textarea { font: inherit; }
+table { border-collapse: collapse; }
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
 }
 
 .num,
@@ -906,8 +922,24 @@ body .modal-footer {
     color: var(--text-muted);
 }
 
-[data-theme="dark"] .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%);
+.btn-close {
+    width: 32px;
+    height: 32px;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+}
+.btn-close::before { content: "×"; }
+.btn-close:hover { background: var(--surface-2); color: var(--text); }
+.btn-close:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
 }
 
 @media (max-width: 768px) {
