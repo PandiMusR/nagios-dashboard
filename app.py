@@ -6,6 +6,7 @@ from flask_wtf.csrf import CSRFProtect
 from services.encryption import load_or_create_secret_key, init_encryption
 from services.ldap_service import check_ldap_server, setup_ldap_structure, CONFIG_DIR
 from services.config import APP_PORT
+from services.shared_helpers import get_monitoring_categories, get_nagios_servers
 from services.active_users import active_users
 from services.scheduler import start_cr_reset_scheduler
 
@@ -23,6 +24,14 @@ init_encryption(app.secret_key)
 
 # Ensure config directory exists
 os.makedirs(CONFIG_DIR, exist_ok=True)
+
+
+@app.context_processor
+def inject_sidebar_nav():
+    return {
+        'monitoring_categories': get_monitoring_categories(),
+        'nagios_servers': get_nagios_servers(),
+    }
 
 
 @app.before_request
