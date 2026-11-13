@@ -88,31 +88,22 @@ FILES_TO_UPDATE=(
     "app.py"
     "proxy.py"
     "templates/base.html"
-    "static/css/base.css"
     "templates/dashboard.html"
-    "static/js/dashboard.js"
-    "static/css/dashboard.css"
     "templates/edit_config.html"
     "templates/host_manager.html"
-    "static/css/host_manager.css"
     "templates/login.html"
     "templates/monitoring.html"
-    "static/js/monitoring.js"
-    "static/css/monitoring.css"
     "templates/monitoring_intens.html"
     "templates/monitoring_settings.html"
     "templates/nagios_view.html"
     "templates/servers.html"
     "templates/setup.html"
     "templates/stage_history.html"
-    "static/css/stage_history.css"
     "templates/users.html"
     "templates/user_permissions.html"
     "templates/active_users.html"
     "templates/global_settings.html"
     "templates/activity_logs.html"
-    "static/js/servers.js"
-    "static/css/servers.css"
     "requirements.txt"
     "migrate_encrypt_creds.py"
     "migrate_stages_to_db.py"
@@ -128,6 +119,17 @@ MODULE_DIRS=(
     "services"
     "utils"
     "blueprints"
+)
+
+# Whole directories. static/assets (alarm sounds) and config/ are not in this list.
+ASSET_DIRS=(
+    "static/css"
+    "static/js"
+)
+TREE_BACKUP_DIRS=(
+    "templates"
+    "static/css"
+    "static/js"
 )
 
 # HOLD 2026-08-21: Intensive Monitoring must not land on Prod.
@@ -188,6 +190,19 @@ for DIR in "${MODULE_DIRS[@]}"; do
     SRC="$PROD_PATH/$DIR"
     DEST="$BACKUP_DIR/$DIR"
     if [ -d "$SRC" ]; then
+        cp -r "$SRC" "$DEST"
+        ok "Backed up: $DIR/"
+    else
+        warn "Directory not found, skipping backup: $DIR/"
+    fi
+done
+
+log "Backing up templates and static css/js..."
+for DIR in "${TREE_BACKUP_DIRS[@]}"; do
+    SRC="$PROD_PATH/$DIR"
+    DEST="$BACKUP_DIR/$DIR"
+    if [ -d "$SRC" ]; then
+        mkdir -p "$(dirname "$DEST")"
         cp -r "$SRC" "$DEST"
         ok "Backed up: $DIR/"
     else
@@ -276,9 +291,37 @@ for DIR in "${MODULE_DIRS[@]}"; do
     fi
 done
 
-# MODULE_DIRS is a full directory copy — strip Intensive HOLD files that
-# arrived inside services/ or blueprints/. Also remove leftover UI/worker
-# paths if a previous deploy left them on Prod.
+# static/css and static/js are full directory copies. static/assets/sound
+# and config/ are left untouched.
+log "Pulling static css/js directories from dev server..."
+for DIR in "${ASSET_DIRS[@]}"; do
+    SRC="${DEV_USER}@${DEV_HOST}:${DEV_PATH}/${DIR}"
+    DEST="$PROD_PATH/$DIR"
+    PARENT="$(dirname "$DEST")"
+
+    rm -rf "$DEST"
+    mkdir -p "$PARENT"
+
+    log "Syncing: $DIR/"
+    if scp -r $SSH_OPTS "$SRC" "$PARENT/"; then
+        ok "Updated: $DIR/"
+    else
+        BACKUP_DIR_MOD="$BACKUP_DIR/$DIR"
+        warn "SCP failed for $DIR/ — restoring backup..."
+        if [ -d "$BACKUP_DIR_MOD" ]; then
+            rm -rf "$DEST"
+            mkdir -p "$PARENT"
+            cp -r "$BACKUP_DIR_MOD" "$DEST"
+            warn "Backup restored for $DIR/"
+        else
+            fail "No backup found for $DIR/ and SCP failed. Check manually."
+        fi
+        fail "Deployment aborted due to SCP failure on $DIR/."
+    fi
+done
+
+# Full directory copies can bring Intensive HOLD files inside services/,
+# blueprints/, static/css/, or static/js/. Strip them after sync.
 strip_intensive_hold_files
 echo ""
 
@@ -344,12 +387,13 @@ log "Verifying app module imports..."
 if python3 -c "import sys; sys.path.insert(0, '$PROD_PATH'); from app import app; print(f'OK: {len(app.blueprints)} blueprints, {len(app.url_map._rules)} routes')" 2>&1; then
     ok "App module verification passed"
 else
-    warn "App module verification failed — rolling back app.py..."
+    warn "App module verification failed — rolling back app.py, modules, templates, and static..."
     cp "$BACKUP_DIR/app.py" "$PROD_PATH/app.py"
-    for DIR in "${MODULE_DIRS[@]}"; do
+    for DIR in "${MODULE_DIRS[@]}" "${TREE_BACKUP_DIRS[@]}"; do
         BACKUP_DIR_MOD="$BACKUP_DIR/$DIR"
         if [ -d "$BACKUP_DIR_MOD" ]; then
             rm -rf "$PROD_PATH/$DIR"
+            mkdir -p "$(dirname "$PROD_PATH/$DIR")"
             cp -r "$BACKUP_DIR_MOD" "$PROD_PATH/$DIR"
         fi
     done
@@ -381,10 +425,11 @@ else
     warn "Service failed to start — rolling back..."
     rc-service "$SERVICE_NAME" stop 2>/dev/null || true
     cp "$BACKUP_DIR/app.py" "$PROD_PATH/app.py"
-    for DIR in "${MODULE_DIRS[@]}"; do
+    for DIR in "${MODULE_DIRS[@]}" "${TREE_BACKUP_DIRS[@]}"; do
         BACKUP_DIR_MOD="$BACKUP_DIR/$DIR"
         if [ -d "$BACKUP_DIR_MOD" ]; then
             rm -rf "$PROD_PATH/$DIR"
+            mkdir -p "$(dirname "$PROD_PATH/$DIR")"
             cp -r "$BACKUP_DIR_MOD" "$PROD_PATH/$DIR"
         fi
     done
@@ -431,8 +476,8 @@ echo ""
 echo -e "  To roll back:"
 echo -e "  ${CYAN}rc-service $SERVICE_NAME stop${NC}"
 echo -e "  ${CYAN}cp $BACKUP_DIR/app.py $PROD_PATH/app.py${NC}"
-for DIR in "${MODULE_DIRS[@]}"; do
-    echo -e "  ${CYAN}rm -rf $PROD_PATH/$DIR && cp -r $BACKUP_DIR/$DIR $PROD_PATH/$DIR${NC}"
+for DIR in "${MODULE_DIRS[@]}" "${TREE_BACKUP_DIRS[@]}"; do
+    echo -e "  ${CYAN}rm -rf $PROD_PATH/$DIR && mkdir -p \$(dirname $PROD_PATH/$DIR) && cp -r $BACKUP_DIR/$DIR $PROD_PATH/$DIR${NC}"
 done
 echo -e "  ${CYAN}pip install -r $BACKUP_DIR/requirements.txt${NC}"
 echo -e "  ${CYAN}rc-service $SERVICE_NAME start${NC}"
