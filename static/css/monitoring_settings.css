@@ -188,6 +188,24 @@
     box-sizing: border-box;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+input[type="file"] {
+    color: var(--text-muted);
+    font: inherit;
+}
+input[type="file"]::file-selector-button {
+    margin-right: 12px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+input[type="file"]::file-selector-button:hover {
+    background: var(--surface);
+}
 .ms-field input:focus,
 .ms-field select:focus,
 .ms-input-group input:focus,
@@ -314,8 +332,10 @@
     white-space: nowrap;
 }
 .ms-btn:hover:not(:disabled) { transform: none; }
-.ms-btn:disabled {
-    opacity: 0.55;
+.ms-btn:disabled,
+.ms-btn:disabled:hover {
+    opacity: 0.65;
+    color: var(--text-muted);
     cursor: not-allowed;
     transform: none !important;
 }
@@ -329,13 +349,13 @@
     box-shadow: var(--shadow-primary);
 }
 .ms-btn-secondary {
-    background: var(--bg-secondary);
-    border-color: var(--border-color);
-    color: var(--text-secondary);
+    background: var(--surface-2);
+    border-color: var(--border);
+    color: var(--text);
 }
 .ms-btn-secondary:hover:not(:disabled) {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
+    background: var(--surface);
+    color: var(--text);
 }
 .ms-btn-ghost {
     background: transparent;

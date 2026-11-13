@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Global Settings{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/global_settings.css?v=20261113-noc10">
+<link rel="stylesheet" href="/static/css/global_settings.css?v=20261113-noc11">
 {% endblock %}
 {% block content %}
 <div class="gs-page">
@@ -230,8 +230,13 @@
                 <label for="apiKeyDisplay">Current API key</label>
                 <div class="gs-input-group">
                     <span class="gs-input-icon" aria-hidden="true"><i class="fas fa-fingerprint"></i></span>
-                    <input type="text" id="apiKeyDisplay" value="{{ global_config.get('api_key', 'Not generated') }}" readonly>
-                    <button type="button" onclick="copyApiKey()" class="gs-btn gs-btn-icon" title="Copy"><i class="fas fa-copy"></i></button>
+                    {% set api_key = global_config.get('api_key', '') %}
+                    <input type="text" id="apiKeyDisplay" readonly autocomplete="off" spellcheck="false"
+                           data-key="{{ api_key }}"
+                           value="{% if api_key %}••••{{ api_key[-4:] }}{% else %}Not generated{% endif %}"
+                           aria-label="Current API key">
+                    <button type="button" id="apiKeyToggle" class="gs-btn gs-btn-icon" onclick="toggleApiKey()" aria-pressed="false" title="Show API key" aria-label="Show API key"><i class="fas fa-eye"></i></button>
+                    <button type="button" onclick="copyApiKey()" class="gs-btn gs-btn-icon" title="Copy" aria-label="Copy API key"><i class="fas fa-copy"></i></button>
                 </div>
             </div>
             <button type="button" onclick="generateApiKey()" class="gs-btn gs-btn-primary"><i class="fas fa-sync-alt"></i> Generate New Key</button>
@@ -258,5 +263,5 @@
     </section>
 </div>
 
-<script src="/static/js/global_settings.js?v=20261113-noc9"></script>
+<script src="/static/js/global_settings.js?v=20261113-noc10"></script>
 {% endblock %}

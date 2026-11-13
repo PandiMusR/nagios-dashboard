@@ -80,7 +80,6 @@
         font-size: 1.25rem;
     }
     .btn-batch-ack,
-    .btn-stage,
     .btn-primary {
         background: var(--accent-fill);
         color: var(--accent-text);
@@ -91,7 +90,6 @@
     }
     .btn-batch-ack { padding: 0.75rem 1.5rem; }
     .btn-batch-ack:hover,
-    .btn-stage:hover,
     .btn-primary:hover {
         background: var(--accent-hover);
         border-color: var(--accent-hover);
@@ -183,6 +181,14 @@
         padding: 6px 12px;
         font-size: var(--text-xs);
         white-space: nowrap;
+        background: transparent;
+        color: var(--accent);
+        border: 1px solid var(--accent);
+    }
+    .btn-stage:hover {
+        background: var(--surface-2);
+        color: var(--accent);
+        border-color: var(--accent);
     }
 
     /* Stage radio buttons */
