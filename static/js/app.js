@@ -12,11 +12,7 @@
 
         // Dark mode
         function initDarkMode() {
-            const saved = localStorage.getItem('theme');
-            if (saved === 'dark') {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                updateDarkModeIcon(true);
-            }
+            updateDarkModeIcon(document.documentElement.getAttribute('data-theme') === 'dark');
         }
         function toggleDarkMode() {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
