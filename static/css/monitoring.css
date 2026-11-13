@@ -596,15 +596,6 @@ body.is-wall > *:not(#view-only-table) { display: none; }
     border-bottom: 1px solid var(--border);
 }
 .wall-counts { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-.wall-scope {
-    align-self: center;
-    font-size: var(--text-lg);
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    line-height: 1;
-    color: var(--text-muted);
-}
 .wall-count {
     display: inline-flex;
     align-items: baseline;
@@ -648,38 +639,120 @@ body.is-wall > *:not(#view-only-table) { display: none; }
     table-layout: fixed;
     font-size: 20px;
 }
-.wall-col-host { width: 22%; }
-.wall-col-ip { width: 14%; }
+.wall-col-host { width: 24%; }
+.wall-col-ip { width: 13%; }
 .wall-col-status { width: 12%; }
-.wall-col-stage { width: 18%; }
-.wall-col-duration { width: 12%; }
-.wall-col-detail { width: 22%; }
+.wall-col-stage { width: 17%; }
+.wall-col-duration { width: 10%; }
+.wall-col-detail { width: 24%; }
 .wall-table th {
     position: sticky;
     top: 0;
     z-index: 1;
-    padding: 16px 18px;
+    padding: 14px 16px;
     text-align: left;
     font-size: 24px;
     font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     color: var(--text);
     background: var(--surface-2);
     border-bottom: 1px solid var(--border);
 }
 .wall-table td {
-    padding: 16px 18px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--border);
-    vertical-align: top;
+    vertical-align: middle;
+    overflow: hidden;
 }
-.wall-table .stage-badge,
-.wall-table .status-badge { font-size: 18px; padding: 4px 12px; }
-.wall-table .stage-dot { width: 10px; height: 10px; }
+.wall-table .stage-badge {
+    display: inline-block;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+    font-size: 18px;
+    padding: 4px 12px;
+}
+.wall-table .stage-dot {
+    width: 10px;
+    height: 10px;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+.wall-table .stage-badge.stage-new {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+.wall-table .stage-badge.stage-new .stage-dot { background: var(--st-down); }
+.wall-table .status-badge {
+    display: inline-block;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+    background: transparent;
+    border: 1.5px solid currentColor;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: 700;
+    padding: 4px 12px;
+}
+.wall-table .status-down {
+    color: var(--st-down);
+    border-color: var(--st-down);
+    background: transparent;
+}
+.wall-table .status-unreachable {
+    color: var(--st-unreachable);
+    border-color: var(--st-unreachable);
+    background: transparent;
+}
 .wall-table tr.is-down td { background: var(--st-down-bg); color: var(--text); }
 .wall-table tr.is-down td:first-child { box-shadow: inset 4px 0 0 var(--st-down-solid); }
 .wall-table tr.is-unreachable td { background: var(--st-unreachable-bg); }
 .wall-table tr.is-unreachable td:first-child { box-shadow: inset 4px 0 0 var(--st-unreachable-solid); }
 .wall-host { font-weight: 700; word-break: break-word; }
-.wall-detail, .wall-table .stage-note { color: var(--text); white-space: normal; max-width: none; }
+.wall-table .cell-ip,
+.wall-table tr.is-down td.cell-ip,
+.wall-table tr.is-unreachable td.cell-ip {
+    font-family: var(--font);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.wall-table td.num {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.wall-detail,
+.wall-table tr.is-down td.wall-detail,
+.wall-table tr.is-unreachable td.wall-detail {
+    color: var(--text-muted);
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1.35;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.wall-table .stage-note {
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
 .wall-empty {
     flex: 1;
     display: flex;

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Monitoring - {{ page|title }}{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/monitoring.css?v=20261113-noc11">
+<link rel="stylesheet" href="/static/css/monitoring.css?v=20261113-noc12">
 {% endblock %}
 {% block content %}
 
@@ -1001,9 +1001,8 @@ function toggleViewOnly() {
     wall.innerHTML = `
         <div class="wall-bar">
             <div class="wall-counts">
-                <span class="wall-scope">belum ditangani</span>
-                <span class="wall-count is-down"><span id="wall_down_count" class="num">0</span> DOWN baru</span>
-                <span class="wall-count is-unreachable"><span id="wall_unreach_count" class="num">0</span> UNREACHABLE baru</span>
+                <span class="wall-count is-down"><span id="wall_down_count" class="num">0</span> DOWN</span>
+                <span class="wall-count is-unreachable"><span id="wall_unreach_count" class="num">0</span> UNREACHABLE</span>
             </div>
             <div class="wall-meta">
                 <span>Updated <span id="wall_last_update" class="num">-</span></span>
