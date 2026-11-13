@@ -31,7 +31,7 @@ Poller credentials: `config/nagios_creds_<container>.json` (not the logged-in LD
 | | Dev | Production |
 |---|---|---|
 | Host | `194.233.73.24` | `103.73.74.98` |
-| SSH | port 21212 | `ssh -p 2325 rif@103.73.74.98` (or `root@` for deploy) |
+| SSH | port 21212 | `ssh -p 2326 rif@103.73.74.98` (or `root@` for deploy) |
 | App | `/root/apps/nagiosDashboard` | `/svr/dashboard-nagios` |
 | Git | `git@github.com:PandiMusR/nagios-dashboard.git` | no git — SCP via `deploy_from_dev.sh` |
 
