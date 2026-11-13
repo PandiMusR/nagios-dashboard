@@ -80,7 +80,10 @@
 <!-- Add Modal -->
 <div id="addModal" class="modal">
     <div class="modal-content">
-        <h3><i class="fas fa-plus-circle"></i> Add New Host</h3>
+        <div class="modal-header">
+            <h3><i class="fas fa-plus-circle"></i> Add New Host</h3>
+            <button type="button" class="modal-close" onclick="closeAddModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
+        </div>
         <form id="addForm" method="POST" action="/host-manager/add" onsubmit="return validateAddForm()">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
@@ -152,7 +155,10 @@
 <!-- Batch Add Modal -->
 <div id="batchModal" class="modal">
     <div class="modal-content modal-wide">
-        <h3><i class="fas fa-list-ul"></i> Batch Tambah Hosts</h3>
+        <div class="modal-header">
+            <h3><i class="fas fa-list-ul"></i> Batch Tambah Hosts</h3>
+            <button type="button" class="modal-close" onclick="closeBatchModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
+        </div>
         <form method="POST" action="/host-manager/batch-add">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="batch-panel">
@@ -174,7 +180,10 @@
 <!-- Edit Modal -->
 <div id="editModal" class="modal">
     <div class="modal-content">
-        <h3><i class="fas fa-edit"></i> Edit Host</h3>
+        <div class="modal-header">
+            <h3><i class="fas fa-edit"></i> Edit Host</h3>
+            <button type="button" class="modal-close" onclick="closeEditModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
+        </div>
         <form method="POST" action="/host-manager/edit" onsubmit="return validateEditForm()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="server" id="editServer">
@@ -236,7 +245,10 @@
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="modal">
     <div class="modal-content">
-        <h3 class="delete-title"><i class="fas fa-exclamation-triangle"></i> Konfirmasi Hapus</h3>
+        <div class="modal-header">
+            <h3 class="delete-title"><i class="fas fa-exclamation-triangle"></i> Konfirmasi Hapus</h3>
+            <button type="button" class="modal-close" onclick="closeDeleteModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
+        </div>
         <p class="muted">The following <strong id="deleteTotalCount">0</strong> host(s) will be deleted:</p>
         <div id="deleteHostList" class="delete-list"></div>
         <div class="modal-footer">

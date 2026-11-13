@@ -179,7 +179,7 @@
     <div class="modal-content" style="width: 95%; max-width: 700px;">
         <div class="modal-header">
             <h3><i class="fas fa-plug"></i> Plugin Manager - <span id="pluginServerName"></span></h3>
-            <button class="btn-close" onclick="closePluginModal()">&times;</button>
+            <button type="button" class="modal-close" onclick="closePluginModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
         </div>
         <div class="modal-body">
             <div style="margin-bottom: 2rem;">
@@ -206,7 +206,7 @@
     <div class="modal-content" style="width: 95%; max-width: 500px;">
         <div class="modal-header">
             <h3 id="batchModalTitle">Confirm Action</h3>
-            <button class="btn-close" onclick="closeBatchModal()">&times;</button>
+            <button type="button" class="modal-close" onclick="closeBatchModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
         </div>
         <div class="modal-body">
             <p id="batchModalMessage" style="margin: 0 0 1.5rem 0; color: var(--text-secondary);"></p>
@@ -224,7 +224,7 @@
     <div class="modal-content" style="width: 95%; max-width: 800px;">
         <div class="modal-header">
             <h3><i class="fas fa-check"></i> Configuration Check - <span id="configServerName"></span></h3>
-            <button class="btn-close" onclick="closeConfigModal()">&times;</button>
+            <button type="button" class="modal-close" onclick="closeConfigModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
         </div>
         <div class="modal-body">
             <pre id="configOutput" style="background: var(--bg-primary); padding: 1.5rem; border-radius: 8px; font-size: 0.85rem; white-space: pre-wrap; font-family: 'Courier New', monospace; margin: 0; max-height: 400px; overflow-y: auto;">Checking...</pre>

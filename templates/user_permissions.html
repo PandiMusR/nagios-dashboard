@@ -59,7 +59,10 @@
 <!-- Edit Permissions Modal -->
 <div id="editModal" class="modal">
     <div class="modal-content">
-        <h3><i class="fas fa-lock"></i> Edit User Permissions</h3>
+        <div class="modal-header">
+            <h3><i class="fas fa-lock"></i> Edit User Permissions</h3>
+            <button type="button" class="modal-close" onclick="closeEditModal()" aria-label="Tutup"><i class="fas fa-times" aria-hidden="true"></i></button>
+        </div>
         <form method="POST" action="/user-permissions/update" id="permForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="username" id="edit_username">

@@ -700,10 +700,10 @@ select:focus {
     inset: 0;
     background: var(--modal-overlay);
     z-index: 2000;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    overflow-y: auto;
-    padding: var(--space-5);
+    overflow: hidden;
+    padding: 16px;
 }
 
 .modal.show,
@@ -717,7 +717,43 @@ select:focus {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-pop);
     width: min(480px, 100%);
+    margin-top: var(--nav-height);
+    max-height: calc(100vh - var(--nav-height) - 32px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     padding: var(--space-5);
+}
+
+body .modal,
+body .modal-password {
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 2000;
+    overflow: hidden;
+    padding: 16px;
+}
+
+body .modal-content,
+body .modal-password-content {
+    margin-top: var(--nav-height);
+    max-height: calc(100vh - var(--nav-height) - 32px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+body .modal-content > form,
+body .modal-password-content > form,
+body .modal-body {
+    overflow-y: auto;
+    min-height: 0;
+    flex: 1 1 auto;
+}
+
+body .modal-header,
+body .modal-footer {
+    flex: 0 0 auto;
 }
 
 .modal-header {
@@ -726,6 +762,8 @@ select:focus {
     justify-content: space-between;
     gap: var(--space-3);
     margin-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border);
 }
 
 .modal-header h3,
