@@ -58,8 +58,8 @@
     --st-unknown-bg: #f3f0fa;
     --st-unknown-solid: #5b4b8a;
 
-    --stage-new: #3d4a5c;
-    --stage-new-bg: #eef1f4;
+    --stage-new: #c4312b;
+    --stage-new-bg: #fdecea;
     --stage-cs: #1e4b8f;
     --stage-cs-bg: #e7f0fb;
     --stage-escalated: #9a3412;
@@ -172,8 +172,8 @@
     --st-unknown: #ddd6fe;
     --st-unknown-bg: #2e2458;
 
-    --stage-new: #c5d0dc;
-    --stage-new-bg: #243140;
+    --stage-new: #ffb4ab;
+    --stage-new-bg: #4a1614;
     --stage-cs: #c5daf5;
     --stage-cs-bg: #1a3358;
     --stage-escalated: #ffd0a8;
@@ -975,8 +975,8 @@ body .modal-footer {
         --st-warning-bg: #fef3c7;
         --st-unknown: #5b4b8a;
         --st-unknown-bg: #f3f0fa;
-        --stage-new: #3d4a5c;
-        --stage-new-bg: #eef1f4;
+        --stage-new: #c4312b;
+        --stage-new-bg: #fdecea;
         --stage-cs: #1e4b8f;
         --stage-cs-bg: #e7f0fb;
         --stage-escalated: #9a3412;
