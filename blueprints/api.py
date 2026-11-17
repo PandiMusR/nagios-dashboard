@@ -3,7 +3,12 @@ from __future__ import annotations
 from flask import Blueprint, request, jsonify, Response
 from datetime import datetime
 from ipaddress import IPv4Address
-import os, json, subprocess, re, threading, shutil, fcntl
+import os, json, subprocess, re, threading
+
+from services.host_config import (
+    atomic_replace_host_config, guard_host_config_writes,
+    host_config_path, lock_host_configs,
+)
 
 from services.config import GLOBAL_CONFIG_PATH
 from services.ldap_service import log_activity
@@ -114,6 +119,7 @@ def _build_host_definition(
 
 
 @api_bp.route('/api/hosts/add', methods=['POST'])
+@guard_host_config_writes
 def api_add_host() -> tuple[Response, int]:
     """POST /api/hosts/add — Add a host to a Nagios server via API.
 
@@ -182,7 +188,8 @@ def api_add_host() -> tuple[Response, int]:
     host_name, id_ne = _parse_onu_host_name(host_name, server)
 
     # Check server exists
-    config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+    config_path = host_config_path(server)
+    lock_host_configs([config_path])
     if not os.path.exists(config_path):
         return _error(f'Server "{server}" not found or config missing', 404)
 
@@ -235,6 +242,7 @@ def api_add_host() -> tuple[Response, int]:
 
 
 @api_bp.route('/api/hosts/batch-add', methods=['POST'])
+@guard_host_config_writes
 def api_batch_add_hosts() -> tuple[Response, int]:
     """POST /api/hosts/batch-add — Add multiple hosts at once via API.
 
@@ -276,7 +284,8 @@ def api_batch_add_hosts() -> tuple[Response, int]:
     if not hosts or not isinstance(hosts, list):
         return _error('Missing or invalid "hosts" array')
 
-    config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+    config_path = host_config_path(server)
+    lock_host_configs([config_path])
     if not os.path.exists(config_path):
         return _error(f'Server "{server}" not found', 404)
 
@@ -402,6 +411,7 @@ def _replace_host_name_references(content: str, old_host_name: str, host_name: s
 
 
 @api_bp.route('/api/hosts/rename', methods=['POST'])
+@guard_host_config_writes
 def api_rename_host() -> tuple[Response, int]:
     """POST /api/hosts/rename — Rename a host and update its Nagios references.
 
@@ -435,7 +445,8 @@ def api_rename_host() -> tuple[Response, int]:
     if old_host_name == host_name:
         return _error('old_host_name and host_name must be different')
 
-    config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+    config_path = host_config_path(server)
+    lock_host_configs([config_path])
     if not os.path.exists(config_path):
         return _error(f'Server "{server}" not found', 404)
 
@@ -687,6 +698,7 @@ def _change_summary(changes: list[dict]) -> str:
 
 
 @api_bp.route('/api/hosts/change-ip', methods=['POST'])
+@guard_host_config_writes
 def api_change_ip() -> tuple[Response, int]:
     """POST /api/hosts/change-ip — Replace exact host addresses on Bhome.
 
@@ -721,23 +733,15 @@ def api_change_ip() -> tuple[Response, int]:
     if error:
         return error
 
+    lock_host_configs([BHOME_CONFIG_PATH])
     if not os.path.exists(BHOME_CONFIG_PATH):
         return _error('Server "Bhome" not found or config missing', 404)
 
-    lock_path = os.path.join(os.path.dirname(BHOME_CONFIG_PATH), '.ip-change.lock')
     try:
-        lock_fh = open(lock_path, 'a+')
-    except OSError as exc:
-        return _error(f'File error: {exc}', 500)
-
-    try:
-        try:
-            fcntl.flock(lock_fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            return _error('Another Bhome IP change is in progress; retry later', 409)
         try:
             with open(BHOME_CONFIG_PATH, 'r') as fh:
                 content = fh.read()
+                metadata = os.fstat(fh.fileno())
         except OSError as exc:
             return _error(f'File error: {exc}', 500)
 
@@ -767,21 +771,21 @@ def api_change_ip() -> tuple[Response, int]:
                 backup_dir,
                 'localhost_before_ip_change_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f') + '.cfg',
             )
-            shutil.copy2(BHOME_CONFIG_PATH, backup_path)
-            tmp_path = BHOME_CONFIG_PATH + '.tmp'
-            with open(tmp_path, 'w') as fh:
-                fh.write(plan['updated'])
-            shutil.copymode(BHOME_CONFIG_PATH, tmp_path)
-            os.replace(tmp_path, BHOME_CONFIG_PATH)
+            atomic_replace_host_config(backup_path, content, metadata)
+            atomic_replace_host_config(BHOME_CONFIG_PATH, plan['updated'], metadata)
         except OSError as exc:
-            tmp_path = BHOME_CONFIG_PATH + '.tmp'
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
             return _error(f'File error: {exc}', 500)
 
         ok, output = _verify_bhome_config()
         if not ok:
-            shutil.copy2(backup_path, BHOME_CONFIG_PATH)
+            try:
+                atomic_replace_host_config(BHOME_CONFIG_PATH, content, metadata)
+            except OSError as exc:
+                return jsonify({
+                    'success': False,
+                    'error': f'Nagios validation failed and config restoration failed: {exc}',
+                    'backup': backup_path,
+                }), 500
             log_activity('API: Change IP Failed', 'Bhome: nagios -v failed, config restored', username='API')
             return jsonify({
                 'success': False,
@@ -816,12 +820,12 @@ def api_change_ip() -> tuple[Response, int]:
             'backup': backup_path,
             'changes': plan['changes'],
         }), 200
-    finally:
-        fcntl.flock(lock_fh, fcntl.LOCK_UN)
-        lock_fh.close()
+    except OSError as exc:
+        return _error(f'File error: {exc}', 500)
 
 
 @api_bp.route('/api/hosts/delete', methods=['DELETE'])
+@guard_host_config_writes
 def api_delete_host() -> tuple[Response, int]:
     """DELETE /api/hosts/delete — Delete a host from a Nagios server.
 
@@ -846,7 +850,8 @@ def api_delete_host() -> tuple[Response, int]:
     if not server or not host_name:
         return _error('Missing required fields: server, host_name')
 
-    config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+    config_path = host_config_path(server)
+    lock_host_configs([config_path])
     if not os.path.exists(config_path):
         return _error(f'Server "{server}" not found', 404)
 

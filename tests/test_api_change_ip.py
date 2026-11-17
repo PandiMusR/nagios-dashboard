@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from flask import Flask
+from services import host_config
 
 
 def load_api():
@@ -65,6 +66,9 @@ class ChangeIPTests(unittest.TestCase):
             patcher = patch.object(api, name, value)
             patcher.start()
             self.addCleanup(patcher.stop)
+        lock_patch = patch.object(host_config, 'LOCK_DIR', str(Path(self.tmp.name) / 'locks'))
+        lock_patch.start()
+        self.addCleanup(lock_patch.stop)
         commands_patch = patch.object(api.subprocess, 'run')
         self.commands = commands_patch.start()
         self.addCleanup(commands_patch.stop)
@@ -224,8 +228,7 @@ class ChangeIPTests(unittest.TestCase):
         self.assertNotEqual(self.config.read_text(), ORIGINAL)
 
     def test_busy_lock_returns_conflict_without_writing(self):
-        with open(self.config.parent / '.ip-change.lock', 'a+') as lock:
-            api.fcntl.flock(lock, api.fcntl.LOCK_EX | api.fcntl.LOCK_NB)
+        with host_config.host_config_lock(str(self.config)):
             self.assertEqual(self.send().status_code, 409)
             self.assert_untouched()
 

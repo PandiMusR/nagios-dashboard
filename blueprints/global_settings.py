@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 from flask import Blueprint, render_template, request, redirect, session, jsonify, flash, send_file, Response
-import os, json, subprocess
+import os, json, subprocess, tempfile
 from datetime import datetime
+
+from services.host_config import (
+    HostConfigBusy, HostConfigError, guard_host_config_writes,
+    host_config_path, lock_host_configs,
+)
 
 from services.config import CONFIG_DIR, ACTIVITY_LOG_PATH, GLOBAL_CONFIG_PATH, MONITORING_SERVER_MAPPINGS_PATH, MONITORING_CONFIG_PATH
 from services.ldap_service import log_activity, read_activity_logs, ACTIVITY_LOG_DIR
@@ -67,6 +72,7 @@ def global_settings() -> str | Response:
 
 
 @global_settings_bp.route('/global-settings/backup', methods=['POST'])
+@guard_host_config_writes
 def create_backup() -> str | Response:
     """POST /global-settings/backup — create a tar.gz backup of all configs."""
     if 'username' not in session:
@@ -88,13 +94,15 @@ def create_backup() -> str | Response:
         
         backup_file = f'{backup_dir}/{backup_name}.tar.gz'
         
+        result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'],
+                                capture_output=True, text=True, timeout=10)
+        servers = result.stdout.strip().split('\n') if result.stdout else []
+        lock_host_configs([host_config_path(server) for server in servers if server])
         with tarfile.open(backup_file, 'w:gz') as tar:
-            result = subprocess.run(['docker', 'ps', '--filter', 'ancestor=nagios-ldap:latest', '--format', '{{.Names}}'], 
-                                  capture_output=True, text=True, timeout=10)
             if result.stdout:
-                for server in result.stdout.strip().split('\n'):
+                for server in servers:
                     if server:
-                        config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+                        config_path = host_config_path(server)
                         if os.path.exists(config_path):
                             tar.add(config_path, arcname=f'{server}/localhost.cfg')
         
@@ -106,6 +114,8 @@ def create_backup() -> str | Response:
         
         log_activity('Create Backup', f'Backup "{backup_name}" created')
         flash(f'Backup "{backup_name}" created successfully!', 'success')
+    except (HostConfigBusy, HostConfigError):
+        raise
     except Exception as e:
         flash(f'Failed to create backup: {str(e)}', 'error')
     
@@ -144,6 +154,7 @@ def list_backups() -> Response | tuple[Response, int]:
 
 
 @global_settings_bp.route('/global-settings/restore', methods=['POST'])
+@guard_host_config_writes
 def restore_backup() -> Response | tuple[Response, int]:
     """POST /global-settings/restore — restore a tar.gz backup."""
     if 'username' not in session:
@@ -160,22 +171,24 @@ def restore_backup() -> Response | tuple[Response, int]:
         if not os.path.exists(backup_file):
             return jsonify({'success': False, 'error': 'Backup not found'})
         
-        with tarfile.open(backup_file, 'r:gz') as tar:
-            tar.extractall('/tmp/restore_temp', filter='data')
-        
-        for server_dir in os.listdir('/tmp/restore_temp'):
-            server_path = f'/tmp/restore_temp/{server_dir}'
-            if os.path.isdir(server_path):
-                config_file = f'{server_path}/localhost.cfg'
-                if os.path.exists(config_file):
-                    dest = f'/svr/{server_dir}/etc/objects/localhost.cfg'
-                    subprocess.run(['cp', config_file, dest], timeout=10)
-                    subprocess.run(['docker', 'restart', server_dir], capture_output=True, timeout=60)
-        
-        subprocess.run(['rm', '-rf', '/tmp/restore_temp'], timeout=10)
-        
+        with tempfile.TemporaryDirectory(prefix='nagios-restore-') as restore_dir:
+            with tarfile.open(backup_file, 'r:gz') as tar:
+                tar.extractall(restore_dir, filter='data')
+            sources = []
+            for server_dir in os.listdir(restore_dir):
+                config_file = os.path.join(restore_dir, server_dir, 'localhost.cfg')
+                if os.path.isfile(config_file):
+                    sources.append((server_dir, config_file))
+            lock_host_configs([host_config_path(server) for server, _ in sources])
+            for server, config_file in sources:
+                dest = host_config_path(server)
+                subprocess.run(['cp', config_file, dest], check=True, timeout=10)
+                subprocess.run(['docker', 'restart', server], check=True, capture_output=True, timeout=60)
+
         log_activity('Restore Backup', f'Backup "{backup_name}" restored')
         return jsonify({'success': True})
+    except (HostConfigBusy, HostConfigError):
+        raise
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
