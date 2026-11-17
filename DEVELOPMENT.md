@@ -31,7 +31,7 @@ Poller credentials: `config/nagios_creds_<container>.json` (not the logged-in LD
 | | Dev | Production |
 |---|---|---|
 | Host | `194.233.73.24` | `103.73.74.98` |
-| SSH | port 21212 | `ssh -p 2325 rif@103.73.74.98` (or `root@` for deploy) |
+| SSH | port 21212 | `ssh -p 2326 rif@103.73.74.98` (or `root@` for deploy) |
 | App | `/root/apps/nagiosDashboard` | `/svr/dashboard-nagios` |
 | Git | `git@github.com:PandiMusR/nagios-dashboard.git` | no git — SCP via `deploy_from_dev.sh` |
 
@@ -47,6 +47,29 @@ Settings stay in gitignored JSON. Stages and CGI snapshot are SQLite:
 
 - `config/host_stages.db` — per-row UPSERT/DELETE (`stage_db.py`), plus `stage_comments`
 - `config/nagios_snapshot.db` — poller snapshot + `container_health`
+
+---
+
+## Host configuration mutation
+
+`services/host_config.py` coordinates application access to `/svr/<server>/etc/objects/localhost.cfg`. Every participating writer takes a nonblocking exclusive `flock` on a persistent file in `config/host_config_locks/`, keyed by the SHA-256 of the canonical configuration path. The lock is outside the server volume, so atomic replacement, server deletion, and recreation do not change its identity. Do not remove lock files while application processes are running.
+
+| Participants | Protected operations |
+|---|---|
+| `blueprints/api.py` | Host add, batch add, rename, delete, and Bhome IP change |
+| `blueprints/host_manager.py` | Host add, batch add, edit, delete, restore; backup copy/pruning and backup deletion |
+| `blueprints/global_settings.py` | Archive backup reads and archive restore writes |
+| `blueprints/servers.py` | Raw host-config editor, server creation/build, single and batch server deletion |
+
+Authentication and existing permissions run before acquiring locks. A request guard releases all acquired descriptors on return or exception. Multi-server requests acquire all required canonical paths in sorted order before any host-config writes; duplicate paths are acquired once. Acquisition never waits: contention returns JSON `success: false` with HTTP 409, and lock setup failures return an operational error. Retry a rejected mutation after the active operation completes; refresh edit forms before retrying so stale submitted field values do not intentionally overwrite newer values. Successful response contracts are unchanged.
+
+Locks cover reads used for mutation, backups, writes, validation, restoration, and the associated restart. Server creation reserves its lock before accepting the request and transfers release responsibility to its background thread. Archive restores extract into a private temporary directory, then acquire all destination locks before copying. Existing backup pruning/deletion participates so it cannot remove an active IP-change rollback backup.
+
+Bhome IP changes capture UID, GID, and mode from the open original descriptor. Backup, replacement, and validation-failure restoration use exclusive temporary files in the destination directory. Each staged descriptor receives the original ownership (only if different) and mode, verifies both, and flushes to disk before atomic replacement. No elevated privileges are requested. Failure to preserve ownership or mode returns an explicit error before replacing the original; the staged file is removed. A restoration failure returns HTTP 500 with the retained backup path rather than claiming restoration succeeded. ACLs, extended attributes, and ownership mapping across container/user namespaces require deployment-specific review.
+
+The protocol coordinates cooperating application processes running this implementation, not shell editors, manual `create-nagios/build.sh` runs, external automation, or older application versions. Those writers must be excluded during mutations or explicitly use the same lock protocol. Full-backup scripts only read the live host configuration and are not application writers. Host/service definition-building helpers only construct strings; their calling endpoints hold the mutation lock. Credential/settings files, plugins, stage databases, and collector snapshots are separate resources and are not covered by this lock.
+
+Validation is isolated: `python3 -B -m unittest discover -s tests -p 'test*.py' -v`. The suite uses temporary volumes, mocked Docker/integration calls, event-coordinated threads, and a short-lived local process for lock verification. Ownership success/failure is covered with portable mocks; a separate real foreign-UID/GID test runs only when permitted and is skipped for non-root execution. No tests import `app.py` or access production Nagios.
 
 ---
 

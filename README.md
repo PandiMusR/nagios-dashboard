@@ -386,6 +386,8 @@ Generate API key in **Global Settings → API Key**.
 |---|---|---|
 | `/api/hosts/add` | POST | Add a host to a Nagios server |
 | `/api/hosts/batch-add` | POST | Add multiple hosts at once |
+| `/api/hosts/rename` | POST | Rename a host and update its Nagios references |
+| `/api/hosts/change-ip` | POST | Replace exact Bhome addresses (`10.10.0.1` does not match `10.10.0.11`) |
 | `/api/hosts/delete` | DELETE | Delete a host |
 | `/api/hosts` | GET | List hosts on a server |
 | `/api/servers` | GET | List all running servers |
@@ -402,7 +404,17 @@ curl -X POST http://server/api/hosts/add \
 
 # Query stage history
 curl -H "X-API-Key: YOUR_KEY" "http://server/api/stage-history?host=switch-1&limit=50"
+
+# Preview a Bhome IP change. Only an address that is exactly 10.10.0.1 is listed.
+curl -X POST http://server/api/hosts/change-ip \
+  -H "X-API-Key: YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"server":"Bhome","dry_run":true,"changes":[{"old_ip":"10.10.0.1","new_ip":"10.11.0.1"}]}'
 ```
+
+Change IP currently supports only `server: "Bhome"`. Send `dry_run: true` to preview matching hosts; omitting it or setting it to `false` applies the changes, backs up `localhost.cfg`, validates with `nagios -v`, and restarts Bhome once. Failed validation restores the config without restarting. If restart fails after validation, the response reports that the config was written and includes its backup path.
+
+The whole batch is rejected when an old IP is missing (`404`) or a new IP is already used outside the batch (`409`). `allow_existing: true` explicitly permits the latter. A concurrent IP change returns `409`; retry after the current request finishes. Every host with an exact matching address is included.
 
 ---
 

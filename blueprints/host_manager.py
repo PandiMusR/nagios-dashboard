@@ -7,6 +7,11 @@ from urllib.parse import urlencode
 from flask import Blueprint, render_template, request, redirect, session, jsonify, flash, Response
 import os, json, subprocess, re, requests, threading
 
+from services.host_config import (
+    HostConfigBusy, HostConfigError, guard_host_config_writes,
+    host_config_path, lock_host_configs,
+)
+
 from services.config import CONFIG_DIR, STAGE_LABELS
 from services.down_history import build_down_episodes
 from services.encryption import decrypt_session_value, load_encrypted_json
@@ -32,6 +37,7 @@ def _add_to_uptime_kuma_async(host_name: str, address: str) -> None:
 
 
 @host_manager_bp.route('/host-manager/backup', methods=['POST'])
+@guard_host_config_writes
 def backup_localhost_cfg() -> Response | tuple[Response, int]:
     """POST /host-manager/backup — create a backup of a server's localhost.cfg."""
     if 'username' not in session:
@@ -42,14 +48,15 @@ def backup_localhost_cfg() -> Response | tuple[Response, int]:
     try:
         data = request.get_json()
         server = data.get('server')
+        lock_host_configs([host_config_path(server)])
         
-        backup_dir = f'/svr/{server}/etc/objects/backups'
+        backup_dir = os.path.join(os.path.dirname(host_config_path(server)), 'backups')
         os.makedirs(backup_dir, exist_ok=True)
         
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_name = f'localhost_{timestamp}'
         
-        config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+        config_path = host_config_path(server)
         backup_path = f'{backup_dir}/{backup_name}.cfg'
         
         subprocess.run(['cp', config_path, backup_path], timeout=10)
@@ -65,6 +72,8 @@ def backup_localhost_cfg() -> Response | tuple[Response, int]:
         
         log_activity('Backup Config', f'Backup created for {server}' + (' (uploaded to cloud)' if cloud_success else ''))
         return jsonify({'success': True, 'cloud': cloud_success})
+    except (HostConfigBusy, HostConfigError):
+        raise
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
@@ -78,7 +87,7 @@ def list_localhost_backups(server: str) -> Response | tuple[Response, int]:
         return jsonify({'error': 'Access denied'}), 403
     
     try:
-        backup_dir = f'/svr/{server}/etc/objects/backups'
+        backup_dir = os.path.join(os.path.dirname(host_config_path(server)), 'backups')
         os.makedirs(backup_dir, exist_ok=True)
         
         backups = []
@@ -98,6 +107,7 @@ def list_localhost_backups(server: str) -> Response | tuple[Response, int]:
 
 
 @host_manager_bp.route('/host-manager/restore', methods=['POST'])
+@guard_host_config_writes
 def restore_localhost_cfg() -> Response | tuple[Response, int]:
     """POST /host-manager/restore — restore a backup of localhost.cfg."""
     if 'username' not in session:
@@ -110,8 +120,9 @@ def restore_localhost_cfg() -> Response | tuple[Response, int]:
         server = data.get('server')
         backup_name = data.get('backup_name')
         
-        backup_path = f'/svr/{server}/etc/objects/backups/{backup_name}.cfg'
-        config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+        backup_path = f'{os.path.dirname(host_config_path(server))}/backups/{backup_name}.cfg'
+        config_path = host_config_path(server)
+        lock_host_configs([config_path])
         
         if not os.path.exists(backup_path):
             return jsonify({'success': False, 'error': 'Backup not found'})
@@ -121,11 +132,14 @@ def restore_localhost_cfg() -> Response | tuple[Response, int]:
         
         log_activity('Restore Config', f'Restored {backup_name} for {server}')
         return jsonify({'success': True})
+    except (HostConfigBusy, HostConfigError):
+        raise
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
 
 @host_manager_bp.route('/host-manager/delete-backup/<server>/<name>', methods=['DELETE'])
+@guard_host_config_writes
 def delete_localhost_backup(server: str, name: str) -> Response | tuple[Response, int]:
     """DELETE /host-manager/delete-backup/<server>/<name> — delete a config backup."""
     if 'username' not in session:
@@ -133,13 +147,17 @@ def delete_localhost_backup(server: str, name: str) -> Response | tuple[Response
     if not check_permission('host_manager'):
         return jsonify({'error': 'Access denied'}), 403
     
+    lock_host_configs([host_config_path(server)])
+
     try:
-        backup_path = f'/svr/{server}/etc/objects/backups/{name}.cfg'
+        backup_path = f'{os.path.dirname(host_config_path(server))}/backups/{name}.cfg'
         if os.path.exists(backup_path):
             os.remove(backup_path)
             log_activity('Delete Backup', f'Deleted {name} for {server}')
             return jsonify({'success': True})
         return jsonify({'success': False, 'error': 'Not found'})
+    except (HostConfigBusy, HostConfigError):
+        raise
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
@@ -323,6 +341,7 @@ def host_manager() -> str | Response:
 
 
 @host_manager_bp.route('/host-manager/add', methods=['POST'])
+@guard_host_config_writes
 def add_host() -> str | Response:
     """POST /host-manager/add — add a new host to a Nagios server."""
     if 'username' not in session:
@@ -353,7 +372,8 @@ def add_host() -> str | Response:
     # Sanitize host_name
     host_name = re.sub(r'[^a-zA-Z0-9_. -]', '', host_name)
     
-    config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+    config_path = host_config_path(server)
+    lock_host_configs([config_path])
     
     try:
         # Read existing content to check if file ends with newline
@@ -405,6 +425,8 @@ def add_host() -> str | Response:
         # Restart container immediately
         subprocess.run(['docker', 'restart', server], check=True, capture_output=True, timeout=60)
         flash(f'Host "{host_name}" added to {server} and restarted!', 'success')
+    except (HostConfigBusy, HostConfigError):
+        raise
     except Exception as e:
         flash(f'Failed to add host: {str(e)}', 'error')
     
@@ -412,6 +434,7 @@ def add_host() -> str | Response:
 
 
 @host_manager_bp.route('/host-manager/batch-add', methods=['POST'])
+@guard_host_config_writes
 def batch_add_hosts() -> str | Response:
     """POST /host-manager/batch-add — add multiple hosts in bulk."""
     if 'username' not in session:
@@ -431,6 +454,14 @@ def batch_add_hosts() -> str | Response:
     
     added_by_server = {}
     
+    lock_host_configs([
+        host_config_path(server.strip()) for server in servers
+        if isinstance(server, str) and (
+            session.get('role') == 'admin'
+            or session.get('permissions', {}).get(f'nagios_{server.strip()}')
+        )
+    ])
+
     try:
         for i in range(len(hostnames)):
             if i >= len(addresses) or i >= len(servers):
@@ -451,7 +482,7 @@ def batch_add_hosts() -> str | Response:
                     continue
             
             host_name = re.sub(r'[^a-zA-Z0-9_. -]', '', host_name)
-            config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+            config_path = host_config_path(server)
             
             host_def = '\ndefine host{\n'
             host_def += '    use                     linux-server\n'
@@ -505,6 +536,8 @@ def batch_add_hosts() -> str | Response:
             flash(f'{total} host(s) added!', 'success')
         else:
             flash('No valid hosts!', 'error')
+    except (HostConfigBusy, HostConfigError):
+        raise
     except Exception as e:
         flash(f'Failed: {str(e)}', 'error')
     
@@ -512,6 +545,7 @@ def batch_add_hosts() -> str | Response:
 
 
 @host_manager_bp.route('/host-manager/delete', methods=['POST'])
+@guard_host_config_writes
 def delete_host() -> str | Response:
     """POST /host-manager/delete — delete a host and its descendants."""
     if 'username' not in session:
@@ -530,7 +564,8 @@ def delete_host() -> str | Response:
     
     host_name = request.form.get('host_name')
     
-    config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+    config_path = host_config_path(server)
+    lock_host_configs([config_path])
     
     try:
         with open(config_path, 'r') as f:
@@ -595,6 +630,8 @@ def delete_host() -> str | Response:
         if len(hosts_to_delete) > 1:
             msg += f' and {len(hosts_to_delete)-1} descendant(s)'
         flash(msg + ' - Server restarted!', 'success')
+    except (HostConfigBusy, HostConfigError):
+        raise
     except Exception as e:
         flash(f'Failed to delete host: {str(e)}', 'error')
     
@@ -666,6 +703,7 @@ def _remove_and_rebuild_services(content: str, old_host_name: str, host_name: st
 
 
 @host_manager_bp.route('/host-manager/edit', methods=['POST'])
+@guard_host_config_writes
 def edit_host() -> str | Response:
     """POST /host-manager/edit — edit an existing host configuration."""
     if 'username' not in session:
@@ -690,7 +728,8 @@ def edit_host() -> str | Response:
     service_args = request.form.get('service_args', '')
 
     host_name = re.sub(r'[^a-zA-Z0-9_. -]', '', host_name)
-    config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+    config_path = host_config_path(server)
+    lock_host_configs([config_path])
 
     try:
         with open(config_path, 'r') as f:
@@ -714,6 +753,8 @@ def edit_host() -> str | Response:
 
         subprocess.run(['docker', 'restart', server], check=True, capture_output=True, timeout=60)
         flash(f'Host "{host_name}" updated and restarted!', 'success')
+    except (HostConfigBusy, HostConfigError):
+        raise
     except Exception as e:
         flash(f'Failed to update host: {str(e)}', 'error')
 

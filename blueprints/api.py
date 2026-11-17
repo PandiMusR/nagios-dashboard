@@ -1,7 +1,14 @@
 from __future__ import annotations
 
 from flask import Blueprint, request, jsonify, Response
+from datetime import datetime
+from ipaddress import IPv4Address
 import os, json, subprocess, re, threading
+
+from services.host_config import (
+    atomic_replace_host_config, guard_host_config_writes,
+    host_config_path, lock_host_configs,
+)
 
 from services.config import GLOBAL_CONFIG_PATH
 from services.ldap_service import log_activity
@@ -112,6 +119,7 @@ def _build_host_definition(
 
 
 @api_bp.route('/api/hosts/add', methods=['POST'])
+@guard_host_config_writes
 def api_add_host() -> tuple[Response, int]:
     """POST /api/hosts/add — Add a host to a Nagios server via API.
 
@@ -180,7 +188,8 @@ def api_add_host() -> tuple[Response, int]:
     host_name, id_ne = _parse_onu_host_name(host_name, server)
 
     # Check server exists
-    config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+    config_path = host_config_path(server)
+    lock_host_configs([config_path])
     if not os.path.exists(config_path):
         return _error(f'Server "{server}" not found or config missing', 404)
 
@@ -233,6 +242,7 @@ def api_add_host() -> tuple[Response, int]:
 
 
 @api_bp.route('/api/hosts/batch-add', methods=['POST'])
+@guard_host_config_writes
 def api_batch_add_hosts() -> tuple[Response, int]:
     """POST /api/hosts/batch-add — Add multiple hosts at once via API.
 
@@ -274,7 +284,8 @@ def api_batch_add_hosts() -> tuple[Response, int]:
     if not hosts or not isinstance(hosts, list):
         return _error('Missing or invalid "hosts" array')
 
-    config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+    config_path = host_config_path(server)
+    lock_host_configs([config_path])
     if not os.path.exists(config_path):
         return _error(f'Server "{server}" not found', 404)
 
@@ -400,6 +411,7 @@ def _replace_host_name_references(content: str, old_host_name: str, host_name: s
 
 
 @api_bp.route('/api/hosts/rename', methods=['POST'])
+@guard_host_config_writes
 def api_rename_host() -> tuple[Response, int]:
     """POST /api/hosts/rename — Rename a host and update its Nagios references.
 
@@ -433,7 +445,8 @@ def api_rename_host() -> tuple[Response, int]:
     if old_host_name == host_name:
         return _error('old_host_name and host_name must be different')
 
-    config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+    config_path = host_config_path(server)
+    lock_host_configs([config_path])
     if not os.path.exists(config_path):
         return _error(f'Server "{server}" not found', 404)
 
@@ -488,7 +501,331 @@ def api_rename_host() -> tuple[Response, int]:
         return _error(f'File error: {str(e)}', 500)
 
 
+BHOME_SERVER = 'Bhome'
+BHOME_CONFIG_PATH = f'/svr/{BHOME_SERVER}/etc/objects/localhost.cfg'
+_HOST_BLOCK_RE = re.compile(r'define\s+host\s*\{[^}]*\}', re.DOTALL)
+_ADDRESS_LINE_RE = re.compile(r'^(\s*address\s+)(\S+)(.*)$', re.MULTILINE)
+_HOST_NAME_LINE_RE = re.compile(r'^\s*host_name\s+(.+?)\s*$', re.MULTILINE)
+
+
+def _optional_bool(data: dict, key: str) -> tuple[bool, tuple[Response, int] | None]:
+    if key not in data:
+        return False, None
+    value = data[key]
+    if not isinstance(value, bool):
+        return False, _error(f'{key} must be true or false')
+    return value, None
+
+
+def _parse_bhome_ip_request(
+    data: dict,
+) -> tuple[list[tuple[str, str]] | None, bool, bool, tuple[Response, int] | None]:
+    server = data.get('server', '')
+    if not isinstance(server, str) or server.strip() != BHOME_SERVER:
+        return None, False, False, _error('server must be Bhome')
+
+    dry_run, error = _optional_bool(data, 'dry_run')
+    if error:
+        return None, False, False, error
+    allow_existing, error = _optional_bool(data, 'allow_existing')
+    if error:
+        return None, False, False, error
+
+    if 'changes' in data:
+        raw_changes = data['changes']
+        if not isinstance(raw_changes, list) or not raw_changes:
+            return None, False, False, _error('changes must be a non-empty list')
+    elif 'old_ip' in data or 'new_ip' in data:
+        raw_changes = [{'old_ip': data.get('old_ip'), 'new_ip': data.get('new_ip')}]
+    else:
+        return None, False, False, _error('Missing changes, or old_ip and new_ip')
+
+    pairs: list[tuple[str, str]] = []
+    seen_old: set[str] = set()
+    seen_new: set[str] = set()
+    for item in raw_changes:
+        if not isinstance(item, dict):
+            return None, False, False, _error('each change must be an object with old_ip and new_ip')
+        old_ip = item.get('old_ip', '')
+        new_ip = item.get('new_ip', '')
+        if not isinstance(old_ip, str) or not isinstance(new_ip, str):
+            return None, False, False, _error('old_ip and new_ip must be strings')
+        old_ip = old_ip.strip()
+        new_ip = new_ip.strip()
+        try:
+            IPv4Address(old_ip)
+            IPv4Address(new_ip)
+        except ValueError:
+            return None, False, False, _error('old_ip and new_ip must be exact IPv4 addresses')
+        if old_ip == new_ip:
+            return None, False, False, _error(f'old_ip and new_ip are the same: {old_ip}')
+        if old_ip in seen_old:
+            return None, False, False, _error(f'duplicate old_ip: {old_ip}')
+        if new_ip in seen_new:
+            return None, False, False, _error(f'duplicate new_ip: {new_ip}')
+        seen_old.add(old_ip)
+        seen_new.add(new_ip)
+        pairs.append((old_ip, new_ip))
+    return pairs, dry_run, allow_existing, None
+
+
+def _apply_address_map(
+    content: str, mapping: dict[str, str]
+) -> tuple[str, list[dict], dict[str, list[str]]]:
+    index: dict[str, list[str]] = {}
+    hits: list[dict] = []
+
+    def replace_host_block(match: re.Match) -> str:
+        block = match.group(0)
+        host_match = _HOST_NAME_LINE_RE.search(block)
+        host_name = host_match.group(1) if host_match else ''
+
+        def replace_address(addr_match: re.Match) -> str:
+            current = addr_match.group(2)
+            index.setdefault(current, []).append(host_name)
+            new_ip = mapping.get(current)
+            if new_ip is None:
+                return addr_match.group(0)
+            hits.append({'host_name': host_name, 'old_ip': current, 'new_ip': new_ip})
+            return addr_match.group(1) + new_ip + addr_match.group(3)
+
+        return _ADDRESS_LINE_RE.sub(replace_address, block)
+
+    updated = _HOST_BLOCK_RE.sub(replace_host_block, content)
+    return updated, hits, index
+
+
+def _audit_address_edit(before: str, after: str, mapping: dict[str, str]) -> str | None:
+    if _HOST_BLOCK_RE.sub('', before) != _HOST_BLOCK_RE.sub('', after):
+        return 'edit touched text outside host blocks'
+    before_blocks = _HOST_BLOCK_RE.findall(before)
+    after_blocks = _HOST_BLOCK_RE.findall(after)
+    if len(before_blocks) != len(after_blocks):
+        return 'host block count changed'
+    for old_block, new_block in zip(before_blocks, after_blocks):
+        old_lines = old_block.splitlines()
+        new_lines = new_block.splitlines()
+        if len(old_lines) != len(new_lines):
+            return 'host block line count changed'
+        for old_line, new_line in zip(old_lines, new_lines):
+            if old_line == new_line:
+                continue
+            old_addr = _ADDRESS_LINE_RE.match(old_line)
+            new_addr = _ADDRESS_LINE_RE.match(new_line)
+            if not old_addr or not new_addr:
+                return 'non-address line changed'
+            if old_addr.group(1) != new_addr.group(1) or old_addr.group(3) != new_addr.group(3):
+                return 'address line formatting changed'
+            if mapping.get(old_addr.group(2)) != new_addr.group(2):
+                return 'address changed to an unexpected value'
+    return None
+
+
+def _plan_bhome_address_changes(
+    content: str, pairs: list[tuple[str, str]], allow_existing: bool
+) -> dict:
+    mapping = dict(pairs)
+    updated, hits, index = _apply_address_map(content, mapping)
+    missing = [old_ip for old_ip, _new_ip in pairs if old_ip not in index]
+    if missing:
+        return {'ok': False, 'status': 404, 'error': 'old_ip not found on Bhome', 'missing': missing}
+
+    old_set = set(mapping)
+    conflicts = []
+    reported: set[str] = set()
+    for _old_ip, new_ip in pairs:
+        if new_ip in reported:
+            continue
+        reported.add(new_ip)
+        if new_ip in index and new_ip not in old_set:
+            conflicts.append({'new_ip': new_ip, 'host_names': index[new_ip]})
+    if conflicts and not allow_existing:
+        return {
+            'ok': False,
+            'status': 409,
+            'error': 'new_ip is already used by a host that is not part of this change',
+            'conflicts': conflicts,
+        }
+
+    audit_error = _audit_address_edit(content, updated, mapping)
+    if audit_error:
+        return {'ok': False, 'status': 500, 'error': f'Refusing to write config: {audit_error}'}
+
+    changes = []
+    for old_ip, new_ip in pairs:
+        host_names = [hit['host_name'] for hit in hits if hit['old_ip'] == old_ip]
+        changes.append({
+            'old_ip': old_ip,
+            'new_ip': new_ip,
+            'host_count': len(host_names),
+            'host_names': host_names,
+        })
+    return {
+        'ok': True,
+        'updated': updated,
+        'changes': changes,
+        'total_hosts': sum(item['host_count'] for item in changes),
+    }
+
+
+def _verify_bhome_config() -> tuple[bool, str]:
+    try:
+        result = subprocess.run(
+            ['docker', 'exec', BHOME_SERVER, '/opt/nagios/bin/nagios', '-v', '/opt/nagios/etc/nagios.cfg'],
+            capture_output=True, text=True, timeout=120,
+        )
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return False, str(exc)
+    output = (result.stdout or '') + (result.stderr or '')
+    return result.returncode == 0, output
+
+
+def _restart_bhome() -> None:
+    subprocess.run(
+        ['docker', 'restart', BHOME_SERVER],
+        check=True, capture_output=True, timeout=120,
+    )
+
+
+def _change_summary(changes: list[dict]) -> str:
+    summary = ', '.join(
+        f"{item['old_ip']} -> {item['new_ip']} ({item['host_count']} hosts)"
+        for item in changes
+    )
+    if len(summary) > 1500:
+        return summary[:1500] + '...'
+    return summary
+
+
+@api_bp.route('/api/hosts/change-ip', methods=['POST'])
+@guard_host_config_writes
+def api_change_ip() -> tuple[Response, int]:
+    """POST /api/hosts/change-ip — Replace exact host addresses on Bhome.
+
+    Auth: X-API-Key header or ?api_key query param
+
+    Only the address directive is compared, as a whole token.
+    10.10.0.1 does not match 10.10.0.11 or 10.10.0.19.
+    host_name, services, and files other than localhost.cfg are left as they are.
+    Several pairs are applied in one pass, then Nagios is validated and restarted once.
+
+    Body (JSON):
+    {
+        "server": "Bhome",
+        "dry_run": true,
+        "allow_existing": false,
+        "changes": [
+            {"old_ip": "10.10.0.1", "new_ip": "10.11.0.1"}
+        ]
+    }
+
+    A single pair may be sent as old_ip and new_ip instead of changes.
+    dry_run previews the hosts that would change and does not write or restart.
+    """
+    if not _check_api_key(request):
+        return _error('Invalid or missing API key', 401)
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return _error('Request body must be JSON')
+
+    pairs, dry_run, allow_existing, error = _parse_bhome_ip_request(data)
+    if error:
+        return error
+
+    lock_host_configs([BHOME_CONFIG_PATH])
+    if not os.path.exists(BHOME_CONFIG_PATH):
+        return _error('Server "Bhome" not found or config missing', 404)
+
+    try:
+        try:
+            with open(BHOME_CONFIG_PATH, 'r') as fh:
+                content = fh.read()
+                metadata = os.fstat(fh.fileno())
+        except OSError as exc:
+            return _error(f'File error: {exc}', 500)
+
+        plan = _plan_bhome_address_changes(content, pairs, allow_existing)
+        if not plan['ok']:
+            body = {'success': False, 'error': plan['error']}
+            if 'missing' in plan:
+                body['missing'] = plan['missing']
+            if 'conflicts' in plan:
+                body['conflicts'] = plan['conflicts']
+            return jsonify(body), plan['status']
+
+        if dry_run:
+            return jsonify({
+                'success': True,
+                'server': BHOME_SERVER,
+                'dry_run': True,
+                'restarted': False,
+                'total_hosts': plan['total_hosts'],
+                'changes': plan['changes'],
+            }), 200
+
+        backup_dir = os.path.join(os.path.dirname(BHOME_CONFIG_PATH), 'backups')
+        try:
+            os.makedirs(backup_dir, exist_ok=True)
+            backup_path = os.path.join(
+                backup_dir,
+                'localhost_before_ip_change_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f') + '.cfg',
+            )
+            atomic_replace_host_config(backup_path, content, metadata)
+            atomic_replace_host_config(BHOME_CONFIG_PATH, plan['updated'], metadata)
+        except OSError as exc:
+            return _error(f'File error: {exc}', 500)
+
+        ok, output = _verify_bhome_config()
+        if not ok:
+            try:
+                atomic_replace_host_config(BHOME_CONFIG_PATH, content, metadata)
+            except OSError as exc:
+                return jsonify({
+                    'success': False,
+                    'error': f'Nagios validation failed and config restoration failed: {exc}',
+                    'backup': backup_path,
+                }), 500
+            log_activity('API: Change IP Failed', 'Bhome: nagios -v failed, config restored', username='API')
+            return jsonify({
+                'success': False,
+                'error': 'nagios -v failed, config restored',
+                'nagios_output': output[-4000:],
+            }), 422
+
+        try:
+            _restart_bhome()
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
+            log_activity(
+                'API: Change IP restart failed',
+                'Bhome: config written but restart failed',
+                username='API',
+            )
+            return jsonify({
+                'success': False,
+                'error': f'Config written but restart failed: {exc}',
+                'restarted': False,
+                'backup': backup_path,
+                'total_hosts': plan['total_hosts'],
+                'changes': plan['changes'],
+            }), 500
+
+        log_activity('API: Change IP', f'Bhome: {_change_summary(plan["changes"])}', username='API')
+        return jsonify({
+            'success': True,
+            'server': BHOME_SERVER,
+            'dry_run': False,
+            'restarted': True,
+            'total_hosts': plan['total_hosts'],
+            'backup': backup_path,
+            'changes': plan['changes'],
+        }), 200
+    except OSError as exc:
+        return _error(f'File error: {exc}', 500)
+
+
 @api_bp.route('/api/hosts/delete', methods=['DELETE'])
+@guard_host_config_writes
 def api_delete_host() -> tuple[Response, int]:
     """DELETE /api/hosts/delete — Delete a host from a Nagios server.
 
@@ -513,7 +850,8 @@ def api_delete_host() -> tuple[Response, int]:
     if not server or not host_name:
         return _error('Missing required fields: server, host_name')
 
-    config_path = f'/svr/{server}/etc/objects/localhost.cfg'
+    config_path = host_config_path(server)
+    lock_host_configs([config_path])
     if not os.path.exists(config_path):
         return _error(f'Server "{server}" not found', 404)
 

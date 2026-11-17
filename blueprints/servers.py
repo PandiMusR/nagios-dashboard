@@ -2,6 +2,12 @@ from __future__ import annotations
 
 from flask import Blueprint, Response, render_template, request, redirect, session, jsonify, flash
 import os, json, subprocess, threading, time
+from contextlib import ExitStack
+
+from services.host_config import (
+    HostConfigBusy, guard_host_config_writes,
+    host_config_lock, host_config_path, lock_host_configs,
+)
 
 from services.config import APP_ROOT, CONFIG_DIR, PROXY_PORT_OFFSET
 from services.encryption import decrypt_session_value, save_encrypted_json
@@ -116,7 +122,9 @@ def add_server() -> Response | tuple[Response, int]:
         log_activity('Add Server Failed', f'Proxy port {proxy_port} already in use')
         return jsonify({'success': False, 'error': f'Proxy port {proxy_port} is already in use. Please choose a different port.'}), 400
     
+    build_lock = ExitStack()
     try:
+        build_lock.enter_context(host_config_lock(host_config_path(name)))
         # Get credentials before threading
         username = session.get('username')
         password = decrypt_session_value(session.get('password'))
@@ -153,12 +161,22 @@ def add_server() -> Response | tuple[Response, int]:
                 log_activity('Add Server Failed', f'Error building server "{name}": {str(e)}', username=username, ip=client_ip)
                 print(f"Exception building server {name}: {str(e)}")
         
-        thread = threading.Thread(target=build_server)
+        def guarded_build() -> None:
+            try:
+                build_server()
+            finally:
+                build_lock.close()
+
+        thread = threading.Thread(target=guarded_build)
         thread.daemon = True
         thread.start()
         
         return jsonify({'success': True, 'name': name})
+    except HostConfigBusy as exc:
+        build_lock.close()
+        return jsonify({'success': False, 'error': str(exc)}), 409
     except Exception as e:
+        build_lock.close()
         log_activity('Add Server Failed', f'Failed to create server "{name}": {str(e)}')
         return jsonify({'success': False, 'error': 'Failed to create server!'}), 500
 
@@ -255,6 +273,7 @@ def batch_restart_servers() -> Response | tuple[Response, int]:
 
 
 @servers_bp.route('/servers/batch-delete', methods=['POST'])
+@guard_host_config_writes
 def batch_delete_servers() -> Response | tuple[Response, int]:
     """POST /servers/batch-delete — Delete multiple Nagios containers and their data."""
     if 'username' not in session:
@@ -268,6 +287,8 @@ def batch_delete_servers() -> Response | tuple[Response, int]:
     if not servers_list:
         return jsonify({'success': False, 'error': 'No servers selected'})
     
+    lock_host_configs([host_config_path(server) for server in servers_list])
+
     try:
         for server in servers_list:
             # Validate server exists before deleting
@@ -418,6 +439,7 @@ def check_server(name: str) -> Response | tuple[Response, int]:
 
 
 @servers_bp.route('/servers/delete/<name>', methods=['POST'])
+@guard_host_config_writes
 def delete_server(name: str) -> Response:
     """POST /servers/delete/<name> — Stop and remove a Nagios server container."""
     if 'username' not in session:
@@ -425,6 +447,8 @@ def delete_server(name: str) -> Response:
     if not check_permission('servers'):
         return jsonify({'error': 'Access denied'}), 403
     
+    lock_host_configs([host_config_path(name)])
+
     try:
         subprocess.run(['docker', 'stop', name], check=True, capture_output=True, timeout=30)
         subprocess.run(['docker', 'rm', name], check=True, capture_output=True, timeout=30)
@@ -476,6 +500,7 @@ def stop_server(name: str) -> Response:
 
 
 @servers_bp.route('/servers/edit-config/<name>', methods=['GET', 'POST'])
+@guard_host_config_writes
 def edit_server_config(name: str) -> str | Response:
     """GET/POST /servers/edit-config/<name> — View or update Nagios config file."""
     if 'username' not in session:
@@ -483,9 +508,10 @@ def edit_server_config(name: str) -> str | Response:
     if not check_permission('servers'):
         return jsonify({'error': 'Access denied'}), 403
     
-    config_path = f'/svr/{name}/etc/objects/localhost.cfg'
+    config_path = host_config_path(name)
     
     if request.method == 'POST':
+        lock_host_configs([config_path])
         content = request.form.get('content')
         try:
             with open(config_path, 'w') as f:
