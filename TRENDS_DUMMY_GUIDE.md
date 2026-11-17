@@ -1,7 +1,7 @@
 # Nagios Trends Dummy Injection Guide
 
 **Status:** demo/ops reference only (not app runtime docs).  
-**Prod SSH:** `ssh -p 2325 rif@103.73.74.98` — Docker via sudo. Alpine containers: prefer **Python** over BusyBox `sed` for file edits. **Always backup** status/retention/archives before inject.
+**Prod SSH:** `ssh -p 2326 rif@103.73.74.98` — Docker via sudo. Alpine containers: prefer **Python** over BusyBox `sed` for file edits. **Always backup** status/retention/archives before inject.
 
 Panduan membuat data Trends palsu di Nagios untuk demo: inject log ke archive logs agar `trends.cgi` menampilkan history seolah host sudah dimonitor.
 
@@ -236,7 +236,7 @@ python3 -c "from datetime import datetime; print(int(datetime(2026,6,30,13,16,3)
 Sebelum menjalankan script utama, cari line numbers untuk host yang ingin di-edit:
 
 ```bash
-ssh -p 2325 rif@103.73.74.98 "echo '<pass>' | sudo -S docker exec <container> grep -n 'host_name=Nama Host' /opt/nagios/var/status.dat"
+ssh -p 2326 rif@103.73.74.98 "echo '<pass>' | sudo -S docker exec <container> grep -n 'host_name=Nama Host' /opt/nagios/var/status.dat"
 ```
 
 ### 3. Jalankan Script
@@ -244,23 +244,23 @@ ssh -p 2325 rif@103.73.74.98 "echo '<pass>' | sudo -S docker exec <container> gr
 **Opsi A: Pipe langsung dari dev ke container**
 
 ```bash
-cat inject_trends.py | ssh -p 2325 rif@103.73.74.98 "echo '<pass>' | sudo -S docker exec -i <container> python3"
+cat inject_trends.py | ssh -p 2326 rif@103.73.74.98 "echo '<pass>' | sudo -S docker exec -i <container> python3"
 ```
 
 **Opsi B: Copy ke container, lalu jalankan**
 
 ```bash
 # Copy
-ssh -p 2325 rif@103.73.74.98 "echo '<pass>' | sudo -S docker cp inject_trends.py <container>:/tmp/"
+ssh -p 2326 rif@103.73.74.98 "echo '<pass>' | sudo -S docker cp inject_trends.py <container>:/tmp/"
 
 # Jalankan
-ssh -p 2325 rif@103.73.74.98 "echo '<pass>' | sudo -S docker exec <container> python3 /tmp/inject_trends.py"
+ssh -p 2326 rif@103.73.74.98 "echo '<pass>' | sudo -S docker exec <container> python3 /tmp/inject_trends.py"
 ```
 
 **Opsi C: Inline langsung via SSH**
 
 ```bash
-ssh -p 2325 rif@103.73.74.98 "echo '<pass>' | sudo -S docker exec <container> python3 -c '
+ssh -p 2326 rif@103.73.74.98 "echo '<pass>' | sudo -S docker exec <container> python3 -c '
 HOST = \"Nama Host\"
 D = \"epoch_value\"
 # ... (script inline)
@@ -270,7 +270,7 @@ D = \"epoch_value\"
 ### 4. Restart Container
 
 ```bash
-ssh -p 2325 rif@103.73.74.98 "echo '<pass>' | sudo -S docker restart <container>"
+ssh -p 2326 rif@103.73.74.98 "echo '<pass>' | sudo -S docker restart <container>"
 ```
 
 ### 5. Verifikasi
@@ -322,14 +322,14 @@ Backup disimpan dengan suffix `.bak`:
 
 ```bash
 # Restore archive
-ssh -p 2325 rif@103.73.74.98 "echo '<pass>' | sudo -S docker exec <container> sh -c '
+ssh -p 2326 rif@103.73.74.98 "echo '<pass>' | sudo -S docker exec <container> sh -c '
 cp /opt/nagios/var/archives/nagios-06-30-2026-00.log.bak /opt/nagios/var/archives/nagios-06-30-2026-00.log
 cp /opt/nagios/var/status.dat.bak /opt/nagios/var/status.dat
 cp /opt/nagios/var/retention.dat.bak /opt/nagios/var/retention.dat
 '"
 
 # Restart
-ssh -p 2325 rif@103.73.74.98 "echo '<pass>' | sudo -S docker restart <container>"
+ssh -p 2326 rif@103.73.74.98 "echo '<pass>' | sudo -S docker restart <container>"
 ```
 
 ---
