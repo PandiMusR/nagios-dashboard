@@ -10,8 +10,11 @@ from .common import COHORT, MAX_FILE, ReleaseError, canonical, digest, hex_strin
 
 
 def git(repo, *arguments):
-    result = subprocess.run(['git', '-C', str(repo), *arguments], check=True,
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subprocess.run(['/usr/bin/git', '--no-replace-objects', '-C', str(Path(repo).resolve()),
+                             *arguments], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            env={'PATH': '/usr/bin:/bin', 'LC_ALL': 'C', 'HOME': '/nonexistent',
+                                 'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': '/dev/null',
+                                 'GIT_NO_REPLACE_OBJECTS': '1'})
     return result.stdout
 
 

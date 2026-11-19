@@ -17,7 +17,7 @@ from release_tools.common import (
     Busy, COHORT, Layout, ReleaseError, ServiceUncertain, Tree, canonical, digest,
 )
 from release_tools.publisher import Publisher, main
-from release_tools.runtime import OpenRCServices
+from release_tools.runtime import OpenRCServices, process_identity
 
 
 PIN = '8c4b2e2d8ee289d658935f998f12498ed83d51e0'
@@ -63,6 +63,20 @@ class FakeServices:
 
     def stopped(self):
         return not self.running
+
+    def perform(self, action, spawned, completed):
+        spawned(process_identity(os.getpid()))
+        try:
+            getattr(self, action)()
+        except ServiceUncertain:
+            raise
+        except Exception:
+            completed()
+            raise
+        completed()
+
+    def recovery_quiescent(self, record):
+        return True
 
     def stop(self):
         self.calls.append('stop')
@@ -388,10 +402,10 @@ class PublisherTests(unittest.TestCase):
         with patch.object(self.services, 'stop', side_effect=KeyboardInterrupt):
             with self.assertRaises(KeyboardInterrupt):
                 publisher.publish()
-        with self.assertRaisesRegex(ReleaseError, 'baseline remains'):
+        with self.assertRaisesRegex(ReleaseError, 'uncertain'):
             self.publisher().publish()
         self.assertEqual(self.services.calls, ['probe', 'preflight'])
-        self.assertEqual(self.journal()['phase'], 'ABORTED')
+        self.assertEqual(self.journal()['phase'], 'MANUAL_INTERVENTION')
         self.assert_before()
 
     def test_interrupted_rollback_is_recoverable(self):
@@ -733,11 +747,16 @@ class RuntimeTests(unittest.TestCase):
 
     def test_service_controller_has_fixed_commands_and_cleared_environment(self):
         service = OpenRCServices(Layout.production())
-        with patch('release_tools.runtime.subprocess.run') as run:
-            run.return_value.returncode = 0
+        with patch('release_tools.runtime.subprocess.Popen') as run, \
+                patch('release_tools.runtime.process_identity', return_value=process_identity(os.getpid())):
+            run.return_value.wait.return_value = 0
+            run.return_value.poll.return_value = 0
             service._command('start')
         args, options = run.call_args
-        self.assertEqual(args[0], ['/sbin/rc-service', 'dashboard-nagios', 'start'])
+        self.assertEqual(args[0][:3], ['/usr/bin/python3', '-I', '-B'])
+        self.assertIn("'/sbin/rc-service','dashboard-nagios'", args[0][4])
+        self.assertEqual(args[0][-1], 'start')
+        self.assertTrue(options['start_new_session'])
         self.assertNotIn('shell', options)
         self.assertNotIn('PYTHONPATH', options['env'])
         with self.assertRaises(ReleaseError):
@@ -745,7 +764,10 @@ class RuntimeTests(unittest.TestCase):
 
     def test_controller_timeout_is_explicitly_uncertain(self):
         service = OpenRCServices(Layout.production())
-        with patch('release_tools.runtime.subprocess.run', side_effect=subprocess.TimeoutExpired('fixture', 30)):
+        with patch('release_tools.runtime.subprocess.Popen') as run, \
+                patch('release_tools.runtime.process_identity', return_value=process_identity(os.getpid())):
+            run.return_value.wait.side_effect = subprocess.TimeoutExpired('fixture', 30)
+            run.return_value.poll.return_value = None
             with self.assertRaises(ServiceUncertain):
                 service._command('start')
 

@@ -14,6 +14,8 @@ python3 -B -m release_tools.builder \
 
 The output directory must not exist. `release.tar` is deterministic USTAR with five regular files, sorted paths, commit timestamps, UID/GID zero, and mode 0644. `manifest.json` records commit, per-file SHA-256/size/metadata and artifact SHA-256/size. Working-tree changes, caches, configuration, databases and secrets cannot enter the fixed allowlist. A different exact 40-character commit can be selected for preparation; it still requires independent approval.
 
+Every builder Git call uses `/usr/bin/git --no-replace-objects`, `GIT_NO_REPLACE_OBJECTS=1`, and a fresh environment. Inherited Git repository/object/configuration overrides are discarded; global and system Git configuration is disabled. Existing replacement refs are left untouched. The explicitly selected local repository and its object storage remain trusted build inputs.
+
 The cohort is `services/host_config.py` and `blueprints/{api,global_settings,host_manager,servers}.py`. Extending it requires a reviewed code change, not a CLI parameter. No dependency or schema update is part of this release.
 
 ## Independent approval
@@ -114,13 +116,13 @@ The program has no caller-selected production paths, checksums or commands. Libr
 4. Test cross-process nonblocking locking using `.publisher-probe.lock`. This reserved persistent file is retained; actual shared lock files are never removed.
 5. Verify existing Dashboard/collector/proxy PID identities and private configuration metadata. Do not read key/password contents.
 6. Observe a successful collector advance before interruption. Direct `mode=ro` SQLite queries use approved containers, no application imports or schema initialization. Require healthy records and bounded advancement; do not use DB modification time. Choose the 1–180 second deadline from observed cycle times, not an assumed 30-second cycle.
-7. Back up code and captured UID/GID/mode/timestamps, mark the approval consumed, and durably journal each phase.
+7. Back up code and captured UID/GID/mode/timestamps. Read every required backup back and verify its approved before hash/size and root UID/GID with mode 0600; recheck the production baseline. A failure records a protected backup-verification event before any service shutdown or approval consumption. Only then mark the approval consumed and durably journal each phase. Readback is an application-level check, not proof of storage-device durability after power loss.
 8. Stop only `dashboard-nagios`; verify it stopped, then publish the complete cohort with same-directory temporary files and atomic replacements.
 9. Verify installed hashes/metadata, mark `INSTALLED`, then start Dashboard. The startup guard must permit this complete cohort.
 10. Validate fixed loopback `/login` and `/static/css/login.css` reads, collector/proxy process continuity, credential metadata stability and successful snapshot advancement. Do not follow redirects or log response bodies. Do not call `/health`, import `app.py`, or run CGI/administrative mutations.
 11. Commit, or perform one controlled rollback. Audit events contain identifiers, phases and reason codes, not secrets, request bodies or raw service output.
 
-OpenRC operations have 30-second controller timeouts. An uncertain controller timeout requires operator intervention rather than racing a potentially still-running start/stop operation. HTTP validation also has a process alarm deadline, so a slowly trickling response cannot extend the socket timeout indefinitely. SQLite queries have bounded busy/progress limits; a freshness deadline can include the final bounded query. The existing service stop semantics must be reviewed: the publisher never adds a forced-kill escalation. Its safety depends on the prior drain attestation.
+OpenRC operations have 30-second controller timeouts. An uncertain controller timeout requires operator intervention rather than racing a potentially still-running start/stop operation. The helper does not terminate a controller or signal its process group: killing one PID/group would not establish detached-descendant quiescence. HTTP validation also has a process alarm deadline, so a slowly trickling response cannot extend the socket timeout indefinitely. SQLite queries have bounded busy/progress limits; a freshness deadline can include the final bounded query. The existing service stop semantics must be reviewed: the publisher never adds a forced-kill escalation. Its safety depends on the prior drain attestation.
 
 NOC separately checks normal authentication and an existing native read view. The `/nagios/<container>` launcher rewrites collector credentials and is not an automated read-only canary. Do not use X-Auth headers or command CGI for validation. Keep the maintenance freeze until acceptance.
 
@@ -130,7 +132,42 @@ NOC separately checks normal authentication and an existing native read view. Th
 
 A repeated committed attempt verifies hashes and returns `already-current` without restarting. Consumed approvals cannot reinstall after abort/rollback, even if the current journal changed. A new independently approved nonce is required.
 
-Interrupted attempts are inspected before accepting another release. If interruption occurred before any install and the original service is still running with the entire baseline, the attempt is aborted without a restart. Otherwise the helper verifies every backup and current file before restoring anything. It restores only states recognized as approved old/new bytes. An added module is removed only when its hash and journal prove provenance. Persistent application data and lock files are never restored/deleted.
+Interrupted attempts are inspected before accepting another release. Pending service operations are reconciled first. An abort without restart is allowed only when no unresolved operation exists and the complete baseline is still running. Otherwise the helper verifies every backup and current file before restoring anything. It restores only states recognized as approved old/new bytes. An added module is removed only when its hash and journal prove provenance. Persistent application data and lock files are never restored/deleted.
+
+### Service-operation safety and manual reconciliation
+
+`state/service-operation.json` durably records a unique operation nonce, approval ID, action and publisher identity before any controller is created. A fixed isolated-Python launcher waits on a pipe. The publisher records the controller PID, Linux start ticks and boot ID before releasing that gate to exec the fixed OpenRC command. If the publisher dies before release, EOF prevents command execution. If it dies after release, the pending record remains. A successful foreground OpenRC return and matching service state are required before recording completion. Nonzero exits, timeouts, missing identity/completion persistence and process interruption remain unresolved.
+
+The gate prevents an unrecorded controller from executing; it does not contain OpenRC descendants. A new session is diagnostic isolation, not proof of containment. Missing/reused PIDs, process-group emptiness and reboot alone do not authorize recovery. Every unresolved operation blocks source replacement, automatic rollback and successful terminal states. A guard invocation during a pending start must descend from the recorded controller with matching boot/start identity; other callers are refused. A guard that already passed can still be delayed before execution, which is why recovery holds the files unchanged until reconciliation.
+
+Normal completion relies on a separately reviewed OpenRC service contract: success must mean synchronous completion of start/stop control, with no detached task retaining a deferred start/stop action. The intended Dashboard daemon may persist after successful start. Verify the actual scripts, supervisors and hooks on isolated Alpine before activation. If that contract cannot be established, do not activate this publisher. A timeout or abnormal controller exit never receives that success presumption.
+
+For unresolved operations, the helper records `MANUAL_INTERVENTION` and preserves the operation record, cohort and backups. Repeated invocation cannot infer safety merely from Dashboard being absent. An authorized root operator must:
+
+1. Keep ingress and administrative mutations frozen; preserve the journal and operation evidence.
+2. Match the recorded boot ID/PID/start ticks to live processes. Identify all related controllers, supervisors and detached descendants. Do not signal a PID that has been reused.
+3. Establish that no earlier operation can perform a later start/stop, and stop every Dashboard instance that could have loaded an uncertain cohort. Merely restoring source cannot repair an already running process.
+4. If lineage/quiescence cannot be proved, leave the attempt blocked. Use an approved console-controlled reboot/recovery with Dashboard startup disabled or guard-blocked, then verify quiescence and stopped state. Never reopen ingress automatically.
+5. Renew the existing maintenance record for this attempt. Independently create root-owned 0600 `/etc/nagios-release/controller-recovery.json` only after those checks, using this schema:
+
+```json
+{
+  "schema": 1,
+  "approval_id": "the pending approval ID",
+  "operation_id": "the pending operation nonce",
+  "operation_sha256": "SHA-256 of canonical service-operation.json",
+  "expires_at": 0,
+  "quiescent": true,
+  "dashboard_stopped": true,
+  "uncertain_processes_terminated": true
+}
+```
+
+Canonical JSON is sorted keys, compact separators and one trailing newline, as written by this helper. The installed root operator can obtain the digest with the read-only command `sha256sum /var/lib/nagios-release/state/service-operation.json`; never automatically generate or approve the attestation from a missing PID. The identity and digest bind this root attestation to one exact pending operation. The uploader cannot create it. The helper additionally rejects a still-live original controller, unreadable controller state, or any running Dashboard. Detached-descendant quiescence is an explicit operator assertion, not an automatically established fact.
+
+6. Reinvoke the existing no-argument publisher. It records reconciliation and attempts the normal verified rollback, never declaring the failed release committed. A consumed approval remains consumed; later publication requires a new independently approved nonce. A different ambiguous operation requires a new matching attestation.
+
+Untracked ambiguous service phases left by an older publisher require manual reconciliation rather than automatic abort/restore. Do not delete records to manufacture a clean state. Startup-hook ancestry, actual OpenRC completion semantics and the operator reconciliation procedure are production rehearsal gates.
 
 Rollback restores code ownership, permissions and timestamps, starts only Dashboard, verifies availability and unrelated process identities, and records `ROLLED_BACK`. Snapshot/key/configuration values are never restored. Rollback does not repair an independent collector incident; investigate it separately.
 

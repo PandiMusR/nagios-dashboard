@@ -10,6 +10,50 @@ import time
 from .common import ReleaseError, ServiceUncertain, Tree
 
 
+def process_identity(pid):
+    proc = Path('/proc') / str(pid)
+    try:
+        fields = (proc / 'stat').read_text().rsplit(')', 1)[1].split()
+        return {'pid': pid, 'start_ticks': int(fields[19]),
+                'boot_id': Path('/proc/sys/kernel/random/boot_id').read_text().strip()}
+    except (OSError, ValueError, IndexError) as exc:
+        raise ServiceUncertain('cannot establish controller identity') from exc
+
+
+def controller_absent(identity):
+    if identity is None:
+        return True
+    try:
+        boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+        if boot != identity['boot_id']:
+            return True
+        try:
+            return process_identity(identity['pid']) != identity
+        except ServiceUncertain as exc:
+            if isinstance(exc.__cause__, FileNotFoundError):
+                return True
+            raise
+    except (OSError, ServiceUncertain):
+        return False
+
+
+def controller_ancestor(identity):
+    if identity is None:
+        return False
+    try:
+        pid = os.getpid()
+        for _ in range(128):
+            if pid < 2:
+                return False
+            if pid == identity['pid']:
+                return process_identity(pid) == identity
+            fields = (Path('/proc') / str(pid) / 'stat').read_text().rsplit(')', 1)[1].split()
+            pid = int(fields[1])
+        return False
+    except (OSError, ValueError, IndexError, ServiceUncertain):
+        return False
+
+
 @contextmanager
 def availability_deadline(seconds):
     if signal.getitimer(signal.ITIMER_REAL) != (0.0, 0.0):
@@ -29,19 +73,48 @@ class OpenRCServices:
     def __init__(self, layout):
         self.layout = layout
 
-    def _command(self, action):
+    def _command(self, action, spawned=lambda identity: None):
         if action not in ('stop', 'start'):
             raise ReleaseError('unsupported service operation')
+        read_gate, write_gate = os.pipe2(os.O_CLOEXEC)
+        launcher = ('import os,sys; fd=int(sys.argv[1]); permit=os.read(fd,1); os.close(fd); '
+                    "sys.exit(125) if permit != b'1' else None; "
+                    "os.execve('/sbin/rc-service',['/sbin/rc-service','dashboard-nagios',sys.argv[2]],"
+                    "{'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})")
+        process = None
         try:
-            result = subprocess.run(
-                ['/sbin/rc-service', 'dashboard-nagios', action], stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30,
+            process = subprocess.Popen(
+                ['/usr/bin/python3', '-I', '-B', '-c', launcher, str(read_gate), action],
+                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                pass_fds=(read_gate,), start_new_session=True,
                 env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'LC_ALL': 'C'},
             )
-        except subprocess.TimeoutExpired as exc:
-            raise ServiceUncertain('service control deadline exceeded') from exc
-        if result.returncode:
-            raise ReleaseError('Dashboard service operation failed')
+            self.controller = process
+            spawned(process_identity(process.pid))
+            os.write(write_gate, b'1')
+            try:
+                returncode = process.wait(timeout=30)
+            except subprocess.TimeoutExpired as exc:
+                raise ServiceUncertain('service control deadline exceeded') from exc
+            if returncode:
+                raise ServiceUncertain('controller failed; descendants may remain')
+        finally:
+            os.close(read_gate)
+            os.close(write_gate)
+            if process is not None and process.poll() is not None:
+                process.wait()
+
+    def perform(self, action, spawned, completed):
+        if action == 'start' and not self.stopped():
+            completed()
+            raise ReleaseError('unexpected Dashboard process already running')
+        self._command(action, spawned)
+        if self.stopped() != (action == 'stop'):
+            raise ServiceUncertain('service state does not match completed controller')
+        completed()
+
+    def recovery_quiescent(self, record):
+        return controller_absent(record['controller'])
 
     def stop(self):
         self._command('stop')
