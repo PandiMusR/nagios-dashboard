@@ -89,6 +89,8 @@ After poller code changes: `rc-service nagios-poller restart`. After scheduler/U
 
 ## Deploy
 
+The five-file PR #2 reconciliation has a development-only publisher described in [SAFE_RELEASE.md](SAFE_RELEASE.md). It is not installed or authorized on Production. Use its reviewed approval, staging, and recovery process for that reconciliation; the full SCP script below is not suitable for the narrowly scoped release without further changes.
+
 Run **on Prod**: `cd /svr/dashboard-nagios && ./deploy_from_dev.sh`
 
 Never copy `config/` in a UI deploy. After poller changes, restart `nagios-poller` explicitly. After `async_proxy.py` / initd: `rc-service nagios-proxy restart`.
