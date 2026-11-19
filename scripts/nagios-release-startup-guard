@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+test "$#" -eq 0 || exit 64
+umask 077
+exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LC_ALL=C \
+    /usr/bin/python3 -I -B /usr/local/libexec/nagios-release/guard_entry.py
