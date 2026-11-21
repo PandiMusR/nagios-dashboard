@@ -3,6 +3,8 @@ import os
 
 from flask_wtf.csrf import CSRFProtect
 
+from blueprints.topology import reject_unbounded_parent_request, topology_bp
+
 from services.encryption import load_or_create_secret_key, init_encryption
 from services.ldap_service import check_ldap_server, setup_ldap_structure, CONFIG_DIR
 from services.config import APP_PORT
@@ -16,6 +18,7 @@ app = Flask(__name__)
 app.secret_key = load_or_create_secret_key()
 
 # CSRF Protection
+app.before_request(reject_unbounded_parent_request)
 csrf = CSRFProtect(app)
 app.config['WTF_CSRF_TIME_LIMIT'] = None
 
@@ -81,6 +84,7 @@ app.register_blueprint(nagios_proxy_bp)
 app.register_blueprint(monitoring_intens_bp)
 # app.register_blueprint(intensive_bp)
 app.register_blueprint(api_bp)
+app.register_blueprint(topology_bp)
 
 # Exempt API blueprint from CSRF (uses API key auth, not session)
 csrf.exempt(api_bp)

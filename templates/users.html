@@ -8,6 +8,7 @@
     <p>Manage LDAP users in nagiosadmins group</p>
 </div>
 
+{% if session.get('role') == 'admin' %}
 <div class="section-card">
     <h3><i class="fas fa-user-plus"></i> Add New User</h3>
     <form method="POST" action="/users/add">
@@ -103,6 +104,7 @@
         <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Tambah Pengguna</button>
     </form>
 </div>
+{% endif %}
 
 <div class="section-card">
     <h3><i class="fas fa-list"></i> User List</h3>
@@ -130,10 +132,12 @@
                         </span>
                     </td>
                     <td>
+                        {% if session.get('role') == 'admin' %}
                         <form method="POST" action="/users/delete/{{ user.uid }}" class="inline-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="icon-btn" title="Delete user" aria-label="Delete user" onclick="return confirm('Delete user {{ user.uid }}?');"><i class="fas fa-trash" aria-hidden="true"></i></button>
                         </form>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

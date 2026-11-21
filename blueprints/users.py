@@ -150,6 +150,8 @@ def add_user() -> Response:
     """POST /users/add — Create a new LDAP user."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
 
     uid = request.form.get('uid')
     cn = request.form.get('cn')
@@ -217,6 +219,8 @@ def edit_user(uid: str) -> Response:
     """POST /users/edit/<uid> — Update an LDAP user's details."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
 
     cn = request.form.get('cn')
     sn = request.form.get('sn')
@@ -252,6 +256,8 @@ def delete_user(uid: str) -> Response:
     """POST /users/delete/<uid> — Delete an LDAP user."""
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    if session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
 
     try:
         conn = get_ldap_admin_connection()
