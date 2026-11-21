@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ server }} · Topology{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/topology.css') }}">
+{% endblock %}
+{% block content %}
+<section class="topology" id="topology" data-graph="{{ url_for('topology.graph', server=server) }}"
+         data-status="{{ url_for('topology.status', server=server) }}" data-save="{{ url_for('topology.parents', server=server) }}">
+    <header class="topology-heading">
+        <div><h1>{{ server }} topology</h1><p>Parent dependencies in localhost.cfg</p></div>
+        <div class="topology-actions">
+            <a href="{{ url_for('nagios_proxy.nagios_proxy_root', container_name=server) }}">Open native Nagios</a>
+            {% if session.get('role') == 'admin' or session.get('permissions', {}).get('host_manager') is sameas true %}
+            <a href="{{ url_for('host_manager.host_manager') }}">Host Manager</a>
+            {% endif %}
+            {% if editable %}<button id="topology-edit" type="button" disabled>Edit connections</button>{% endif %}
+        </div>
+    </header>
+    <div class="topology-workspace">
+        <section class="topology-map" aria-label="Dependency graph">
+            <div class="topology-toolbar">
+                <label>Find a host <input id="topology-search" type="search" autocomplete="off" placeholder="Name or address"></label>
+                <button id="topology-in" type="button" aria-label="Zoom in">+</button>
+                <button id="topology-out" type="button" aria-label="Zoom out">−</button>
+                <button id="topology-fit" type="button">Fit</button>
+                <button id="topology-reset" type="button">Reset layout</button>
+                <button id="topology-direction" type="button" aria-pressed="false">Left to right</button>
+                <button id="topology-expand" type="button" aria-pressed="false">Expand</button>
+            </div>
+            <div id="topology-results" class="topology-results" hidden></div>
+            <div id="topology-message" role="status" aria-live="polite">Loading topology…</div>
+            <div id="topology-canvas" aria-label="Interactive topology canvas"></div>
+            <div class="topology-footer">
+                <span id="topology-snapshot">Loading monitoring snapshot…</span>
+                <span class="topology-legend" aria-label="Host statuses">
+                    {% for label in ['UP', 'DOWN', 'UNREACHABLE', 'PENDING', 'UNKNOWN'] %}
+                    <span><i class="topology-dot {{ label|lower }}"></i>{{ label|title }}</span>
+                    {% endfor %}
+                </span>
+            </div>
+        </section>
+        <aside class="topology-details" aria-label="Selected host and connections">
+            <h2 id="topology-host">Host details</h2>
+            <p id="topology-host-status">Select a node or find a host.</p>
+            <p id="topology-address"></p>
+            <h3>Parents</h3><ul id="topology-parents"></ul>
+            <h3>Children</h3><ul id="topology-children"></ul>
+            <section id="topology-editor" hidden>
+                <h3>Draft connections</h3>
+                <p>Select a child on the map, then add or remove its parents here.</p>
+                <label>Parent host <select id="topology-candidate"></select></label>
+                <div class="topology-actions">
+                    <button id="topology-add" type="button">Add parent</button>
+                    <button id="topology-undo" type="button">Undo</button>
+                    <button id="topology-redo" type="button">Redo</button>
+                </div>
+                <p id="topology-draft"></p>
+                <div class="topology-actions">
+                    <button id="topology-cancel" type="button">Cancel draft</button>
+                    <button id="topology-update" class="topology-primary" type="button">Update topology</button>
+                </div>
+            </section>
+        </aside>
+    </div>
+    <dialog id="topology-confirm">
+        <h2>Confirm parent changes</h2>
+        <p>Nagios will restart for {{ server }} after validation.</p>
+        <ul id="topology-summary"></ul>
+        <div class="topology-actions">
+            <button id="topology-back" type="button">Back</button>
+            <button id="topology-submit" class="topology-primary" type="button">Apply changes</button>
+        </div>
+    </dialog>
+</section>
+<script defer src="{{ url_for('static', filename='vendor/vis-network-10.1.5/vis-network.min.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/topology.js') }}"></script>
+{% endblock %}

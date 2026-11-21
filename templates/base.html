@@ -86,6 +86,7 @@
                         {% for server in nagios_servers %}
                         {% if session.get('role') == 'admin' or session.get('permissions', {}).get('nagios_' + server) %}
                         <li><a href="/nagios/{{ server }}" class="{% if request.path == '/nagios/' + server %}active{% endif %}"><i class="fas fa-angle-right"></i><span>{{ server }}</span></a></li>
+                        <li><a href="{{ url_for('topology.page', server=server) }}" class="{% if request.endpoint == 'topology.page' and request.view_args.server == server %}active{% endif %}"><i class="fas fa-project-diagram"></i><span style="overflow-wrap:anywhere">{{ server }} · Topology</span></a></li>
                         {% endif %}
                         {% endfor %}
                     </ul>

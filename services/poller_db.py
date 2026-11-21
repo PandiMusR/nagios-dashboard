@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from contextlib import closing
 import json
 import os
 import sqlite3
 import threading
 from datetime import datetime
+from pathlib import Path
 
 _APP_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _CONFIG_DIR = os.path.join(_APP_ROOT, 'config')
@@ -226,6 +228,21 @@ def list_snapshot_hosts(
     with _lock:
         rows = conn.execute(sql, params).fetchall()
     return [_row_to_host(row) for row in rows]
+
+
+def topology_snapshot(container: str, limit: int, db_path: str | None = None):
+    path = Path(db_path or DEFAULT_DB_PATH).absolute()
+    with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True, timeout=0.5)) as conn:
+        conn.execute('BEGIN')
+        health = conn.execute(
+            'SELECT last_success_at, last_error IS NOT NULL FROM container_health WHERE container = ?',
+            (container,),
+        ).fetchone()
+        hosts = conn.execute(
+            'SELECT hostname, status_code FROM host_snapshot WHERE container = ? ORDER BY hostname LIMIT ?',
+            (container, limit),
+        ).fetchall()
+    return hosts, health
 
 
 def commit_successful_fetch(
