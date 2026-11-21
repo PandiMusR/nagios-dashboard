@@ -3,6 +3,8 @@ import os
 
 from flask_wtf.csrf import CSRFProtect
 
+from blueprints.topology import reject_unbounded_parent_request, topology_bp
+
 from services.encryption import load_or_create_secret_key, init_encryption
 from services.ldap_service import check_ldap_server, setup_ldap_structure, CONFIG_DIR
 from services.config import APP_PORT
@@ -16,6 +18,7 @@ app = Flask(__name__)
 app.secret_key = load_or_create_secret_key()
 
 # CSRF Protection
+app.before_request(reject_unbounded_parent_request)
 csrf = CSRFProtect(app)
 app.config['WTF_CSRF_TIME_LIMIT'] = None
 
@@ -66,7 +69,6 @@ from blueprints.global_settings import global_settings_bp
 from blueprints.nagios_proxy import nagios_proxy_bp
 from blueprints.monitoring_intens import monitoring_intens_bp
 from blueprints.api import api_bp
-from blueprints.topology import topology_bp
 # HOLD: Intensive Monitoring paused — do not re-enable (see DEVELOPMENT.md).
 # from blueprints.intensive import intensive_bp
 

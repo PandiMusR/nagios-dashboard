@@ -93,6 +93,7 @@ class RouteTests(unittest.TestCase):
         app = Flask(__name__)
         app.secret_key = 'synthetic-topology-test'
         app.config['TESTING'] = True
+        app.before_request(routes.reject_unbounded_parent_request)
         CSRFProtect(app)
         app.register_blueprint(routes.topology_bp)
         app.register_blueprint(users.users_bp)
@@ -189,11 +190,24 @@ class RouteTests(unittest.TestCase):
             self.assertEqual(self.submit({'KELURAHAN': ['POP001']}).json, {'success': True, 'changed': False})
             docker.assert_not_called()
 
+    def fixture_docker(self, *args, **options):
+        return self.cfg.read_text() if options.get('capture') else None
+
+    def test_non_json_request_is_rejected_before_csrf_form_parsing(self):
+        self.login()
+        with patch('flask.Request._load_form_data', side_effect=AssertionError('unexpected form parse')):
+            result = self.client.post('/api/topology/fixture/parents', data='test=value',
+                                      content_type='application/x-www-form-urlencoded')
+        self.assertEqual(result.status_code, 400)
+        self.assertEqual(result.json['error'], 'Expected a JSON request.')
+
     def test_success_stages_before_publication_and_preserves_metadata(self):
         self.login()
         before = self.cfg.stat()
 
         def verify(*args, **kwargs):
+            if kwargs.get('capture'):
+                return self.cfg.read_text()
             self.assertEqual(self.cfg.read_text(), SOURCE)
             candidate = self.cfg.parent.parent / Path(args[-1]).parent.name / 'localhost.cfg'
             self.assertIn('parents POP002 ;', candidate.read_text())
@@ -223,7 +237,7 @@ class RouteTests(unittest.TestCase):
     def test_restart_failure_rolls_back_and_rechecks_previous_config(self):
         self.login()
         with patch('services.topology_write.target_container', return_value='fixture-id'), \
-                patch('services.topology_write.docker'), \
+                patch('services.topology_write.docker', side_effect=self.fixture_docker), \
                 patch('services.topology_write.restart_and_check', side_effect=[ApplyError('fixture'), None]) as restart:
             result = self.submit()
         self.assertEqual(result.status_code, 503)
@@ -234,7 +248,7 @@ class RouteTests(unittest.TestCase):
     def test_timeout_restores_source_without_launching_a_second_restart(self):
         self.login()
         with patch('services.topology_write.target_container', return_value='fixture-id'), \
-                patch('services.topology_write.docker'), \
+                patch('services.topology_write.docker', side_effect=self.fixture_docker), \
                 patch('services.topology_write.restart_and_check',
                       side_effect=subprocess.TimeoutExpired('fixture', 25)) as restart:
             result = self.submit()
@@ -242,6 +256,38 @@ class RouteTests(unittest.TestCase):
         self.assertIn('uncertain', result.json['error'])
         restart.assert_called_once()
         self.assertEqual(self.cfg.read_text(), SOURCE)
+
+    def test_same_bytes_with_new_metadata_are_preserved_on_failed_apply(self):
+        self.login()
+
+        def fail_after_metadata_update(*args):
+            self.cfg.chmod(0o600)
+            raise ApplyError('fixture')
+
+        with patch('services.topology_write.target_container', return_value='fixture-id'), \
+                patch('services.topology_write.docker', side_effect=self.fixture_docker), \
+                patch('services.topology_write.restart_and_check', side_effect=fail_after_metadata_update):
+            result = self.submit()
+        self.assertEqual(result.status_code, 503)
+        self.assertIn('rollback could not be verified', result.json['error'])
+        self.assertEqual(self.cfg.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(self.cfg.read_text(), SOURCE.replace('parents POP001 ;', 'parents POP002 ;'))
+
+    def test_running_nagios_with_old_effective_parents_requires_rollback(self):
+        self.login()
+
+        def docker(*args, **options):
+            return SOURCE if options.get('capture') else None
+
+        with patch('services.topology_write.target_container', return_value='fixture-id'), \
+                patch('services.topology_write.docker', side_effect=docker), \
+                patch('services.topology_write.restart_and_check') as restart:
+            result = self.submit()
+        self.assertEqual(result.status_code, 503)
+        self.assertIn('previous configuration was restored', result.json['error'])
+        self.assertEqual(restart.call_count, 2)
+        self.assertEqual(self.cfg.read_text(), SOURCE)
+        self.audit.assert_not_called()
 
     def test_unsupported_nagios_includes_are_refused_before_verification(self):
         self.login()
@@ -256,8 +302,14 @@ class RouteTests(unittest.TestCase):
     def test_concurrent_noncooperating_change_during_verification_survives(self):
         self.login()
         other = SOURCE + '\n# external writer\n'
+
+        def change_during_verification(*args, **options):
+            if options.get('capture'):
+                return SOURCE
+            self.cfg.write_text(other)
+
         with patch('services.topology_write.target_container', return_value='fixture-id'), \
-                patch('services.topology_write.docker', side_effect=lambda *a, **k: self.cfg.write_text(other)), \
+                patch('services.topology_write.docker', side_effect=change_during_verification), \
                 patch('services.topology_write.restart_and_check') as restart:
             self.assertEqual(self.submit().status_code, 409)
         restart.assert_not_called()

@@ -134,12 +134,18 @@ def unique_fields(items):
     return result
 
 
-def parse_update():
+def reject_unbounded_parent_request():
+    if request.endpoint != 'topology.parents':
+        return None
     length = request.content_length
     if length is None or not 0 < length <= MAX_BODY:
-        raise TopologyError('Expected a bounded JSON request of at most 128 KiB.')
+        return error('Expected a bounded JSON request of at most 128 KiB.', 400)
     if not request.is_json:
-        raise TopologyError('Expected a JSON request.')
+        return error('Expected a JSON request.', 400)
+    return None
+
+
+def parse_update():
     try:
         data = json.loads(request.stream.read(MAX_BODY + 1), object_pairs_hook=unique_fields)
     except (ValueError, RecursionError):

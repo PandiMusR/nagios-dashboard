@@ -208,7 +208,7 @@
         control('redo').disabled = saving || !redo.length;
         control('cancel').disabled = saving;
         control('update').disabled = saving || conflicted || !changed.size;
-        control('draft').textContent = conflicted ? 'Source changed. Cancel this draft to load the current topology.' :
+        control('draft').textContent = conflicted ? 'Cancel this draft to load the current topology before retrying.' :
             changed.size ? changed.size + ' host(s) changed · dashed green adds, dashed red removals' : 'No pending changes';
     }
 
@@ -344,18 +344,21 @@
         let committed = false;
         try {
             const changes = Object.fromEntries([...changed].map(name => [name, draft.get(name)]));
-            await json(root.dataset.save, {
+            const result = await json(root.dataset.save, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content},
                 body: JSON.stringify({revision: graph.revision, changes})
             });
+            if (result?.success !== true || typeof result.changed !== 'boolean') {
+                throw new Error('The dashboard did not confirm the update. Reload the topology before retrying.');
+            }
             committed = true;
             dialog.close();
             setEditing(false);
             await load();
             message('Topology updated.');
         } catch (error) {
-            if (error.status === 409) conflicted = true;
+            if (!committed && (error.status === 409 || !error.status)) conflicted = true;
             dialog.close();
             if (committed) edit.disabled = true;
             message(committed ? 'Changes applied. Reload the page to see the current topology.' : error.message);
